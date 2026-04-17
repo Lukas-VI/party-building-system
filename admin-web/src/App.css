@@ -116,6 +116,11 @@
   flex: 1;
 }
 
+.sidebar-footer {
+  display: grid;
+  gap: 14px;
+}
+
 .sidebar-settings {
   padding: 14px;
   border-radius: 16px;
