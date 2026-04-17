@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Input, MessagePlugin, Select, Space, Tag } from 'tdesign-react';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://192.168.31.135:3000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? 'http://192.168.31.135:3000/api' : '/api');
 const SAMPLE_ACCOUNTS = [
   { username: 'zz001', role: '组织员' },
   { username: 'zb001', role: '党支部书记' },
@@ -248,7 +248,7 @@ function App() {
       <aside className="admin-sidebar">
         <div>
           <div className="brand-title">党员发展管理系统</div>
-          <div className="brand-subtitle">汇报版联调 Demo</div>
+          <div className="brand-subtitle">开发联调环境</div>
         </div>
         <div className="sidebar-user">
           <div className="sidebar-user-name">{user.name}</div>
@@ -269,7 +269,7 @@ function App() {
         <header className="content-header">
           <div>
             <h1>{MENU_LABELS[activeView]}</h1>
-            <p>PC 端重点展示查看、统计、下载和按角色分级操作能力。</p>
+            <p>当前页面已接入真实服务端，用于开发服务器联调与功能验证。</p>
           </div>
           <Tag theme="danger" variant="light">{loading ? '加载中' : '实时数据'}</Tag>
         </header>
@@ -497,7 +497,7 @@ function LoginScreen({ onLogin }) {
       <div className="login-panel">
         <div>
           <div className="login-title">党员发展管理后台</div>
-          <div className="login-subtitle">查看、统计、下载、分权操作一体化演示</div>
+          <div className="login-subtitle">连接开发服务器进行真实联调</div>
         </div>
         <Input value={username} onChange={setUsername} placeholder="账号" size="large" />
         <Input type="password" value={password} onChange={setPassword} placeholder="密码" size="large" />

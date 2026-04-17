@@ -11,6 +11,8 @@
 - `192.168.31.135`
 - Ubuntu
 - SSH 已改为支持公钥登录
+- 后台入口：`http://192.168.31.135`
+- API 健康检查：`http://192.168.31.135/api/health`
 
 ## 2. 域名与 HTTPS
 - 小程序服务端必须使用已备案并配置 HTTPS 的域名
@@ -23,6 +25,7 @@
 
 开发联调阶段可先使用：
 - API：`http://192.168.31.135:3000`
+- 反代后统一入口：`http://192.168.31.135/api`
 
 ## 3. 数据库准备
 创建数据库：
@@ -57,6 +60,13 @@ apt-get update
 apt-get install -y nginx
 npm install -g pm2
 ```
+
+当前开发服务器已完成：
+- MySQL 重置并重新初始化
+- Node.js / Nginx / PM2 安装
+- 服务端通过 PM2 启动
+- 后台静态文件已部署到 Nginx
+- `/api` 与 `/uploads` 已由 Nginx 反代
 
 ## 5. 后台部署
 ```bash
@@ -112,4 +122,5 @@ npm run build
 - 已清理 `journalctl` 历史日志，释放约 296MB
 - 已清理 apt 缓存和 lists
 - 已移除 Snap 的旧禁用版本
-- 根分区从 100% 降至约 90%
+- 已清理 root 目录中无关 Rust / npm 缓存
+- 根分区从 100% 降至约 89%
