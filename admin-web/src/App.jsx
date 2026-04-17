@@ -266,6 +266,13 @@ function App() {
           <div className="sidebar-user-role">{user.roles?.map((item) => item.label).join(' / ')}</div>
           <Tag theme="danger" variant="light">{user.orgName || '全校范围'}</Tag>
         </div>
+        <div className="sidebar-settings sidebar-settings-top">
+          <div className="sidebar-settings-label">界面设置</div>
+          <div className="sidebar-settings-value">当前风格：{themeMode === 'propaganda' ? '宣传版' : '标准版'}</div>
+          <Button size="small" theme="warning" variant="outline" onClick={toggleThemeMode}>
+            切换界面风格
+          </Button>
+        </div>
         <nav className="menu-list">
           {menus.map((item) => (
             <button key={item} className={`menu-item ${activeView === item ? 'is-active' : ''}`} onClick={() => setActiveView(item)} type="button">
@@ -273,13 +280,6 @@ function App() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-settings">
-          <div className="sidebar-settings-label">界面设置</div>
-          <div className="sidebar-settings-value">当前风格：{themeMode === 'propaganda' ? '宣传版' : '标准版'}</div>
-          <Button size="small" theme="warning" variant="outline" onClick={toggleThemeMode}>
-            切换界面风格
-          </Button>
-        </div>
         <Button variant="outline" theme="danger" onClick={logout}>退出登录</Button>
       </aside>
 

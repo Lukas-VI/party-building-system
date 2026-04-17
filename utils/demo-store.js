@@ -2,7 +2,7 @@ const SEED_USER = {
   id: 'u-applicant-001',
   username: '2023001',
   password: '123456',
-  name: '张明远',
+  name: 'Name',
   role: 'applicant',
   roleLabel: '入党申请人',
   orgId: 'org-literature',
@@ -19,7 +19,7 @@ const DEMO_ACCOUNTS = [
     id: 'u-organizer-001',
     username: 'zz001',
     password: '123456',
-    name: '王组织',
+    name: 'Name',
     role: 'organizer',
     roleLabel: '组织员',
     orgId: 'org-literature',
@@ -33,7 +33,7 @@ const DEMO_ACCOUNTS = [
     id: 'u-branch-001',
     username: 'zb001',
     password: '123456',
-    name: '李支书',
+    name: 'Name',
     role: 'branchSecretary',
     roleLabel: '党支部书记',
     orgId: 'org-literature',
@@ -47,7 +47,7 @@ const DEMO_ACCOUNTS = [
     id: 'u-org-001',
     username: 'org001',
     password: '123456',
-    name: '周部长',
+    name: 'Name',
     role: 'orgDept',
     roleLabel: '校党委组织部人员',
     orgId: '',
@@ -111,7 +111,7 @@ function buildDefaultWorkflow() {
         summary: index < 4 ? `${name}已完成录入` : '',
         note: index === 4 ? '待组织员指定两名培养联系人' : '',
       },
-      lastOperator: index < 4 ? '王组织' : '',
+      lastOperator: index < 4 ? 'Name' : '',
       operatedAt: index < 4 ? '2026-04-15 10:30' : '',
       reviewComment: '',
       attachments: [],
@@ -121,7 +121,7 @@ function buildDefaultWorkflow() {
 
 function buildDefaultProfile() {
   return {
-    name: '张明远',
+    name: 'Name',
     idNo: '410123199910101234',
     gender: '男',
     ethnicity: '汉族',
@@ -135,7 +135,7 @@ function buildDefaultProfile() {
     unitName: '河南师范大学文学院',
     leagueJoinDate: '2015-05',
     resume: '2010.09-2016.06 新乡市实验小学 学生；2016.09-2022.06 新乡市第一中学 学生；2023.09至今 河南师范大学文学院 学生',
-    familyInfo: '父亲 张建国 群众 新乡市人民医院；母亲 李秀兰 群众 新乡市第二中学',
+    familyInfo: '家庭与社会关系材料待补充',
     awards: '2024年校级优秀学生干部；2025年一等奖学金',
   };
 }
