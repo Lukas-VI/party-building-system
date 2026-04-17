@@ -1,4 +1,5 @@
-const store = require('../../utils/demo-store');
+const api = require('../../utils/api');
+const auth = require('../../utils/auth');
 
 Page({
   data: {
@@ -9,20 +10,29 @@ Page({
     attachments: [],
   },
 
-  onLoad(options) {
-    const user = store.getCurrentUser();
+  async onLoad(options) {
+    const user = auth.getUser();
     if (!user) {
       wx.redirectTo({ url: '/pages/login/index' });
       return;
     }
-    const step = store.getStep(options.stepCode);
-    this.setData({
-      user,
-      step,
-      summary: step?.formData?.summary || '',
-      note: step?.formData?.note || '',
-      attachments: step?.attachments || [],
-    });
+    try {
+      wx.showLoading({ title: '加载中' });
+      const workflow = await api.getMyWorkflow();
+      const step = (workflow.steps || []).find((item) => item.stepCode === options.stepCode);
+      this.setData({
+        user,
+        applicantId: workflow.instance?.applicantId || user.id,
+        step,
+        summary: step?.formData?.summary || '',
+        note: step?.formData?.note || '',
+        attachments: step?.attachments || [],
+      });
+      wx.hideLoading();
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({ title: error.message || '加载失败', icon: 'none' });
+    }
   },
 
   onInput(e) {
@@ -33,30 +43,55 @@ Page({
   chooseImage() {
     wx.chooseImage({
       count: 1,
-      success: (result) => {
-        this.setData({
-          attachments: this.data.attachments.concat(result.tempFilePaths),
-        });
+      success: async (result) => {
+        try {
+          wx.showLoading({ title: '上传中' });
+          const uploaded = await api.uploadFile(result.tempFilePaths[0]);
+          this.setData({
+            attachments: this.data.attachments.concat(uploaded),
+          });
+          wx.hideLoading();
+        } catch (error) {
+          wx.hideLoading();
+          wx.showToast({ title: error.message || '上传失败', icon: 'none' });
+        }
       },
     });
   },
 
-  saveAs(e) {
+  async saveAs(e) {
     const { status } = e.currentTarget.dataset;
-    const updated = store.updateStep(this.data.step.stepCode, {
-      status,
-      formData: {
-        summary: this.data.summary,
-        note: this.data.note,
-      },
-      attachments: this.data.attachments,
-      lastOperator: this.data.user.name,
-      reviewComment: status === 'rejected' ? '补充后重新提交' : '演示状态更新',
-    });
-    wx.showToast({
-      title: status === 'approved' ? '已通过' : status === 'rejected' ? '已退回' : '已提交',
-      icon: 'success',
-    });
-    this.setData({ step: updated });
+    try {
+      wx.showLoading({ title: '提交中' });
+      if (status === 'reviewing') {
+        await api.submitWorkflowStep(this.data.applicantId, this.data.step.stepCode, {
+          formData: {
+            summary: this.data.summary,
+            note: this.data.note,
+            attachments: this.data.attachments,
+          },
+          reviewComment: '申请人提交更新',
+        });
+      } else {
+        await api.reviewWorkflowStep(this.data.applicantId, this.data.step.stepCode, {
+          status,
+          comment: status === 'approved' ? '审核通过' : '补充后重新提交',
+        });
+      }
+      const workflow = await api.getMyWorkflow();
+      const updated = (workflow.steps || []).find((item) => item.stepCode === this.data.step.stepCode);
+      this.setData({
+        step: updated,
+        attachments: updated?.attachments || this.data.attachments,
+      });
+      wx.hideLoading();
+      wx.showToast({
+        title: status === 'approved' ? '已通过' : status === 'rejected' ? '已退回' : '已提交',
+        icon: 'success',
+      });
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({ title: error.message || '提交失败', icon: 'none' });
+    }
   },
 });

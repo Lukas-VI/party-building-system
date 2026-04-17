@@ -16,8 +16,8 @@
 
     <view class="field-label" style="margin-top: 24rpx;">附件</view>
     <button class="btn-secondary" bindtap="chooseImage">选择图片附件</button>
-    <block wx:for="{{attachments}}" wx:key="*this">
-      <view class="attachment-item">{{item}}</view>
+    <block wx:for="{{attachments}}" wx:key="fileUrl">
+      <view class="attachment-item">{{item.fileName || item.storageName || item.fileUrl}}</view>
     </block>
   </view>
 
@@ -29,6 +29,6 @@
   </view>
 
   <button class="btn-primary" bindtap="saveAs" data-status="reviewing">提交 / 更新</button>
-  <button class="btn-secondary" style="margin-top: 16rpx;" bindtap="saveAs" data-status="approved">标记通过</button>
-  <button class="btn-ghost" style="margin-top: 16rpx;" bindtap="saveAs" data-status="rejected">演示退回</button>
+  <button wx:if="{{user.primaryRole !== 'applicant'}}" class="btn-secondary" style="margin-top: 16rpx;" bindtap="saveAs" data-status="approved">审核通过</button>
+  <button wx:if="{{user.primaryRole !== 'applicant'}}" class="btn-ghost" style="margin-top: 16rpx;" bindtap="saveAs" data-status="rejected">审核退回</button>
 </view>

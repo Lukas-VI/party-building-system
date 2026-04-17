@@ -1,4 +1,4 @@
-const store = require('../../utils/demo-store');
+const api = require('../../utils/api');
 
 Page({
   data: {
@@ -6,6 +6,7 @@ Page({
       name: '',
       idNo: '',
       username: '',
+      password: '',
       roleLabel: '入党申请人',
     },
   },
@@ -17,14 +18,26 @@ Page({
     });
   },
 
-  handleSubmit() {
-    const { name, idNo, username } = this.data.form;
-    if (!name || !idNo || !username) {
+  async handleSubmit() {
+    const { name, idNo, username, password } = this.data.form;
+    if (!name || !idNo || !username || !password) {
       wx.showToast({ title: '请完整填写注册信息', icon: 'none' });
       return;
     }
-    store.registerDraft(this.data.form);
-    wx.showToast({ title: '已提交待审核', icon: 'success' });
-    setTimeout(() => wx.navigateBack(), 500);
+    try {
+      wx.showLoading({ title: '提交中' });
+      await api.register({
+        name,
+        idNo,
+        employeeNo: username,
+        password,
+      });
+      wx.hideLoading();
+      wx.showToast({ title: '已提交待审核', icon: 'success' });
+      setTimeout(() => wx.navigateBack(), 500);
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({ title: error.message || '提交失败', icon: 'none' });
+    }
   },
 });

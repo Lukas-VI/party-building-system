@@ -1,4 +1,5 @@
-const store = require('../../utils/demo-store');
+const api = require('../../utils/api');
+const auth = require('../../utils/auth');
 
 Page({
   data: {
@@ -7,17 +8,26 @@ Page({
     shortcuts: [],
   },
 
-  onShow() {
-    const user = store.getCurrentUser();
+  async onShow() {
+    const user = auth.getUser();
     if (!user) {
       wx.redirectTo({ url: '/pages/login/index' });
       return;
     }
-    this.setData({
-      user,
-      dashboard: store.getDashboardData(user),
-      shortcuts: this.buildShortcuts(user),
-    });
+    try {
+      wx.showLoading({ title: '加载中' });
+      const [freshUser, dashboard] = await Promise.all([api.me(), api.getDashboard()]);
+      auth.setUser(freshUser);
+      this.setData({
+        user: freshUser,
+        dashboard,
+        shortcuts: this.buildShortcuts(freshUser),
+      });
+      wx.hideLoading();
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({ title: error.message || '加载失败', icon: 'none' });
+    }
   },
 
   buildShortcuts(user) {
@@ -25,7 +35,7 @@ Page({
       { title: '流程进度', desc: '查看 25 步流程与状态', url: '/pages/workflow/index' },
       { title: '个人信息', desc: '维护申请人基础资料', url: '/pages/profile/index' },
     ];
-    if (user.role !== 'applicant') {
+    if (user.primaryRole !== 'applicant') {
       actions.push({ title: 'PC 后台', desc: '查看统计、审核与导出', url: '' });
     }
     return actions;
@@ -45,7 +55,7 @@ Page({
   },
 
   logout() {
-    store.logoutLocal();
+    auth.clearAuth();
     wx.redirectTo({ url: '/pages/login/index' });
   },
 });

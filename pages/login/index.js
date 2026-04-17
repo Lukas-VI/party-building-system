@@ -1,20 +1,21 @@
 const api = require('../../utils/api');
-const store = require('../../utils/demo-store');
+const auth = require('../../utils/auth');
 
 Page({
   data: {
     username: '2023001',
     password: '123456',
-    sampleAccounts: store.DEMO_ACCOUNTS.map((item) => ({
-      username: item.username,
-      roleLabel: item.roleLabel,
-      name: item.name,
-    })),
+    sampleAccounts: [
+      { username: '2023001', roleLabel: '入党申请人', name: '张明远' },
+      { username: 'zz001', roleLabel: '组织员', name: '王组织' },
+      { username: 'zb001', roleLabel: '党支部书记', name: '李支书' },
+      { username: 'org001', roleLabel: '校党委组织部人员', name: '周部长' },
+      { username: 'admin', roleLabel: '超级管理员', name: '系统管理员' },
+    ],
   },
 
   onLoad() {
-    store.ensureSeed();
-    const user = store.getCurrentUser();
+    const user = auth.getUser();
     if (user) {
       wx.redirectTo({ url: '/pages/dashboard/index' });
     }
@@ -40,8 +41,8 @@ Page({
         username: this.data.username,
         password: this.data.password,
       });
-      const user = result.user || result.data?.user;
-      if (user) wx.setStorageSync('dj_user', user);
+      auth.setToken(result.token);
+      auth.setUser(result.user);
       wx.hideLoading();
       wx.redirectTo({ url: '/pages/dashboard/index' });
     } catch (error) {

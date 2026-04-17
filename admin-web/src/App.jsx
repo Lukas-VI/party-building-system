@@ -62,7 +62,7 @@ function App() {
     const response = await fetch(`${API_BASE}${path}`, {
       headers: {
         'Content-Type': 'application/json',
-        'x-demo-user-id': token,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(options.headers || {}),
       },
       ...options,
@@ -72,7 +72,13 @@ function App() {
       throw new Error(payload.message || '请求失败');
     }
     const type = response.headers.get('content-type') || '';
-    if (type.includes('application/json')) return response.json();
+    if (type.includes('application/json')) {
+      const payload = await response.json();
+      if (payload.code !== 0) {
+        throw new Error(payload.message || '请求失败');
+      }
+      return payload.data;
+    }
     return response.blob();
   }
 
@@ -80,8 +86,8 @@ function App() {
     if (!token) return;
     api('/auth/me')
       .then((result) => {
-        setUser(result.user);
-        localStorage.setItem('dj_admin_user', JSON.stringify(result.user));
+        setUser(result);
+        localStorage.setItem('dj_admin_user', JSON.stringify(result));
       })
       .catch((error) => {
         MessagePlugin.error(error.message);
@@ -102,42 +108,42 @@ function App() {
     try {
       if (view === 'dashboard') {
         const [overviewRes, orgRes, branchRes] = await Promise.all([api('/stats/overview'), api('/stats/by-org'), api('/stats/by-branch')]);
-        setOverview(overviewRes.data);
-        setOrgStats(orgRes.data);
-        setBranchStats(branchRes.data);
+        setOverview(overviewRes);
+        setOrgStats(orgRes);
+        setBranchStats(branchRes);
       }
       if (view === 'applicants') {
         const query = new URLSearchParams(filters).toString();
         const result = await api(`/applicants${query ? `?${query}` : ''}`);
-        setApplicants(result.data);
+        setApplicants(result);
         const [orgRes, branchRes] = await Promise.all([api('/orgs'), api('/branches')]);
-        setOrgs(orgRes.data);
-        setBranches(branchRes.data);
+        setOrgs(orgRes);
+        setBranches(branchRes);
       }
       if (view === 'workflowDetail' && selectedApplicantId) {
         const [detailRes, workflowRes] = await Promise.all([api(`/applicants/${selectedApplicantId}`), api(`/workflows/${selectedApplicantId}`)]);
-        setApplicantDetail(detailRes.data);
-        setWorkflow(workflowRes.data);
+        setApplicantDetail(detailRes);
+        setWorkflow(workflowRes);
       }
       if (view === 'reviews') {
         const result = await api('/reviews/pending');
-        setReviews(result.data);
+        setReviews(result);
       }
       if (view === 'organizations') {
         const [orgRes, branchRes, userRes] = await Promise.all([api('/orgs'), api('/branches'), api('/users')]);
-        setOrgs(orgRes.data);
-        setBranches(branchRes.data);
-        setUsers(userRes.data);
+        setOrgs(orgRes);
+        setBranches(branchRes);
+        setUsers(userRes);
       }
       if (view === 'analytics') {
         const [orgRes, branchRes, overviewRes] = await Promise.all([api('/stats/by-org'), api('/stats/by-branch'), api('/stats/overview')]);
-        setOrgStats(orgRes.data);
-        setBranchStats(branchRes.data);
-        setOverview(overviewRes.data);
+        setOrgStats(orgRes);
+        setBranchStats(branchRes);
+        setOverview(overviewRes);
       }
       if (view === 'workflowConfig') {
         const result = await api('/workflow-steps/config');
-        setConfigs(result.data);
+        setConfigs(result);
       }
     } catch (error) {
       MessagePlugin.error(error.message);
@@ -159,10 +165,10 @@ function App() {
         }
         return response.json();
       });
-      setToken(result.token);
-      setUser(result.user);
-      localStorage.setItem('dj_admin_token', result.token);
-      localStorage.setItem('dj_admin_user', JSON.stringify(result.user));
+      setToken(result.data.token);
+      setUser(result.data.user);
+      localStorage.setItem('dj_admin_token', result.data.token);
+      localStorage.setItem('dj_admin_user', JSON.stringify(result.data.user));
       MessagePlugin.success('登录成功');
     } catch (error) {
       MessagePlugin.error(error.message);
@@ -220,7 +226,7 @@ function App() {
 
   async function downloadFile(endpoint, fileName) {
     try {
-      const blob = await api(endpoint, { headers: { 'Content-Type': 'application/json' } });
+      const blob = await api(endpoint, { headers: {} });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -349,7 +355,7 @@ function App() {
                     <DetailItem label="学号/工号" value={applicantDetail.username} />
                     <DetailItem label="单位" value={applicantDetail.orgName} />
                     <DetailItem label="支部" value={applicantDetail.branchName} />
-                    <DetailItem label="当前阶段" value={applicantDetail.current_stage} />
+                    <DetailItem label="当前阶段" value={applicantDetail.currentStage} />
                     <DetailItem label="联系电话" value={applicantDetail.phone} />
                   </div>
                 </Card>
