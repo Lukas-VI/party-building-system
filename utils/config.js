@@ -2,7 +2,7 @@ const ENV = 'dev';
 
 const ENV_CONFIG = {
   dev: {
-    apiBase: 'http://192.168.31.135:3000/api',
+    apiBase: 'http://192.168.31.135/api',
   },
   prod: {
     apiBase: 'https://api.your-domain.com/api',
