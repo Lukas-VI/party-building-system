@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Input, MessagePlugin, Select, Space, Tag } from 'tdesign-react';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:3000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://192.168.31.135:3000/api';
 const SAMPLE_ACCOUNTS = [
   { username: 'zz001', role: '组织员' },
   { username: 'zb001', role: '党支部书记' },

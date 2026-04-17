@@ -11,6 +11,7 @@ function getPool() {
       user: env.DB_USER,
       password: env.DB_PASSWORD,
       database: env.DB_NAME,
+      multipleStatements: true,
       waitForConnections: true,
       connectionLimit: 10,
       namedPlaceholders: true,
@@ -31,8 +32,14 @@ async function first(sql, params = {}) {
   return rows[0] || null;
 }
 
+async function raw(sql) {
+  const [rows] = await getPool().query(sql);
+  return rows;
+}
+
 module.exports = {
   getPool,
   query,
   first,
+  raw,
 };

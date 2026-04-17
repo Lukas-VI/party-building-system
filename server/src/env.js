@@ -18,6 +18,9 @@ const env = {
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean),
+  WECHAT_APP_ID: process.env.WECHAT_APP_ID || '',
+  WECHAT_APP_SECRET: process.env.WECHAT_APP_SECRET || '',
+  WECHAT_SESSION_SECRET: process.env.WECHAT_SESSION_SECRET || process.env.JWT_SECRET || 'change-this-secret',
 };
 
 module.exports = {

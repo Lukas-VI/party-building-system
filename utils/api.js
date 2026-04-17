@@ -69,6 +69,26 @@ function register(payload) {
   return request({ url: '/auth/register', method: 'POST', data: payload });
 }
 
+function wechatLogin(payload) {
+  return request({ url: '/wechat/login', method: 'POST', data: payload });
+}
+
+function getWechatBindStatus() {
+  return request({ url: '/wechat/bind/status' });
+}
+
+function wechatBindStart(payload) {
+  return request({ url: '/wechat/bind/start', method: 'POST', data: payload });
+}
+
+function wechatBindConfirm(payload) {
+  return request({ url: '/wechat/bind/confirm', method: 'POST', data: payload });
+}
+
+function unbindWechat() {
+  return request({ url: '/wechat/unbind', method: 'POST', data: {} });
+}
+
 function me() {
   return request({ url: '/auth/me' });
 }
@@ -114,6 +134,11 @@ module.exports = {
   uploadFile,
   login,
   register,
+  wechatLogin,
+  getWechatBindStatus,
+  wechatBindStart,
+  wechatBindConfirm,
+  unbindWechat,
   me,
   getDashboard,
   getMyWorkflow,

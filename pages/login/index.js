@@ -54,6 +54,29 @@ Page({
     }
   },
 
+  async handleWechatLogin() {
+    try {
+      wx.showLoading({ title: '微信登录中' });
+      const loginResult = await new Promise((resolve, reject) => {
+        wx.login({
+          success: resolve,
+          fail: reject,
+        });
+      });
+      const result = await api.wechatLogin({ code: loginResult.code });
+      auth.setToken(result.token);
+      auth.setUser(result.user);
+      wx.hideLoading();
+      wx.redirectTo({ url: '/pages/dashboard/index' });
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({
+        title: error.message || '微信快捷登录失败',
+        icon: 'none',
+      });
+    }
+  },
+
   goRegister() {
     wx.navigateTo({ url: '/pages/register/index' });
   },

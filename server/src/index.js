@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const { env } = require('./env');
 const { query, first, getPool } = require('./db');
 const { ensureSeedData } = require('./seed');
+const { exchangeCode, encryptSessionKey, signBindToken, verifyBindToken } = require('./wechat');
 
 const app = express();
 fs.mkdirSync(env.UPLOAD_DIR, { recursive: true });
@@ -230,6 +231,24 @@ async function getProfileByUserId(userId) {
   );
 }
 
+async function getWechatBindingByUserId(userId) {
+  return first(
+    `SELECT
+        id,
+        user_id AS userId,
+        openid,
+        unionid,
+        nickname,
+        avatar_url AS avatarUrl,
+        status,
+        bound_at AS boundAt,
+        last_login_at AS lastLoginAt
+     FROM wechat_bindings
+     WHERE user_id = :userId AND status = 'active'`,
+    { userId },
+  );
+}
+
 function statusText(status) {
   return {
     pending: '待填写',
@@ -416,6 +435,134 @@ app.post('/api/auth/approve-registration', requireAuth(), async (req, res) => {
     });
     await logAudit('registration_requests', requestNo, 'approve_registration', req.user.id, { status });
     ok(res, true);
+  } catch (error) {
+    fail(res, 500, error.message);
+  }
+});
+
+app.post('/api/wechat/bind/start', requireAuth(), async (req, res) => {
+  try {
+    const { code } = req.body || {};
+    const session = await exchangeCode(code);
+    const existing = await first(
+      `SELECT user_id AS userId, status
+       FROM wechat_bindings
+       WHERE openid = :openid
+       LIMIT 1`,
+      { openid: session.openid },
+    );
+    if (existing && existing.userId !== req.user.id && existing.status === 'active') {
+      return fail(res, 409, '该微信账号已绑定其他系统账号');
+    }
+    ok(res, {
+      bindToken: signBindToken({
+        openid: session.openid,
+        unionid: session.unionid,
+        sessionKeyEncrypted: encryptSessionKey(session.sessionKey),
+      }),
+      openid: session.openid,
+      unionid: session.unionid,
+      alreadyBoundToCurrentUser: !!existing && existing.userId === req.user.id,
+    });
+  } catch (error) {
+    fail(res, error.status || 500, error.message);
+  }
+});
+
+app.post('/api/wechat/bind/confirm', requireAuth(), async (req, res) => {
+  try {
+    const { bindToken, nickname = '', avatarUrl = '' } = req.body || {};
+    const payload = verifyBindToken(bindToken);
+    await query('UPDATE wechat_bindings SET status = :inactive WHERE user_id = :userId', {
+      inactive: 'inactive',
+      userId: req.user.id,
+    });
+    await query(
+      `INSERT INTO wechat_bindings
+        (user_id, openid, unionid, session_key_encrypted, nickname, avatar_url, status, bound_at, last_login_at)
+       VALUES
+        (:userId, :openid, :unionid, :sessionKeyEncrypted, :nickname, :avatarUrl, 'active', :boundAt, :lastLoginAt)
+       ON DUPLICATE KEY UPDATE
+        user_id = VALUES(user_id),
+        unionid = VALUES(unionid),
+        session_key_encrypted = VALUES(session_key_encrypted),
+        nickname = VALUES(nickname),
+        avatar_url = VALUES(avatar_url),
+        status = 'active',
+        bound_at = VALUES(bound_at),
+        last_login_at = VALUES(last_login_at)`,
+      {
+        userId: req.user.id,
+        openid: payload.openid,
+        unionid: payload.unionid || '',
+        sessionKeyEncrypted: payload.sessionKeyEncrypted,
+        nickname,
+        avatarUrl,
+        boundAt: now(),
+        lastLoginAt: now(),
+      },
+    );
+    await logAudit('wechat_bindings', req.user.id, 'bind_wechat', req.user.id, { openid: payload.openid });
+    ok(res, true, '微信账号绑定成功');
+  } catch (error) {
+    fail(res, error.status || 500, error.message);
+  }
+});
+
+app.post('/api/wechat/login', async (req, res) => {
+  try {
+    const { code } = req.body || {};
+    const session = await exchangeCode(code);
+    const binding = await first(
+      `SELECT user_id AS userId
+       FROM wechat_bindings
+       WHERE openid = :openid AND status = 'active'
+       LIMIT 1`,
+      { openid: session.openid },
+    );
+    if (!binding) {
+      return fail(res, 404, '当前微信号尚未绑定系统账号');
+    }
+    await query(
+      `UPDATE wechat_bindings
+       SET session_key_encrypted = :sessionKeyEncrypted,
+           last_login_at = :lastLoginAt
+       WHERE openid = :openid`,
+      {
+        sessionKeyEncrypted: encryptSessionKey(session.sessionKey),
+        lastLoginAt: now(),
+        openid: session.openid,
+      },
+    );
+    const user = await getUserWithAuth(binding.userId);
+    ok(res, { token: signToken(user), expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(), user });
+  } catch (error) {
+    fail(res, error.status || 500, error.message);
+  }
+});
+
+app.get('/api/wechat/bind/status', requireAuth(), async (req, res) => {
+  try {
+    const binding = await getWechatBindingByUserId(req.user.id);
+    ok(res, {
+      bound: !!binding,
+      binding,
+    });
+  } catch (error) {
+    fail(res, 500, error.message);
+  }
+});
+
+app.post('/api/wechat/unbind', requireAuth(), async (req, res) => {
+  try {
+    await query(
+      `UPDATE wechat_bindings
+       SET status = 'inactive'
+       WHERE user_id = :userId AND status = 'active'`,
+      { userId: req.user.id },
+    );
+    await logAudit('wechat_bindings', req.user.id, 'unbind_wechat', req.user.id, {});
+    ok(res, true, '微信账号已解绑');
   } catch (error) {
     fail(res, 500, error.message);
   }

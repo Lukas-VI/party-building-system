@@ -12,6 +12,7 @@
     <input class="input-box" password placeholder="请输入登录密码" value="{{password}}" bindinput="onPasswordChange" />
 
     <button class="btn-primary login-btn" bindtap="handleLogin">登录</button>
+    <button class="btn-secondary login-sub-btn" bindtap="handleWechatLogin">微信快捷登录</button>
     <button class="btn-ghost login-sub-btn" bindtap="goRegister">首次注册</button>
   </view>
 

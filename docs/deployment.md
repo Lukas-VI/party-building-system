@@ -7,6 +7,11 @@
 - Nginx 1.20+
 - PM2 最新稳定版
 
+当前开发联调服务器：
+- `192.168.31.135`
+- Ubuntu
+- SSH 已改为支持公钥登录
+
 ## 2. 域名与 HTTPS
 - 小程序服务端必须使用已备案并配置 HTTPS 的域名
 - 后台管理端建议使用独立二级域名
@@ -15,6 +20,9 @@
 示例：
 - API：`https://api.your-domain.com`
 - Admin：`https://admin.your-domain.com`
+
+开发联调阶段可先使用：
+- API：`http://192.168.31.135:3000`
 
 ## 3. 数据库准备
 创建数据库：
@@ -27,6 +35,13 @@ CREATE DATABASE party_building_app CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode
 mysql -u root -p party_building_app < server/deploy/mysql-init.sql
 ```
 
+如需开发环境专用账号，建议：
+```sql
+CREATE USER 'party_building_user'@'127.0.0.1' IDENTIFIED BY 'replace-me';
+GRANT ALL PRIVILEGES ON party_building_app.* TO 'party_building_user'@'127.0.0.1';
+FLUSH PRIVILEGES;
+```
+
 ## 4. 服务端部署
 ```bash
 cd /var/www/party-building/server
@@ -34,6 +49,13 @@ npm install --production
 cp .env.production.example .env
 pm2 start ecosystem.config.cjs
 pm2 save
+```
+
+开发服务器建议先执行：
+```bash
+apt-get update
+apt-get install -y nginx
+npm install -g pm2
 ```
 
 ## 5. 后台部署
@@ -58,6 +80,9 @@ npm run build
 - `UPLOAD_DIR`：上传文件存储目录
 - `PUBLIC_BASE_URL`：服务公网访问地址
 - `CORS_ORIGINS`：允许访问后台的前端域名
+- `WECHAT_APP_ID`：微信小程序 AppID
+- `WECHAT_APP_SECRET`：微信小程序 AppSecret
+- `WECHAT_SESSION_SECRET`：微信 session_key 加密密钥
 
 ## 7. 文件上传目录
 - 目录建议：`/data/party-building/uploads`
@@ -82,3 +107,9 @@ npm run build
 - 为上传目录配置定期备份
 - 为 Nginx 和 Node 服务启用日志轮转
 - 后续建议接入对象存储和更强密码哈希算法
+
+## 10. 开发服务器清理记录
+- 已清理 `journalctl` 历史日志，释放约 296MB
+- 已清理 apt 缓存和 lists
+- 已移除 Snap 的旧禁用版本
+- 根分区从 100% 降至约 90%

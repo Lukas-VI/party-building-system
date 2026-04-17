@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const { query, first } = require('./db');
+const { query, first, raw } = require('./db');
 
 function hashPassword(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
@@ -9,13 +9,7 @@ function hashPassword(password) {
 
 async function runSqlFile(fileName) {
   const sql = fs.readFileSync(path.join(__dirname, '..', 'deploy', fileName), 'utf8');
-  const statements = sql
-    .split(/;\s*\n/g)
-    .map((item) => item.trim())
-    .filter(Boolean);
-  for (const statement of statements) {
-    await query(statement);
-  }
+  await raw(sql);
 }
 
 async function ensureSeedData() {
