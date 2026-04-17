@@ -22,3 +22,13 @@
 ## 调试说明
 - 若需切换小程序到真实服务端联调，修改 `utils/config.js`
 - 若需重新部署后台静态资源，在 Ubuntu 上重新执行 `admin-web` 构建并覆盖 Nginx 根目录
+
+## 最近一次故障处理
+- 现象：后台页面可打开，但登录请求返回 500
+- 根因：开发服务器 `server/.env` 被示例值覆盖，导致 `CORS_ORIGINS` 缺少后台来源；旧版 CORS 处理又把拒绝请求直接抛成了 500
+- 处理：
+  - 服务端增加 `ALLOW_ALL_CORS` 开关
+  - 开发环境默认允许跨源联调
+  - Ubuntu 上恢复实际 `.env`，重新写入数据库、上传目录和 `PUBLIC_BASE_URL`
+  - 重启 `party-building-server` 并重新部署后台静态资源
+- 当前结果：`/api/health` 与 `/api/auth/login` 已恢复正常
