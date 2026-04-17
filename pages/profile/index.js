@@ -3,13 +3,17 @@ const api = require('../../utils/api');
 Page({
   data: {
     profile: {},
+    wechatStatus: {
+      bound: false,
+      binding: null,
+    },
   },
 
   async onShow() {
     try {
       wx.showLoading({ title: '加载中' });
-      const profile = await api.getMyProfile();
-      this.setData({ profile });
+      const [profile, wechatStatus] = await Promise.all([api.getMyProfile(), api.getWechatBindStatus()]);
+      this.setData({ profile, wechatStatus });
       wx.hideLoading();
     } catch (error) {
       wx.hideLoading();
@@ -33,6 +37,45 @@ Page({
     } catch (error) {
       wx.hideLoading();
       wx.showToast({ title: error.message || '保存失败', icon: 'none' });
+    }
+  },
+
+  async bindWechat() {
+    try {
+      wx.showLoading({ title: '绑定中' });
+      const loginResult = await new Promise((resolve, reject) => {
+        wx.login({
+          success: resolve,
+          fail: reject,
+        });
+      });
+      const bindStart = await api.wechatBindStart({ code: loginResult.code });
+      await api.wechatBindConfirm({
+        bindToken: bindStart.bindToken,
+        nickname: '',
+        avatarUrl: '',
+      });
+      const wechatStatus = await api.getWechatBindStatus();
+      this.setData({ wechatStatus });
+      wx.hideLoading();
+      wx.showToast({ title: '微信账号已绑定', icon: 'success' });
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({ title: error.message || '绑定失败', icon: 'none' });
+    }
+  },
+
+  async unbindWechat() {
+    try {
+      wx.showLoading({ title: '解绑中' });
+      await api.unbindWechat();
+      const wechatStatus = await api.getWechatBindStatus();
+      this.setData({ wechatStatus });
+      wx.hideLoading();
+      wx.showToast({ title: '已解除绑定', icon: 'success' });
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({ title: error.message || '解绑失败', icon: 'none' });
     }
   },
 });

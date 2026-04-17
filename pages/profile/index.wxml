@@ -5,8 +5,14 @@
   </view>
 
   <view class="section-card card">
+    <view class="field-label">微信绑定状态</view>
+    <view class="picker-box">{{wechatStatus.bound ? '已绑定微信账号' : '未绑定微信账号'}}</view>
+    <view wx:if="{{wechatStatus.bound}}" class="field-label" style="margin-top: 16rpx;">最近微信登录：{{wechatStatus.binding.lastLoginAt || '暂无记录'}}</view>
+    <button wx:if="{{!wechatStatus.bound}}" class="btn-secondary" style="margin-top: 20rpx;" bindtap="bindWechat">绑定微信账号</button>
+    <button wx:if="{{wechatStatus.bound}}" class="btn-ghost" style="margin-top: 20rpx;" bindtap="unbindWechat">解除微信绑定</button>
+
+    <view class="field-label" style="margin-top: 24rpx;">姓名</view>
     <view class="field-block">
-      <view class="field-label">姓名</view>
       <input class="input-box" value="{{profile.name}}" data-field="name" bindinput="onInput" />
     </view>
     <view class="field-block">
