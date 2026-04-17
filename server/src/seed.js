@@ -76,17 +76,17 @@ async function ensureSeedData() {
   }
 
   const users = [
-    ['u-applicant-001', '2023001', '123456', '张明远', 'active', 'org-literature', 'branch-literature-1'],
-    ['u-applicant-002', '2023002', '123456', '陈思源', 'active', 'org-literature', 'branch-literature-2'],
-    ['u-applicant-003', '2023101', '123456', '刘星河', 'active', 'org-math', 'branch-math-1'],
-    ['u-applicant-004', '2023201', '123456', '孙知行', 'active', 'org-physics', 'branch-physics-1'],
-    ['u-applicant-005', '2023202', '123456', '赵知礼', 'active', 'org-physics', 'branch-physics-1'],
-    ['u-branch-001', 'zb001', '123456', '李支书', 'active', 'org-literature', 'branch-literature-1'],
-    ['u-organizer-001', 'zz001', '123456', '王组织', 'active', 'org-literature', null],
-    ['u-secretary-001', 'orgsec1', '123456', '韩书记', 'active', 'org-literature', null],
-    ['u-deputy-001', 'orgdep1', '123456', '马副书记', 'active', 'org-literature', null],
-    ['u-orgdept-001', 'org001', '123456', '周部长', 'active', null, null],
-    ['u-admin-001', 'admin', '123456', '系统管理员', 'active', null, null]
+    ['u-applicant-001', '2023001', '123456', 'Name', 'active', 'org-literature', 'branch-literature-1'],
+    ['u-applicant-002', '2023002', '123456', 'Name', 'active', 'org-literature', 'branch-literature-2'],
+    ['u-applicant-003', '2023101', '123456', 'Name', 'active', 'org-math', 'branch-math-1'],
+    ['u-applicant-004', '2023201', '123456', 'Name', 'active', 'org-physics', 'branch-physics-1'],
+    ['u-applicant-005', '2023202', '123456', 'Name', 'active', 'org-physics', 'branch-physics-1'],
+    ['u-branch-001', 'zb001', '123456', 'Name', 'active', 'org-literature', 'branch-literature-1'],
+    ['u-organizer-001', 'zz001', '123456', 'Name', 'active', 'org-literature', null],
+    ['u-secretary-001', 'orgsec1', '123456', 'Name', 'active', 'org-literature', null],
+    ['u-deputy-001', 'orgdep1', '123456', 'Name', 'active', 'org-literature', null],
+    ['u-orgdept-001', 'org001', '123456', 'Name', 'active', null, null],
+    ['u-admin-001', 'admin', '123456', 'Name', 'active', null, null]
   ];
   for (const [id, username, password, name, status, orgId, branchId] of users) {
     await query(
@@ -173,7 +173,7 @@ async function ensureSeedData() {
     `INSERT INTO registration_requests
       (request_no, user_id, name, id_no, employee_no, status, created_at, reviewed_at)
      VALUES
-      ('REG-DEMO-001', 'u-applicant-005', '赵知礼', '410102200505054321', '2023202', 'pending', '2026-04-17 09:30:00', NULL)`
+      ('REG-DEMO-001', 'u-applicant-005', 'Name', '410102200505054321', '2023202', 'pending', '2026-04-17 09:30:00', NULL)`
   );
 
   const stepNames = [

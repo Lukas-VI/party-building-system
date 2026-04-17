@@ -10,11 +10,11 @@ Page({
     themeClass: 'theme-classic',
     themeLabel: '标准版',
     sampleAccounts: [
-      { username: '2023001', roleLabel: '入党申请人', name: '张明远' },
-      { username: 'zz001', roleLabel: '组织员', name: '王组织' },
-      { username: 'zb001', roleLabel: '党支部书记', name: '李支书' },
-      { username: 'org001', roleLabel: '校党委组织部人员', name: '周部长' },
-      { username: 'admin', roleLabel: '超级管理员', name: '系统管理员' },
+      { username: '2023001', roleLabel: '入党申请人', name: 'Name' },
+      { username: 'zz001', roleLabel: '组织员', name: 'Name' },
+      { username: 'zb001', roleLabel: '党支部书记', name: 'Name' },
+      { username: 'org001', roleLabel: '校党委组织部人员', name: 'Name' },
+      { username: 'admin', roleLabel: '超级管理员', name: 'Name' },
     ],
   },
 
