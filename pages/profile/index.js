@@ -1,4 +1,5 @@
 const api = require('../../utils/api');
+const auth = require('../../utils/auth');
 
 Page({
   data: {
@@ -10,6 +11,10 @@ Page({
   },
 
   async onShow() {
+    const user = auth.requireLogin();
+    if (!user) {
+      return;
+    }
     try {
       wx.showLoading({ title: '加载中' });
       const [profile, wechatStatus] = await Promise.all([api.getMyProfile(), api.getWechatBindStatus()]);

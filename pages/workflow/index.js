@@ -8,9 +8,8 @@ Page({
   },
 
   async onShow() {
-    const user = auth.getUser();
+    const user = auth.requireLogin();
     if (!user) {
-      wx.redirectTo({ url: '/pages/login/index' });
       return;
     }
     try {
