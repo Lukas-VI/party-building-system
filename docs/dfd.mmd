@@ -1,0 +1,12 @@
+flowchart LR
+  A["入党申请人"] --> MP["微信小程序"]
+  B["支部书记/组织员/书记副书记"] --> MP
+  B --> AW["PC后台"]
+  C["组织部/超级管理员"] --> AW
+  MP --> API["Node API 服务"]
+  AW --> API
+  API --> AUTH["认证与权限模块"]
+  API --> WF["流程与审核模块"]
+  API --> ST["统计与导出模块"]
+  API --> DB["SQLite 数据库"]
+  API --> FS["附件存储 uploads/"]

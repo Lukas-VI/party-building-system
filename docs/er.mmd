@@ -1,0 +1,15 @@
+erDiagram
+  USERS ||--o{ USER_ROLES : has
+  ROLES ||--o{ USER_ROLES : assigned
+  ROLES ||--o{ ROLE_PERMISSIONS : grants
+  PERMISSIONS ||--o{ ROLE_PERMISSIONS : mapped
+  ORG_UNITS ||--o{ BRANCHES : contains
+  ORG_UNITS ||--o{ USERS : manages
+  BRANCHES ||--o{ USERS : includes
+  USERS ||--o| APPLICANT_PROFILES : owns
+  APPLICANT_PROFILES ||--|| WORKFLOW_INSTANCES : has
+  WORKFLOW_INSTANCES ||--o{ WORKFLOW_STEP_RECORDS : contains
+  WORKFLOW_STEP_DEFINITIONS ||--o{ WORKFLOW_STEP_RECORDS : defines
+  WORKFLOW_STEP_RECORDS ||--o{ ATTACHMENTS : includes
+  WORKFLOW_STEP_RECORDS ||--o{ AUDIT_LOGS : logs
+  USERS ||--o{ AUDIT_LOGS : operates

@@ -1,0 +1,40 @@
+<view class="page-shell" wx:if="{{dashboard}}">
+  <view class="card section-card dashboard-hero">
+    <view class="row-between">
+      <view>
+        <view class="page-title dashboard-title">{{dashboard.welcome}}</view>
+        <view class="page-subtitle">{{user.orgName}} {{user.branchName}}</view>
+      </view>
+      <view class="badge badge-primary">{{dashboard.scopeLabel}}</view>
+    </view>
+    <view class="dashboard-stage">当前定位：{{dashboard.currentStage}}</view>
+  </view>
+
+  <view class="section-card card">
+    <view class="page-title section-title">关键指标</view>
+    <view class="metric-grid" style="margin-top: 24rpx;">
+      <block wx:for="{{dashboard.metrics}}" wx:key="label">
+        <view class="metric-card">
+          <view class="metric-label">{{item.label}}</view>
+          <view class="metric-value">{{item.value}}</view>
+          <view class="metric-desc">{{item.desc}}</view>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <view class="section-card card">
+    <view class="page-title section-title">快捷入口</view>
+    <block wx:for="{{shortcuts}}" wx:key="title">
+      <view class="shortcut-item" data-url="{{item.url}}" bindtap="goAction">
+        <view>
+          <view class="shortcut-title">{{item.title}}</view>
+          <view class="shortcut-desc">{{item.desc}}</view>
+        </view>
+        <view class="link-text">进入</view>
+      </view>
+    </block>
+  </view>
+
+  <button class="btn-ghost" style="margin-top: 24rpx;" bindtap="logout">退出登录</button>
+</view>

@@ -1,0 +1,37 @@
+.step-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18rpx;
+  margin-top: 28rpx;
+}
+
+.step-card {
+  min-height: 220rpx;
+  padding: 24rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.step-card-done {
+  background: linear-gradient(180deg, rgba(198, 31, 31, 0.08) 0%, rgba(255, 255, 255, 0.96) 100%);
+  border-color: rgba(198, 31, 31, 0.18);
+}
+
+.step-index {
+  font-size: 22rpx;
+  color: var(--text-secondary);
+}
+
+.step-name {
+  margin-top: 18rpx;
+  font-size: 28rpx;
+  line-height: 1.45;
+  font-weight: 700;
+}
+
+.step-phase {
+  margin-top: 16rpx;
+  font-size: 22rpx;
+  color: var(--text-muted);
+}

@@ -1,0 +1,39 @@
+<view class="page-shell login-page">
+  <view class="hero-panel card">
+    <view class="hero-title">中国共产党党员发展电子系统</view>
+    <view class="hero-emblem">
+      <view class="hero-emblem-ring"></view>
+      <view class="hero-emblem-core">党</view>
+    </view>
+    <view class="hero-subtitle">党务管理 · 发展党员 · 过程留痕</view>
+  </view>
+
+  <view class="section-card card">
+    <view class="field-label">学号 / 工号</view>
+    <input class="input-box" placeholder="请输入学号或工号" value="{{username}}" bindinput="onUsernameChange" />
+
+    <view class="field-label login-field-gap">登录密码</view>
+    <input class="input-box" password placeholder="请输入登录密码" value="{{password}}" bindinput="onPasswordChange" />
+
+    <button class="btn-primary login-btn" bindtap="handleLogin">登录</button>
+    <button class="btn-ghost login-sub-btn" bindtap="goRegister">首次注册</button>
+  </view>
+
+  <view class="section-card card">
+    <view class="row-between">
+      <view class="page-title sample-title">演示账号</view>
+      <view class="badge badge-primary">密码统一为 123456</view>
+    </view>
+    <block wx:for="{{sampleAccounts}}" wx:key="username">
+      <view class="sample-item" data-username="{{item.username}}" bindtap="fillSample">
+        <view>
+          <view class="sample-name">{{item.roleLabel}} · {{item.name}}</view>
+          <view class="sample-desc">{{item.username}}</view>
+        </view>
+        <view class="link-text">填充</view>
+      </view>
+    </block>
+  </view>
+
+  <view class="footer-note">河南师范大学</view>
+</view>

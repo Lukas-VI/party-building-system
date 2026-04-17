@@ -1,0 +1,48 @@
+<view class="page-shell">
+  <view>
+    <view class="page-title">个人资料维护</view>
+    <view class="page-subtitle">用于生成统一表格和后续发展党员流程节点材料，请保持与证件信息一致。</view>
+  </view>
+
+  <view class="section-card card">
+    <view class="field-block">
+      <view class="field-label">姓名</view>
+      <input class="input-box" value="{{profile.name}}" data-field="name" bindinput="onInput" />
+    </view>
+    <view class="field-block">
+      <view class="field-label">联系电话</view>
+      <input class="input-box" value="{{profile.phone}}" data-field="phone" bindinput="onInput" />
+    </view>
+    <view class="field-block">
+      <view class="field-label">单位</view>
+      <input class="input-box" value="{{profile.unitName}}" data-field="unitName" bindinput="onInput" />
+    </view>
+    <view class="field-block">
+      <view class="field-label">学历</view>
+      <input class="input-box" value="{{profile.education}}" data-field="education" bindinput="onInput" />
+    </view>
+    <view class="field-block">
+      <view class="field-label">学位</view>
+      <input class="input-box" value="{{profile.degree}}" data-field="degree" bindinput="onInput" />
+    </view>
+    <view class="field-block">
+      <view class="field-label">单位、职务或职业</view>
+      <input class="input-box" value="{{profile.occupation}}" data-field="occupation" bindinput="onInput" />
+    </view>
+    <view class="field-block">
+      <view class="field-label">有何专长</view>
+      <input class="input-box" value="{{profile.specialty}}" data-field="specialty" bindinput="onInput" />
+    </view>
+
+    <view class="field-label">本人经历</view>
+    <textarea class="textarea-box" value="{{profile.resume}}" data-field="resume" bindinput="onInput"></textarea>
+
+    <view class="field-label" style="margin-top: 24rpx;">家庭与社会关系</view>
+    <textarea class="textarea-box" value="{{profile.familyInfo}}" data-field="familyInfo" bindinput="onInput"></textarea>
+
+    <view class="field-label" style="margin-top: 24rpx;">奖惩情况</view>
+    <textarea class="textarea-box" value="{{profile.awards}}" data-field="awards" bindinput="onInput"></textarea>
+
+    <button class="btn-primary" style="margin-top: 28rpx;" bindtap="saveProfile">保存资料</button>
+  </view>
+</view>
