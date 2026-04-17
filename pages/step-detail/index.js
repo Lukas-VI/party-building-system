@@ -103,9 +103,4 @@ Page({
       wx.showToast({ title: error.message || '提交失败', icon: 'none' });
     }
   },
-
-  toggleTheme() {
-    theme.toggleThemeMode();
-    theme.applyTheme(this);
-  },
 });

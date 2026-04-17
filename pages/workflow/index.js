@@ -37,9 +37,4 @@ Page({
     const { code } = e.currentTarget.dataset;
     wx.navigateTo({ url: `/pages/step-detail/index?stepCode=${code}` });
   },
-
-  toggleTheme() {
-    theme.toggleThemeMode();
-    theme.applyTheme(this);
-  },
 });

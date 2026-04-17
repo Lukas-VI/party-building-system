@@ -1,5 +1,5 @@
 <view class="page-shell login-page {{themeClass}}">
-  <view class="hero-panel card" bindlongpress="toggleTheme">
+  <view class="hero-panel card">
     <view class="hero-title">中国共产党党员发展电子系统</view>
     <view class="hero-subtitle">党务管理 · 发展党员 · 过程留痕</view>
     <view wx:if="{{themeMode === 'propaganda'}}" class="hero-slogan">高举红旗抓党建  凝心聚力育先锋</view>

@@ -257,7 +257,7 @@ function App() {
     <div className={`admin-shell ${themeClass}`}>
       <aside className="admin-sidebar">
         <div>
-          <div className="brand-title" onDoubleClick={toggleThemeMode}>党员发展管理系统</div>
+          <div className="brand-title">党员发展管理系统</div>
           <div className="brand-subtitle">开发联调环境</div>
           {themeMode === 'propaganda' && <div className="brand-banner">抓党建  强基础  严程序  促发展</div>}
         </div>
@@ -273,13 +273,20 @@ function App() {
             </button>
           ))}
         </nav>
+        <div className="sidebar-settings">
+          <div className="sidebar-settings-label">界面设置</div>
+          <div className="sidebar-settings-value">当前风格：{themeMode === 'propaganda' ? '宣传版' : '标准版'}</div>
+          <Button size="small" theme="warning" variant="outline" onClick={toggleThemeMode}>
+            切换界面风格
+          </Button>
+        </div>
         <Button variant="outline" theme="danger" onClick={logout}>退出登录</Button>
       </aside>
 
       <main className="admin-main">
         <header className="content-header">
           <div>
-            <h1 onDoubleClick={toggleThemeMode}>{MENU_LABELS[activeView]}</h1>
+            <h1>{MENU_LABELS[activeView]}</h1>
             <p>当前页面已接入真实服务端，用于开发服务器联调与功能验证。</p>
             {themeMode === 'propaganda' && <div className="content-slogan">坚持政治标准  严把发展关口  全流程数字化留痕</div>}
           </div>
@@ -508,7 +515,7 @@ function LoginScreen({ onLogin, themeClass, onToggleTheme }) {
     <div className={`login-screen ${themeClass}`}>
       <div className="login-panel">
         <div>
-          <div className="login-title" onDoubleClick={onToggleTheme}>党员发展管理后台</div>
+          <div className="login-title">党员发展管理后台</div>
           <div className="login-subtitle">连接开发服务器进行真实联调</div>
           {themeClass === 'theme-propaganda' && <div className="login-banner">高标准推进党员发展工作信息化建设</div>}
         </div>
@@ -528,6 +535,12 @@ function LoginScreen({ onLogin, themeClass, onToggleTheme }) {
             ))}
           </ul>
           <div className="sample-note">统一密码：123456</div>
+        </Card>
+        <Card title="界面设置" size="small">
+          <div className="login-settings">
+            <span>当前风格：{themeClass === 'theme-propaganda' ? '宣传版' : '标准版'}</span>
+            <Button size="small" theme="warning" variant="outline" onClick={onToggleTheme}>切换界面风格</Button>
+          </div>
         </Card>
       </div>
     </div>

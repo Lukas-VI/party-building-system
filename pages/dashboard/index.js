@@ -62,9 +62,4 @@ Page({
     auth.clearAuth();
     wx.redirectTo({ url: '/pages/login/index' });
   },
-
-  toggleTheme() {
-    theme.toggleThemeMode();
-    theme.applyTheme(this);
-  },
 });

@@ -1,5 +1,5 @@
 <view class="page-shell {{themeClass}}" wx:if="{{dashboard}}">
-  <view class="card section-card dashboard-hero" bindlongpress="toggleTheme">
+  <view class="card section-card dashboard-hero">
     <view class="row-between">
       <view>
         <view class="page-title dashboard-title">{{dashboard.welcome}}</view>

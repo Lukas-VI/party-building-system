@@ -116,6 +116,29 @@
   flex: 1;
 }
 
+.sidebar-settings {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 10px;
+}
+
+.theme-propaganda .sidebar-settings {
+  border: 1px solid rgba(255, 216, 118, 0.22);
+  background: rgba(255, 245, 210, 0.12);
+}
+
+.sidebar-settings-label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.sidebar-settings-value {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
 .menu-item {
   border: 0;
   border-radius: 14px;
@@ -346,6 +369,14 @@
   margin-top: 12px;
   font-size: 13px;
   color: var(--text-subtle);
+}
+
+.login-settings {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-main);
 }
 
 @media (max-width: 1200px) {
