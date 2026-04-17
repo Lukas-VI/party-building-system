@@ -6,12 +6,6 @@
   </view>
 
   <view class="section-card card">
-    <view class="field-label">界面设置</view>
-    <view class="picker-box">当前风格：{{themeLabel}}</view>
-    <button class="btn-secondary settings-btn" bindtap="toggleTheme">切换界面风格</button>
-  </view>
-
-  <view class="section-card card">
     <view class="field-label">微信绑定状态</view>
     <view class="picker-box">{{wechatStatus.bound ? '已绑定微信账号' : '未绑定微信账号'}}</view>
     <view wx:if="{{wechatStatus.bound}}" class="field-label" style="margin-top: 16rpx;">最近微信登录：{{wechatStatus.binding.lastLoginAt || '暂无记录'}}</view>
@@ -57,5 +51,11 @@
     <textarea class="textarea-box" value="{{profile.awards}}" data-field="awards" bindinput="onInput"></textarea>
 
     <button class="btn-primary" style="margin-top: 28rpx;" bindtap="saveProfile">保存资料</button>
+  </view>
+
+  <view class="section-card card">
+    <view class="field-label">更多选项</view>
+    <view class="picker-box">当前：{{themeLabel}}</view>
+    <button class="btn-secondary settings-btn" bindtap="toggleTheme">切换样式</button>
   </view>
 </view>

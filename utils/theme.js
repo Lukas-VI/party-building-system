@@ -24,7 +24,7 @@ function buildThemeState() {
   return {
     themeMode: mode,
     themeClass: mode === 'propaganda' ? 'theme-propaganda' : 'theme-classic',
-    themeLabel: mode === 'propaganda' ? '宣传版' : '标准版',
+    themeLabel: mode === 'propaganda' ? '样式2' : '样式1',
   };
 }
 

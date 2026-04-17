@@ -8,7 +8,7 @@ Page({
     password: '123456',
     themeMode: 'classic',
     themeClass: 'theme-classic',
-    themeLabel: '标准版',
+    themeLabel: '样式1',
     sampleAccounts: [
       { username: '2023001', roleLabel: '入党申请人', name: 'Name' },
       { username: 'zz001', roleLabel: '组织员', name: 'Name' },

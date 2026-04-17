@@ -11,7 +11,7 @@ Page({
     attachments: [],
     themeMode: 'classic',
     themeClass: 'theme-classic',
-    themeLabel: '标准版',
+    themeLabel: '样式1',
   },
 
   async onLoad(options) {

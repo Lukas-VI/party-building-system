@@ -191,7 +191,7 @@ function App() {
     const nextMode = themeMode === 'propaganda' ? 'classic' : 'propaganda';
     setThemeMode(nextMode);
     localStorage.setItem('dj_admin_theme', nextMode);
-    MessagePlugin.success(nextMode === 'propaganda' ? '已切换为宣传版风格' : '已切换为标准版风格');
+    MessagePlugin.success(nextMode === 'propaganda' ? '已切换到样式2' : '已切换到样式1');
   }
 
   async function doReview(applicantId, stepCode, status) {
@@ -266,13 +266,6 @@ function App() {
           <div className="sidebar-user-role">{user.roles?.map((item) => item.label).join(' / ')}</div>
           <Tag theme="danger" variant="light">{user.orgName || '全校范围'}</Tag>
         </div>
-        <div className="sidebar-settings sidebar-settings-top">
-          <div className="sidebar-settings-label">界面设置</div>
-          <div className="sidebar-settings-value">当前风格：{themeMode === 'propaganda' ? '宣传版' : '标准版'}</div>
-          <Button size="small" theme="warning" variant="outline" onClick={toggleThemeMode}>
-            切换界面风格
-          </Button>
-        </div>
         <nav className="menu-list">
           {menus.map((item) => (
             <button key={item} className={`menu-item ${activeView === item ? 'is-active' : ''}`} onClick={() => setActiveView(item)} type="button">
@@ -280,14 +273,22 @@ function App() {
             </button>
           ))}
         </nav>
-        <Button variant="outline" theme="danger" onClick={logout}>退出登录</Button>
+        <div className="sidebar-footer">
+          <div className="sidebar-settings">
+            <div className="sidebar-settings-label">更多选项</div>
+            <div className="sidebar-settings-value">当前：{themeMode === 'propaganda' ? '样式2' : '样式1'}</div>
+            <Button size="small" theme="warning" variant="outline" onClick={toggleThemeMode}>
+              切换样式
+            </Button>
+          </div>
+          <Button variant="outline" theme="danger" onClick={logout}>退出登录</Button>
+        </div>
       </aside>
 
       <main className="admin-main">
         <header className="content-header">
           <div>
             <h1>{MENU_LABELS[activeView]}</h1>
-            <p>当前页面已接入真实服务端，用于开发服务器联调与功能验证。</p>
             {themeMode === 'propaganda' && <div className="content-slogan">坚持政治标准  严把发展关口  全流程数字化留痕</div>}
           </div>
           <Tag theme="danger" variant="light">{loading ? '加载中' : '实时数据'}</Tag>
@@ -536,10 +537,10 @@ function LoginScreen({ onLogin, themeClass, onToggleTheme }) {
           </ul>
           <div className="sample-note">统一密码：123456</div>
         </Card>
-        <Card title="界面设置" size="small">
+        <Card title="更多选项" size="small">
           <div className="login-settings">
-            <span>当前风格：{themeClass === 'theme-propaganda' ? '宣传版' : '标准版'}</span>
-            <Button size="small" theme="warning" variant="outline" onClick={onToggleTheme}>切换界面风格</Button>
+            <span>当前：{themeClass === 'theme-propaganda' ? '样式2' : '样式1'}</span>
+            <Button size="small" theme="warning" variant="outline" onClick={onToggleTheme}>切换样式</Button>
           </div>
         </Card>
       </div>
