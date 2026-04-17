@@ -22,9 +22,6 @@
     "t-cell": "tdesign-miniprogram/cell/cell",
     "t-cell-group": "tdesign-miniprogram/cell-group/cell-group"
   },
-  "resolveAlias": {
-    "@behaviors/*": "behaviors/*"
-  },
   "sitemapLocation": "sitemap.json",
   "lazyCodeLoading": "requiredComponents",
   "rendererOptions": {

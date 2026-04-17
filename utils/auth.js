@@ -38,6 +38,15 @@ function clearAuth() {
   clearUser();
 }
 
+function requireLogin(redirectUrl = '/pages/login/index') {
+  const user = getUser();
+  if (!user) {
+    wx.redirectTo({ url: redirectUrl });
+    return null;
+  }
+  return user;
+}
+
 module.exports = {
   getToken,
   setToken,
@@ -46,4 +55,5 @@ module.exports = {
   setUser,
   clearUser,
   clearAuth,
+  requireLogin,
 };

@@ -11,15 +11,19 @@ Page({
   },
 
   async onLoad(options) {
-    const user = auth.getUser();
+    const user = auth.requireLogin();
     if (!user) {
-      wx.redirectTo({ url: '/pages/login/index' });
       return;
     }
     try {
       wx.showLoading({ title: '加载中' });
       const workflow = await api.getMyWorkflow();
       const step = (workflow.steps || []).find((item) => item.stepCode === options.stepCode);
+      if (!step) {
+        wx.hideLoading();
+        wx.showToast({ title: '未找到流程步骤', icon: 'none' });
+        return;
+      }
       this.setData({
         user,
         applicantId: workflow.instance?.applicantId || user.id,
