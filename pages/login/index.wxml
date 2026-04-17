@@ -1,10 +1,6 @@
 <view class="page-shell login-page">
   <view class="hero-panel card">
     <view class="hero-title">中国共产党党员发展电子系统</view>
-    <view class="hero-emblem">
-      <view class="hero-emblem-ring"></view>
-      <view class="hero-emblem-core">党</view>
-    </view>
     <view class="hero-subtitle">党务管理 · 发展党员 · 过程留痕</view>
   </view>
 

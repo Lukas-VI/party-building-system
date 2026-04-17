@@ -1,4 +1,5 @@
-const store = require('../../utils/demo-store');
+const api = require('../../utils/api');
+const auth = require('../../utils/auth');
 
 Page({
   data: {
@@ -6,16 +7,26 @@ Page({
     workflow: [],
   },
 
-  onShow() {
-    const user = store.getCurrentUser();
+  async onShow() {
+    const user = auth.getUser();
     if (!user) {
       wx.redirectTo({ url: '/pages/login/index' });
       return;
     }
-    this.setData({
-      user,
-      workflow: store.getWorkflow(),
-    });
+    try {
+      wx.showLoading({ title: '加载中' });
+      const workflowData = await api.getMyWorkflow();
+      const steps = (workflowData.steps || []).map((item, index) => ({
+        ...item,
+        index: index + 1,
+        isDone: item.status === 'approved',
+      }));
+      this.setData({ user, workflow: steps });
+      wx.hideLoading();
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({ title: error.message || '加载失败', icon: 'none' });
+    }
   },
 
   openStep(e) {

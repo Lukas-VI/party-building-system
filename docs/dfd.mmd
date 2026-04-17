@@ -5,8 +5,8 @@ flowchart LR
   C["组织部/超级管理员"] --> AW
   MP --> API["Node API 服务"]
   AW --> API
-  API --> AUTH["认证与权限模块"]
+  API --> AUTH["JWT 认证与权限模块"]
   API --> WF["流程与审核模块"]
   API --> ST["统计与导出模块"]
-  API --> DB["SQLite 数据库"]
-  API --> FS["附件存储 uploads/"]
+  API --> DB["MySQL 数据库"]
+  API --> FS["服务器上传目录"]
