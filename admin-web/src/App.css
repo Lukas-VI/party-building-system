@@ -16,17 +16,17 @@
 .admin-shell.theme-propaganda,
 .login-screen.theme-propaganda {
   --bg-main:
-    radial-gradient(circle at top left, rgba(255, 221, 129, 0.22) 0, rgba(255, 221, 129, 0) 18%),
-    radial-gradient(circle at top right, rgba(255, 221, 129, 0.18) 0, rgba(255, 221, 129, 0) 16%),
-    linear-gradient(180deg, #7e0f0f 0%, #b41515 14%, #f5e3bb 14.4%, #f5e9cd 100%);
-  --bg-panel: linear-gradient(180deg, rgba(255, 248, 224, 0.98) 0%, rgba(255, 255, 255, 0.98) 100%);
-  --bg-soft: linear-gradient(180deg, #fff1cb 0%, #fff8ea 100%);
+    radial-gradient(circle at top left, rgba(255, 221, 129, 0.26) 0, rgba(255, 221, 129, 0) 18%),
+    radial-gradient(circle at top right, rgba(255, 221, 129, 0.2) 0, rgba(255, 221, 129, 0) 16%),
+    linear-gradient(180deg, #7e0f0f 0%, #b41515 13%, #f7e7bf 13.4%, #fbf5e8 100%);
+  --bg-panel: linear-gradient(180deg, rgba(255, 249, 232, 1) 0%, rgba(255, 255, 255, 1) 100%);
+  --bg-soft: linear-gradient(180deg, #ffefc2 0%, #fffaf0 100%);
   --sidebar-bg: linear-gradient(180deg, #6f0909 0%, #a40e0e 38%, #c62828 100%);
-  --text-main: #631313;
-  --text-subtle: #8c2c2c;
-  --text-faint: #a35932;
-  --line: rgba(186, 125, 22, 0.24);
-  --card-shadow: 0 26px 60px rgba(115, 14, 14, 0.18);
+  --text-main: #4f0f0f;
+  --text-subtle: #6e1818;
+  --text-faint: #7e4320;
+  --line: rgba(145, 92, 14, 0.32);
+  --card-shadow: 0 26px 60px rgba(115, 14, 14, 0.14);
   --metric-color: #a20f0f;
   --accent: #a20f0f;
 }
@@ -79,6 +79,12 @@
   color: rgba(255, 255, 255, 0.72);
 }
 
+.theme-propaganda .brand-subtitle,
+.theme-propaganda .sidebar-user-role,
+.theme-propaganda .sidebar-settings-value {
+  color: rgba(255, 245, 220, 0.92);
+}
+
 .brand-banner,
 .content-slogan,
 .login-banner {
@@ -86,7 +92,7 @@
   padding: 10px 14px;
   border: 1px solid rgba(255, 220, 122, 0.5);
   background: linear-gradient(90deg, rgba(255, 219, 109, 0.18), rgba(255, 244, 213, 0.05));
-  color: #ffe3a4;
+  color: #fff2cb;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 2px;
@@ -100,8 +106,8 @@
 }
 
 .theme-propaganda .sidebar-user {
-  border: 1px solid rgba(255, 214, 105, 0.28);
-  background: rgba(255, 245, 210, 0.12);
+  border: 1px solid rgba(255, 214, 105, 0.36);
+  background: rgba(255, 245, 210, 0.16);
 }
 
 .sidebar-user-name {
@@ -130,8 +136,8 @@
 }
 
 .theme-propaganda .sidebar-settings {
-  border: 1px solid rgba(255, 216, 118, 0.22);
-  background: rgba(255, 245, 210, 0.12);
+  border: 1px solid rgba(255, 216, 118, 0.36);
+  background: rgba(255, 245, 210, 0.16);
 }
 
 .sidebar-settings-label {
@@ -155,8 +161,9 @@
 }
 
 .theme-propaganda .menu-item {
-  border: 1px solid rgba(255, 216, 118, 0.22);
-  background: linear-gradient(180deg, rgba(255, 244, 213, 0.1), rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(255, 216, 118, 0.34);
+  background: linear-gradient(180deg, rgba(255, 244, 213, 0.16), rgba(255, 255, 255, 0.06));
+  color: #fff7e2;
 }
 
 .menu-item.is-active {
@@ -164,8 +171,9 @@
 }
 
 .theme-propaganda .menu-item.is-active {
-  background: linear-gradient(180deg, rgba(255, 223, 133, 0.42), rgba(255, 243, 213, 0.18));
-  color: #fff4d1;
+  background: linear-gradient(180deg, rgba(255, 223, 133, 0.6), rgba(255, 243, 213, 0.28));
+  color: #5b1010;
+  font-weight: 700;
 }
 
 .admin-main {
@@ -192,8 +200,8 @@
 }
 
 .theme-propaganda .content-slogan {
-  color: #9a1717;
-  background: linear-gradient(90deg, rgba(255, 220, 122, 0.32), rgba(255, 251, 239, 0.72));
+  color: #6c1010;
+  background: linear-gradient(90deg, rgba(255, 220, 122, 0.5), rgba(255, 251, 239, 0.92));
 }
 
 .content-stack {
@@ -216,7 +224,7 @@
 
 .theme-propaganda .metric-panel,
 .theme-propaganda .t-card {
-  border: 1px solid rgba(186, 125, 22, 0.25);
+  border: 1px solid rgba(186, 125, 22, 0.34);
 }
 
 .metric-panel {
@@ -261,7 +269,7 @@
 }
 
 .theme-propaganda .detail-item {
-  border: 1px solid rgba(202, 149, 39, 0.22);
+  border: 1px solid rgba(202, 149, 39, 0.34);
 }
 
 .detail-label {
@@ -295,7 +303,8 @@
 }
 
 .theme-propaganda .data-table th {
-  color: #8c1d1d;
+  color: #681111;
+  background: linear-gradient(180deg, #ffe8b5 0%, #fff5df 100%);
 }
 
 .export-actions {
@@ -313,8 +322,9 @@
 }
 
 .theme-propaganda .inline-input {
-  background: linear-gradient(180deg, #fff4d8, #fffdf7);
-  border-color: rgba(198, 141, 34, 0.38);
+  background: linear-gradient(180deg, #fff3d0, #fffef9);
+  border-color: rgba(198, 141, 34, 0.5);
+  color: #521010;
 }
 
 .empty-state {
@@ -342,7 +352,7 @@
 }
 
 .theme-propaganda .login-panel {
-  border: 1px solid rgba(186, 125, 22, 0.25);
+  border: 1px solid rgba(186, 125, 22, 0.34);
 }
 
 .login-title {
@@ -381,6 +391,18 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  color: var(--text-main);
+}
+
+.theme-propaganda .t-card,
+.theme-propaganda .metric-title,
+.theme-propaganda .metric-desc,
+.theme-propaganda .detail-label,
+.theme-propaganda .detail-value,
+.theme-propaganda .data-table td,
+.theme-propaganda .sample-note,
+.theme-propaganda .login-subtitle,
+.theme-propaganda .login-settings {
   color: var(--text-main);
 }
 
