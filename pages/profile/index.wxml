@@ -1,7 +1,8 @@
-<view class="page-shell">
-  <view>
+<view class="page-shell {{themeClass}}">
+  <view bindlongpress="toggleTheme">
     <view class="page-title">个人资料维护</view>
     <view class="page-subtitle">用于生成统一表格和后续发展党员流程节点材料，请保持与证件信息一致。</view>
+    <view wx:if="{{themeMode === 'propaganda'}}" class="profile-banner">信息真实准确  材料规范完整  过程留痕可追溯</view>
   </view>
 
   <view class="section-card card">

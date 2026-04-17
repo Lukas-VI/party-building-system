@@ -1,7 +1,8 @@
-<view class="page-shell">
-  <view>
+<view class="page-shell {{themeClass}}">
+  <view bindlongpress="toggleTheme">
     <view class="page-title">首次注册</view>
     <view class="page-subtitle">提交姓名、身份证号、学号或工号，管理人员审核通过后才可正式登录。</view>
+    <view wx:if="{{themeMode === 'propaganda'}}" class="register-banner">对党忠诚  如实填报  严格审核  规范入库</view>
   </view>
 
   <view class="section-card card">

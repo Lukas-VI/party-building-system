@@ -1,4 +1,5 @@
 const api = require('../../utils/api');
+const theme = require('../../utils/theme');
 
 Page({
   data: {
@@ -9,6 +10,13 @@ Page({
       password: '',
       roleLabel: '入党申请人',
     },
+    themeMode: 'classic',
+    themeClass: 'theme-classic',
+    themeLabel: '标准版',
+  },
+
+  onLoad() {
+    theme.applyTheme(this);
   },
 
   onChange(e) {
@@ -39,5 +47,10 @@ Page({
       wx.hideLoading();
       wx.showToast({ title: error.message || '提交失败', icon: 'none' });
     }
+  },
+
+  toggleTheme() {
+    theme.toggleThemeMode();
+    theme.applyTheme(this);
   },
 });

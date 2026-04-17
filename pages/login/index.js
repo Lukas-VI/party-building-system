@@ -1,10 +1,14 @@
 const api = require('../../utils/api');
 const auth = require('../../utils/auth');
+const theme = require('../../utils/theme');
 
 Page({
   data: {
     username: '2023001',
     password: '123456',
+    themeMode: 'classic',
+    themeClass: 'theme-classic',
+    themeLabel: '标准版',
     sampleAccounts: [
       { username: '2023001', roleLabel: '入党申请人', name: '张明远' },
       { username: 'zz001', roleLabel: '组织员', name: '王组织' },
@@ -15,6 +19,7 @@ Page({
   },
 
   onLoad() {
+    theme.applyTheme(this);
     const user = auth.getUser();
     if (user) {
       wx.redirectTo({ url: '/pages/dashboard/index' });
@@ -32,6 +37,11 @@ Page({
   fillSample(e) {
     const { username } = e.currentTarget.dataset;
     this.setData({ username, password: '123456' });
+  },
+
+  toggleTheme() {
+    theme.toggleThemeMode();
+    theme.applyTheme(this);
   },
 
   async handleLogin() {
