@@ -132,5 +132,5 @@ CREATE TABLE IF NOT EXISTS wechat_bindings (
   bound_at DATETIME NOT NULL,
   last_login_at DATETIME NULL,
   UNIQUE KEY uk_wechat_user (user_id),
-  UNIQUE KEY uk_wechat_openid (openid),
+  UNIQUE KEY uk_wechat_openid (openid)
 );
