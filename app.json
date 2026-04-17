@@ -1,0 +1,39 @@
+{
+  "darkmode": false,
+  "pages": [
+    "pages/login/index",
+    "pages/register/index",
+    "pages/dashboard/index",
+    "pages/workflow/index",
+    "pages/step-detail/index",
+    "pages/profile/index"
+  ],
+  "subpackages": [],
+  "window": {
+    "navigationBarTitleText": "党员发展电子系统",
+    "navigationBarBackgroundColor": "#fff7f4",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f3f2ef"
+  },
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-tag": "tdesign-miniprogram/tag/tag",
+    "t-cell": "tdesign-miniprogram/cell/cell",
+    "t-cell-group": "tdesign-miniprogram/cell-group/cell-group"
+  },
+  "resolveAlias": {
+    "@behaviors/*": "behaviors/*"
+  },
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents",
+  "rendererOptions": {
+    "skyline": {
+      "disableABTest": true,
+      "defaultDisplayBlock": true,
+      "defaultContentBox": true,
+      "sdkVersionBegin": "3.4.3",
+      "sdkVersionEnd": "15.255.255"
+    }
+  }
+}

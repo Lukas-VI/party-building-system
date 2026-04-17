@@ -1,0 +1,17 @@
+<view class="page-shell">
+  <view>
+    <view class="page-title">{{user.name}} · {{user.orgName}}</view>
+    <view class="page-subtitle">25 个步骤按顺序推进，已完成节点高亮，未开放步骤保持锁定。</view>
+  </view>
+
+  <view class="step-grid">
+    <block wx:for="{{workflow}}" wx:key="stepCode">
+      <view class="step-card card {{item.isDone ? 'step-card-done' : ''}}" data-code="{{item.stepCode}}" bindtap="openStep">
+        <view class="step-index">步骤 {{item.index}}</view>
+        <view class="step-name">{{item.name}}</view>
+        <view class="badge {{item.statusClassName}}">{{item.statusText}}</view>
+        <view class="step-phase">{{item.phase}}</view>
+      </view>
+    </block>
+  </view>
+</view>
