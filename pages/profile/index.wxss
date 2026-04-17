@@ -1,3 +1,7 @@
 .field-block {
   margin-bottom: 24rpx;
 }
+
+.settings-btn {
+  margin-top: 20rpx;
+}

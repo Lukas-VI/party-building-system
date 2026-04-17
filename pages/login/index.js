@@ -39,11 +39,6 @@ Page({
     this.setData({ username, password: '123456' });
   },
 
-  toggleTheme() {
-    theme.toggleThemeMode();
-    theme.applyTheme(this);
-  },
-
   async handleLogin() {
     try {
       wx.showLoading({ title: '登录中' });

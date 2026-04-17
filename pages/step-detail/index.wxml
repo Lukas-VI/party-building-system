@@ -1,5 +1,5 @@
 <view class="page-shell {{themeClass}}" wx:if="{{step}}">
-  <view class="card section-card" bindlongpress="toggleTheme">
+  <view class="card section-card">
     <view class="row-between">
       <view class="page-title step-detail-title">{{step.name}}</view>
       <view class="badge {{step.statusClassName}}">{{step.statusText}}</view>
