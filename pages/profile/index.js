@@ -1,5 +1,6 @@
 const api = require('../../utils/api');
 const auth = require('../../utils/auth');
+const theme = require('../../utils/theme');
 
 Page({
   data: {
@@ -8,9 +9,13 @@ Page({
       bound: false,
       binding: null,
     },
+    themeMode: 'classic',
+    themeClass: 'theme-classic',
+    themeLabel: '标准版',
   },
 
   async onShow() {
+    theme.applyTheme(this);
     const user = auth.requireLogin();
     if (!user) {
       return;
@@ -82,5 +87,10 @@ Page({
       wx.hideLoading();
       wx.showToast({ title: error.message || '解绑失败', icon: 'none' });
     }
+  },
+
+  toggleTheme() {
+    theme.toggleThemeMode();
+    theme.applyTheme(this);
   },
 });

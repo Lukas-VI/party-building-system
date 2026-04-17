@@ -1,0 +1,43 @@
+const THEME_KEY = 'dj_theme_mode';
+const DEFAULT_THEME = 'classic';
+
+function getThemeMode() {
+  try {
+    return wx.getStorageSync(THEME_KEY) || DEFAULT_THEME;
+  } catch (error) {
+    return DEFAULT_THEME;
+  }
+}
+
+function setThemeMode(mode) {
+  const nextMode = mode === 'propaganda' ? 'propaganda' : 'classic';
+  wx.setStorageSync(THEME_KEY, nextMode);
+  return nextMode;
+}
+
+function toggleThemeMode() {
+  return setThemeMode(getThemeMode() === 'propaganda' ? 'classic' : 'propaganda');
+}
+
+function buildThemeState() {
+  const mode = getThemeMode();
+  return {
+    themeMode: mode,
+    themeClass: mode === 'propaganda' ? 'theme-propaganda' : 'theme-classic',
+    themeLabel: mode === 'propaganda' ? '宣传版' : '标准版',
+  };
+}
+
+function applyTheme(page) {
+  const state = buildThemeState();
+  page.setData(state);
+  return state;
+}
+
+module.exports = {
+  getThemeMode,
+  setThemeMode,
+  toggleThemeMode,
+  buildThemeState,
+  applyTheme,
+};

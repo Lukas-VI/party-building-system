@@ -30,6 +30,7 @@ const ROLE_OPTIONS = [
 
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem('dj_admin_token') || '');
+  const [themeMode, setThemeMode] = useState(() => localStorage.getItem('dj_admin_theme') || 'classic');
   const [user, setUser] = useState(() => {
     const raw = localStorage.getItem('dj_admin_user');
     return raw ? JSON.parse(raw) : null;
@@ -57,6 +58,8 @@ function App() {
     if (!base.includes('workflowDetail')) base.push('workflowDetail');
     return Array.from(new Set(base));
   }, [user]);
+
+  const themeClass = themeMode === 'propaganda' ? 'theme-propaganda' : 'theme-classic';
 
   async function api(path, options = {}) {
     const response = await fetch(`${API_BASE}${path}`, {
@@ -184,6 +187,13 @@ function App() {
     setActiveView('dashboard');
   }
 
+  function toggleThemeMode() {
+    const nextMode = themeMode === 'propaganda' ? 'classic' : 'propaganda';
+    setThemeMode(nextMode);
+    localStorage.setItem('dj_admin_theme', nextMode);
+    MessagePlugin.success(nextMode === 'propaganda' ? '已切换为宣传版风格' : '已切换为标准版风格');
+  }
+
   async function doReview(applicantId, stepCode, status) {
     try {
       await api(`/workflows/${applicantId}/steps/${stepCode}/review`, {
@@ -240,15 +250,16 @@ function App() {
   }
 
   if (!user) {
-    return <LoginScreen onLogin={handleLogin} />;
+    return <LoginScreen onLogin={handleLogin} themeClass={themeClass} onToggleTheme={toggleThemeMode} />;
   }
 
   return (
-    <div className="admin-shell">
+    <div className={`admin-shell ${themeClass}`}>
       <aside className="admin-sidebar">
         <div>
-          <div className="brand-title">党员发展管理系统</div>
+          <div className="brand-title" onDoubleClick={toggleThemeMode}>党员发展管理系统</div>
           <div className="brand-subtitle">开发联调环境</div>
+          {themeMode === 'propaganda' && <div className="brand-banner">抓党建  强基础  严程序  促发展</div>}
         </div>
         <div className="sidebar-user">
           <div className="sidebar-user-name">{user.name}</div>
@@ -268,8 +279,9 @@ function App() {
       <main className="admin-main">
         <header className="content-header">
           <div>
-            <h1>{MENU_LABELS[activeView]}</h1>
+            <h1 onDoubleClick={toggleThemeMode}>{MENU_LABELS[activeView]}</h1>
             <p>当前页面已接入真实服务端，用于开发服务器联调与功能验证。</p>
+            {themeMode === 'propaganda' && <div className="content-slogan">坚持政治标准  严把发展关口  全流程数字化留痕</div>}
           </div>
           <Tag theme="danger" variant="light">{loading ? '加载中' : '实时数据'}</Tag>
         </header>
@@ -488,16 +500,17 @@ function App() {
   );
 }
 
-function LoginScreen({ onLogin }) {
+function LoginScreen({ onLogin, themeClass, onToggleTheme }) {
   const [username, setUsername] = useState('zz001');
   const [password, setPassword] = useState('123456');
 
   return (
-    <div className="login-screen">
+    <div className={`login-screen ${themeClass}`}>
       <div className="login-panel">
         <div>
-          <div className="login-title">党员发展管理后台</div>
+          <div className="login-title" onDoubleClick={onToggleTheme}>党员发展管理后台</div>
           <div className="login-subtitle">连接开发服务器进行真实联调</div>
+          {themeClass === 'theme-propaganda' && <div className="login-banner">高标准推进党员发展工作信息化建设</div>}
         </div>
         <Input value={username} onChange={setUsername} placeholder="账号" size="large" />
         <Input type="password" value={password} onChange={setPassword} placeholder="密码" size="large" />

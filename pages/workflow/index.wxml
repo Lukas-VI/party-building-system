@@ -1,7 +1,8 @@
-<view class="page-shell">
-  <view>
+<view class="page-shell {{themeClass}}">
+  <view bindlongpress="toggleTheme">
     <view class="page-title">{{user.name}} · {{user.orgName}}</view>
     <view class="page-subtitle">25 个步骤按顺序推进，已完成节点高亮，未开放步骤保持锁定。</view>
+    <view wx:if="{{themeMode === 'propaganda'}}" class="workflow-banner">发展党员工作必须坚持标准  保证质量  改善结构  慎重发展</view>
   </view>
 
   <view class="step-grid">

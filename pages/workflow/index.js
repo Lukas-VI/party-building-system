@@ -1,13 +1,18 @@
 const api = require('../../utils/api');
 const auth = require('../../utils/auth');
+const theme = require('../../utils/theme');
 
 Page({
   data: {
     user: null,
     workflow: [],
+    themeMode: 'classic',
+    themeClass: 'theme-classic',
+    themeLabel: '标准版',
   },
 
   async onShow() {
+    theme.applyTheme(this);
     const user = auth.requireLogin();
     if (!user) {
       return;
@@ -31,5 +36,10 @@ Page({
   openStep(e) {
     const { code } = e.currentTarget.dataset;
     wx.navigateTo({ url: `/pages/step-detail/index?stepCode=${code}` });
+  },
+
+  toggleTheme() {
+    theme.toggleThemeMode();
+    theme.applyTheme(this);
   },
 });
