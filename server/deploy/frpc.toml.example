@@ -15,7 +15,7 @@ localPort = 3000
 remotePort = 1145
 
 [[proxies]]
-name = "party-building-admin-web"
+name = "party-building-admin-mobile"
 type = "tcp"
 localIP = "127.0.0.1"
 localPort = 1919
