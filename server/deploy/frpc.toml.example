@@ -1,0 +1,15 @@
+serverAddr = "39.105.127.142"
+serverPort = 7000
+
+# 不能删除，否则连接不上时会直接退出
+loginFailExit = false
+
+auth.method = "token"
+auth.token = "havensky520"
+
+[[proxies]]
+name = "party-building-api"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 3000
+remotePort = 1145
