@@ -7,11 +7,11 @@ const ENV_CONFIG = {
     modeLabel: '演示模式',
   },
   dev: {
-    apiBase: 'http://192.168.31.135/api',
+    apiBase: 'https://havensky.cn/DJ_api',
     modeLabel: '开发联调模式',
   },
   prod: {
-    apiBase: 'https://api.your-domain.com/api',
+    apiBase: 'https://havensky.cn/DJ_api',
     modeLabel: '生产模式',
   },
 };
