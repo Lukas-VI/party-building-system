@@ -19,11 +19,16 @@ Page({
   },
 
   onLoad() {
+    theme.bindTheme(this);
     theme.applyTheme(this);
     const user = auth.getUser();
     if (user) {
       wx.redirectTo({ url: '/pages/dashboard/index' });
     }
+  },
+
+  onUnload() {
+    theme.unbindTheme(this);
   },
 
   onUsernameChange(e) {

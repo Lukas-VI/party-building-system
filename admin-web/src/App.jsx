@@ -28,9 +28,17 @@ const ROLE_OPTIONS = [
   { label: '超级管理员', value: 'superAdmin' },
 ];
 
+function getSystemColorScheme() {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return 'light';
+  }
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem('dj_admin_token') || '');
   const [themeMode, setThemeMode] = useState(() => localStorage.getItem('dj_admin_theme') || 'classic');
+  const [colorScheme, setColorScheme] = useState(getSystemColorScheme);
   const [user, setUser] = useState(() => {
     const raw = localStorage.getItem('dj_admin_user');
     return raw ? JSON.parse(raw) : null;
@@ -59,7 +67,7 @@ function App() {
     return Array.from(new Set(base));
   }, [user]);
 
-  const themeClass = themeMode === 'propaganda' ? 'theme-propaganda' : 'theme-classic';
+  const themeClass = `${themeMode === 'propaganda' ? 'theme-propaganda' : 'theme-classic'} ${colorScheme === 'dark' ? 'theme-dark' : 'theme-light'}`;
 
   async function api(path, options = {}) {
     const response = await fetch(`${API_BASE}${path}`, {
@@ -84,6 +92,29 @@ function App() {
     }
     return response.blob();
   }
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return undefined;
+    }
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (event) => {
+      setColorScheme(event.matches ? 'dark' : 'light');
+    };
+    setColorScheme(mediaQuery.matches ? 'dark' : 'light');
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+    mediaQuery.addListener(handleChange);
+    return () => mediaQuery.removeListener(handleChange);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.style.colorScheme = colorScheme;
+    }
+  }, [colorScheme]);
 
   useEffect(() => {
     if (!token) return;
@@ -276,7 +307,7 @@ function App() {
         <div className="sidebar-footer">
           <div className="sidebar-settings">
             <div className="sidebar-settings-label">更多选项</div>
-            <div className="sidebar-settings-value">当前：{themeMode === 'propaganda' ? '样式2' : '样式1'}</div>
+            <div className="sidebar-settings-value">当前：{themeMode === 'propaganda' ? '样式2' : '样式1'} · {colorScheme === 'dark' ? '跟随系统暗色' : '跟随系统亮色'}</div>
             <Button size="small" theme="warning" variant="outline" onClick={toggleThemeMode}>
               切换样式
             </Button>
@@ -539,7 +570,7 @@ function LoginScreen({ onLogin, themeClass, onToggleTheme }) {
         </Card>
         <Card title="更多选项" size="small">
           <div className="login-settings">
-            <span>当前：{themeClass === 'theme-propaganda' ? '样式2' : '样式1'}</span>
+            <span>当前：{themeClass.includes('theme-propaganda') ? '样式2' : '样式1'} · {themeClass.includes('theme-dark') ? '跟随系统暗色' : '跟随系统亮色'}</span>
             <Button size="small" theme="warning" variant="outline" onClick={onToggleTheme}>切换样式</Button>
           </div>
         </Card>

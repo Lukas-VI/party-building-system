@@ -11,6 +11,10 @@ Page({
     themeLabel: '样式1',
   },
 
+  onLoad() {
+    theme.bindTheme(this);
+  },
+
   async onShow() {
     theme.applyTheme(this);
     const user = auth.requireLogin();
@@ -31,6 +35,10 @@ Page({
       wx.hideLoading();
       wx.showToast({ title: error.message || '加载失败', icon: 'none' });
     }
+  },
+
+  onUnload() {
+    theme.unbindTheme(this);
   },
 
   openStep(e) {

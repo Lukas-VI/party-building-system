@@ -16,7 +16,12 @@ Page({
   },
 
   onLoad() {
+    theme.bindTheme(this);
     theme.applyTheme(this);
+  },
+
+  onUnload() {
+    theme.unbindTheme(this);
   },
 
   onChange(e) {
