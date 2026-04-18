@@ -45,7 +45,7 @@
 
   <view class="section-card card">
     <view class="field-label">更多选项</view>
-    <view class="picker-box">当前：{{themeLabel}} · {{colorSchemeLabel}}</view>
+    <view class="picker-box">当前：{{themeLabel}}</view>
     <button class="btn-secondary settings-btn" bindtap="toggleTheme">切换样式</button>
   </view>
 </view>

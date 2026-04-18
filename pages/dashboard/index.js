@@ -2,6 +2,7 @@ const api = require('../../utils/api');
 const auth = require('../../utils/auth');
 const theme = require('../../utils/theme');
 const roleConfig = require('../../utils/role-config');
+const processGuidance = require('../../shared/process-guidance.json');
 
 Page({
   data: {
@@ -9,6 +10,7 @@ Page({
     dashboard: null,
     shortcuts: [],
     roleSummary: '',
+    processGuidance,
     themeMode: 'classic',
     themeClass: 'theme-classic',
     themeLabel: '样式1',

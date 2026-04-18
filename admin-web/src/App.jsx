@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Input, MessagePlugin, Select, Space, Tag } from 'tdesign-react';
+import { PROCESS_GUIDANCE } from './processGuidance';
 
 const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? 'https://havensky.cn/DJ_api' : '/DJ_api');
 const SAMPLE_ACCOUNTS = [
@@ -28,17 +29,9 @@ const ROLE_OPTIONS = [
   { label: '超级管理员', value: 'superAdmin' },
 ];
 
-function getSystemColorScheme() {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-    return 'light';
-  }
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem('dj_admin_token') || '');
   const [themeMode, setThemeMode] = useState(() => localStorage.getItem('dj_admin_theme') || 'classic');
-  const [colorScheme, setColorScheme] = useState(getSystemColorScheme);
   const [user, setUser] = useState(() => {
     const raw = localStorage.getItem('dj_admin_user');
     return raw ? JSON.parse(raw) : null;
@@ -67,7 +60,7 @@ function App() {
     return Array.from(new Set(base));
   }, [user]);
 
-  const themeClass = `${themeMode === 'propaganda' ? 'theme-propaganda' : 'theme-classic'} ${colorScheme === 'dark' ? 'theme-dark' : 'theme-light'}`;
+  const themeClass = themeMode === 'propaganda' ? 'theme-propaganda' : 'theme-classic';
 
   async function api(path, options = {}) {
     const response = await fetch(`${API_BASE}${path}`, {
@@ -92,29 +85,6 @@ function App() {
     }
     return response.blob();
   }
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return undefined;
-    }
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (event) => {
-      setColorScheme(event.matches ? 'dark' : 'light');
-    };
-    setColorScheme(mediaQuery.matches ? 'dark' : 'light');
-    if (typeof mediaQuery.addEventListener === 'function') {
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    }
-    mediaQuery.addListener(handleChange);
-    return () => mediaQuery.removeListener(handleChange);
-  }, []);
-
-  useEffect(() => {
-    if (typeof document !== 'undefined') {
-      document.documentElement.style.colorScheme = colorScheme;
-    }
-  }, [colorScheme]);
 
   useEffect(() => {
     if (!token) return;
@@ -289,8 +259,8 @@ function App() {
       <aside className="admin-sidebar">
         <div>
           <div className="brand-title">党员发展管理系统</div>
-          <div className="brand-subtitle">开发联调环境</div>
-          {themeMode === 'propaganda' && <div className="brand-banner">抓党建  强基础  严程序  促发展</div>}
+          <div className="brand-subtitle">规范发展党员全过程管理</div>
+          {themeMode === 'propaganda' && <div className="brand-banner">坚持标准  严格程序  纪实留痕  逐级把关</div>}
         </div>
         <div className="sidebar-user">
           <div className="sidebar-user-name">{user.name}</div>
@@ -307,7 +277,7 @@ function App() {
         <div className="sidebar-footer">
           <div className="sidebar-settings">
             <div className="sidebar-settings-label">更多选项</div>
-            <div className="sidebar-settings-value">当前：{themeMode === 'propaganda' ? '样式2' : '样式1'} · {colorScheme === 'dark' ? '跟随系统暗色' : '跟随系统亮色'}</div>
+            <div className="sidebar-settings-value">当前：{themeMode === 'propaganda' ? '样式2' : '样式1'}</div>
             <Button size="small" theme="warning" variant="outline" onClick={toggleThemeMode}>
               切换样式
             </Button>
@@ -320,13 +290,14 @@ function App() {
         <header className="content-header">
           <div>
             <h1>{MENU_LABELS[activeView]}</h1>
-            {themeMode === 'propaganda' && <div className="content-slogan">坚持政治标准  严把发展关口  全流程数字化留痕</div>}
+            {themeMode === 'propaganda' && <div className="content-slogan">坚持政治标准 严把发展关口 规范留痕管理</div>}
           </div>
           <Tag theme="danger" variant="light">{loading ? '加载中' : '实时数据'}</Tag>
         </header>
 
         {activeView === 'dashboard' && overview && (
           <div className="content-stack">
+            <GuidancePanel />
             <div className="stats-grid">
               <MetricCard title="申请人数" value={overview.totalApplicants} desc="当前权限范围内的申请人数量" />
               <MetricCard title="待注册审核" value={overview.pendingRegistrations} desc="首次注册待审核" />
@@ -355,6 +326,7 @@ function App() {
               </Space>
             </Card>
             <Card title="申请人台账">
+              <div className="table-scroll">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -391,6 +363,7 @@ function App() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </Card>
           </div>
         )}
@@ -411,6 +384,7 @@ function App() {
                   </div>
                 </Card>
                 <Card title="25 步流程记录">
+                  <div className="table-scroll">
                   <table className="data-table">
                     <thead>
                       <tr>
@@ -435,6 +409,7 @@ function App() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </Card>
               </>
             )}
@@ -443,6 +418,7 @@ function App() {
 
         {activeView === 'reviews' && (
           <Card title="待审核事项">
+            <div className="table-scroll">
             <table className="data-table">
               <thead>
                 <tr>
@@ -472,6 +448,7 @@ function App() {
                 ))}
               </tbody>
             </table>
+            </div>
           </Card>
         )}
 
@@ -516,6 +493,7 @@ function App() {
 
         {activeView === 'workflowConfig' && (
           <Card title="流程时限配置">
+            <div className="table-scroll">
             <table className="data-table">
               <thead>
                 <tr>
@@ -532,6 +510,7 @@ function App() {
                 ))}
               </tbody>
             </table>
+            </div>
           </Card>
         )}
       </main>
@@ -548,7 +527,7 @@ function LoginScreen({ onLogin, themeClass, onToggleTheme }) {
       <div className="login-panel">
         <div>
           <div className="login-title">党员发展管理后台</div>
-          <div className="login-subtitle">连接开发服务器进行真实联调</div>
+          <div className="login-subtitle">用于台账查看、审核审批、统计分析和流程配置</div>
           {themeClass === 'theme-propaganda' && <div className="login-banner">高标准推进党员发展工作信息化建设</div>}
         </div>
         <Input value={username} onChange={setUsername} placeholder="账号" size="large" />
@@ -570,7 +549,7 @@ function LoginScreen({ onLogin, themeClass, onToggleTheme }) {
         </Card>
         <Card title="更多选项" size="small">
           <div className="login-settings">
-            <span>当前：{themeClass.includes('theme-propaganda') ? '样式2' : '样式1'} · {themeClass.includes('theme-dark') ? '跟随系统暗色' : '跟随系统亮色'}</span>
+            <span>当前：{themeClass.includes('theme-propaganda') ? '样式2' : '样式1'}</span>
             <Button size="small" theme="warning" variant="outline" onClick={onToggleTheme}>切换样式</Button>
           </div>
         </Card>
@@ -589,9 +568,46 @@ function MetricCard({ title, value, desc }) {
   );
 }
 
+function GuidancePanel() {
+  return (
+    <div className="guidance-layout">
+      <Card title={PROCESS_GUIDANCE.title}>
+        <div className="guidance-intro">{PROCESS_GUIDANCE.intro}</div>
+        <div className="guidance-list">
+          {PROCESS_GUIDANCE.rules.map((item, index) => (
+            <div className="guidance-item" key={item}>
+              <div className="guidance-index">{index + 1}</div>
+              <div className="guidance-text">{item}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
+      <Card title="流程示意">
+        <div className="flow-stage-list">
+          {PROCESS_GUIDANCE.stages.map((item) => (
+            <div className="flow-stage-card" key={item.code}>
+              <div className="flow-stage-top">
+                <div className="flow-stage-title">{item.title} · {item.subtitle}</div>
+                <Tag theme="danger" variant="light">{item.stepRange}</Tag>
+              </div>
+              <div className="flow-stage-text">{item.summary}</div>
+            </div>
+          ))}
+        </div>
+        <div className="flow-legend-list">
+          {PROCESS_GUIDANCE.legends.map((item) => (
+            <div className="flow-legend-item" key={item}>{item}</div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 function SimpleTableCard({ title, columns, rows }) {
   return (
     <Card title={title}>
+      <div className="table-scroll">
       <table className="data-table">
         <thead>
           <tr>{columns.map((column) => <th key={column}>{column}</th>)}</tr>
@@ -604,6 +620,7 @@ function SimpleTableCard({ title, columns, rows }) {
           ))}
         </tbody>
       </table>
+      </div>
     </Card>
   );
 }
