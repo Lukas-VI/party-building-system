@@ -78,7 +78,7 @@ npm run dev:1919
 
 如需通过路径反代到后台前端，例如 `https://havensky.cn/admin/`：
 - `admin-web` 构建资源基址需为 `/admin/`
-- Vite Preview 需允许目标域名访问，当前已放行 `havensky.cn`
+- `npm run preview:1919` 会提供挂载在 `/admin/` 下的静态预览服务
 - 反向代理需将 `/admin/` 转发到 Ubuntu 的 `127.0.0.1:1919`
 
 ## 6. 环境变量
