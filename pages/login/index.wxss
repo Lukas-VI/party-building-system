@@ -65,26 +65,29 @@
   font-size: 30rpx;
 }
 
-.sample-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 24rpx 0;
-  border-bottom: 1rpx solid #f0dede;
+.sample-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+  margin-top: 22rpx;
 }
 
-.sample-item:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
+.sample-chip {
+  padding: 18rpx;
+  border-radius: 16rpx;
+  border: 1rpx solid #d7c9c9;
+  background: #fff8f4;
 }
 
-.sample-name {
-  font-size: 28rpx;
-  font-weight: 600;
-}
-
-.sample-desc {
-  margin-top: 8rpx;
-  font-size: 24rpx;
+.sample-chip-role {
+  font-size: 22rpx;
+  line-height: 1.5;
   color: var(--text-secondary);
+}
+
+.sample-chip-account {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: var(--text-primary);
 }

@@ -326,6 +326,42 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+.simple-list {
+  display: grid;
+  gap: 12px;
+}
+
+.simple-list-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg-soft);
+  padding: 14px;
+}
+
+.simple-list-row {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.simple-list-row:last-child {
+  border-bottom: none;
+}
+
+.simple-list-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-subtle);
+}
+
+.simple-list-value {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-main);
+}
+
 .data-table {
   width: 100%;
   min-width: 680px;
@@ -461,29 +497,47 @@ body {
   }
 
   .admin-sidebar {
-    position: sticky;
-    top: 0;
     z-index: 20;
-    padding: 16px 14px;
-    gap: 14px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    padding: 14px 12px;
+    gap: 12px;
+    box-shadow: none;
   }
 
   .brand-title {
-    font-size: 20px;
+    font-size: 18px;
+  }
+
+  .brand-subtitle,
+  .sidebar-user-role,
+  .sidebar-settings-value {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .sidebar-user,
+  .sidebar-settings {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .sidebar-user-name {
+    font-size: 16px;
   }
 
   .menu-list {
     flex-direction: row;
     overflow-x: auto;
     white-space: nowrap;
-    padding-bottom: 4px;
+    padding-bottom: 6px;
+    gap: 8px;
   }
 
   .menu-item {
     min-width: max-content;
-    padding: 12px 14px;
-    font-size: 14px;
+    padding: 10px 12px;
+    font-size: 13px;
+    border-radius: 999px;
   }
 
   .sidebar-footer {
@@ -521,12 +575,16 @@ body {
   }
 
   .login-panel {
-    padding: 20px;
-    border-radius: 16px;
+    padding: 18px;
+    border-radius: 14px;
   }
 
   .login-title {
-    font-size: 24px;
+    font-size: 22px;
+  }
+
+  .sample-list {
+    padding-left: 14px;
   }
 
   .login-settings {
@@ -540,5 +598,66 @@ body {
 
   .data-table {
     min-width: 620px;
+  }
+
+  .simple-list-row {
+    grid-template-columns: 78px 1fr;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-main {
+    padding: 12px;
+  }
+
+  .content-header h1 {
+    font-size: 22px;
+  }
+
+  .metric-number {
+    font-size: 32px;
+  }
+
+  .guidance-item {
+    grid-template-columns: 28px 1fr;
+    gap: 10px;
+  }
+
+  .guidance-index {
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+  }
+
+  .guidance-text,
+  .flow-stage-text,
+  .flow-legend-item,
+  .guidance-intro {
+    font-size: 13px;
+  }
+
+  .flow-stage-card,
+  .simple-list-card {
+    padding: 12px;
+  }
+
+  .flow-stage-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .simple-list-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 6px 0;
+  }
+
+  .simple-list-label {
+    font-size: 12px;
+  }
+
+  .simple-list-value {
+    font-size: 13px;
   }
 }
