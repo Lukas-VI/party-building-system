@@ -70,6 +70,14 @@ CREATE TABLE IF NOT EXISTS applicant_profiles (
   updated_at DATETIME NULL
 );
 
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id VARCHAR(64) NOT NULL UNIQUE,
+  profile_type VARCHAR(32) NOT NULL,
+  profile_json LONGTEXT NULL,
+  updated_at DATETIME NULL
+);
+
 CREATE TABLE IF NOT EXISTS workflow_instances (
   id VARCHAR(64) PRIMARY KEY,
   applicant_id VARCHAR(64) NOT NULL UNIQUE,

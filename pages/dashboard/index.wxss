@@ -14,6 +14,13 @@
   color: var(--text-secondary);
 }
 
+.dashboard-summary {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
 .section-title {
   font-size: 30rpx;
 }

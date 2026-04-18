@@ -1,10 +1,14 @@
 const api = require('../../utils/api');
 const auth = require('../../utils/auth');
 const theme = require('../../utils/theme');
+const roleConfig = require('../../utils/role-config');
 
 Page({
   data: {
+    user: null,
     profile: {},
+    profileLayout: { sections: [] },
+    renderSections: [],
     wechatStatus: {
       bound: false,
       binding: null,
@@ -27,7 +31,14 @@ Page({
     try {
       wx.showLoading({ title: '加载中' });
       const [profile, wechatStatus] = await Promise.all([api.getMyProfile(), api.getWechatBindStatus()]);
-      this.setData({ profile, wechatStatus });
+      const profileLayout = roleConfig.profileLayout(user);
+      this.setData({
+        user,
+        profile,
+        wechatStatus,
+        profileLayout,
+        renderSections: this.buildRenderSections(profileLayout, profile),
+      });
       wx.hideLoading();
     } catch (error) {
       wx.hideLoading();
@@ -41,9 +52,25 @@ Page({
 
   onInput(e) {
     const { field } = e.currentTarget.dataset;
+    if (!field) return;
+    const profile = {
+      ...this.data.profile,
+      [field]: e.detail.value,
+    };
     this.setData({
-      [`profile.${field}`]: e.detail.value,
+      profile,
+      renderSections: this.buildRenderSections(this.data.profileLayout, profile),
     });
+  },
+
+  buildRenderSections(profileLayout, profile) {
+    return (profileLayout.sections || []).map((section) => ({
+      ...section,
+      fields: (section.fields || []).map((field) => ({
+        ...field,
+        value: profile[field.key] || '',
+      })),
+    }));
   },
 
   async saveProfile() {

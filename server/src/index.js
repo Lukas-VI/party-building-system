@@ -76,6 +76,59 @@ function buildMenus(permissions) {
   return Array.from(new Set(permissions.map((item) => menuMap[item.id]).filter(Boolean)));
 }
 
+function roleScopeLabel(user) {
+  if (user.primaryRole === 'applicant') return '本人数据';
+  if (user.primaryRole === 'branchSecretary') return '本支部数据';
+  if (['secretary', 'deputySecretary', 'organizer'].includes(user.primaryRole)) return '本单位数据';
+  return '全校数据';
+}
+
+function profileTypeForRole(role) {
+  if (role === 'applicant') return 'applicant';
+  if (['branchSecretary', 'organizer'].includes(role)) return 'cadre';
+  return 'admin';
+}
+
+function buildDefaultProfilePayload(user) {
+  if (user.primaryRole === 'applicant') {
+    return {
+      name: user.name,
+      username: user.username,
+      currentStage: '入党申请人',
+      phone: '',
+      education: '',
+      degree: '',
+      unitName: user.orgName || '',
+      occupation: '',
+      specialty: '',
+      resume: '',
+      familyInfo: '',
+      awards: '',
+    };
+  }
+  if (['branchSecretary', 'organizer'].includes(user.primaryRole)) {
+    return {
+      name: user.name,
+      username: user.username,
+      roleLabel: user.roles[0]?.label || '管理角色',
+      orgName: user.orgName || '',
+      branchName: user.branchName || '',
+      phone: '',
+      dutySummary: '',
+      workFocus: '',
+    };
+  }
+  return {
+    name: user.name,
+    username: user.username,
+    roleLabel: user.roles[0]?.label || '系统角色',
+    scopeLabel: roleScopeLabel(user),
+    phone: '',
+    managementScope: '',
+    systemNote: '',
+  };
+}
+
 async function logAudit(targetType, targetId, action, operatorId, detail = {}) {
   await query(
     `INSERT INTO audit_logs (target_type, target_id, action, operator_id, detail_json, created_at)
@@ -207,7 +260,7 @@ async function canAccessApplicant(user, applicantId) {
   return rows.some((item) => item.id === applicantId);
 }
 
-async function getProfileByUserId(userId) {
+async function getApplicantProfileByUserId(userId) {
   return first(
     `SELECT
         ap.user_id AS userId,
@@ -228,6 +281,76 @@ async function getProfileByUserId(userId) {
      LEFT JOIN branches b ON b.id = u.branch_id
      WHERE ap.user_id = :userId`,
     { userId },
+  );
+}
+
+async function getUserProfileRecord(userId) {
+  return first(
+    `SELECT
+        user_id AS userId,
+        profile_type AS profileType,
+        profile_json AS profileJson,
+        updated_at AS updatedAt
+     FROM user_profiles
+     WHERE user_id = :userId`,
+    { userId },
+  );
+}
+
+async function getProfileViewByUser(user) {
+  const profileRecord = await getUserProfileRecord(user.id);
+  const baseProfile = buildDefaultProfilePayload(user);
+  if (user.primaryRole === 'applicant') {
+    const applicantProfile = await getApplicantProfileByUserId(user.id);
+    return {
+      ...baseProfile,
+      ...parseJson(profileRecord?.profileJson, {}),
+      ...parseJson(applicantProfile?.profileJson, {}),
+      userId: user.id,
+      username: user.username,
+      name: user.name,
+      orgName: user.orgName,
+      branchName: user.branchName,
+      currentStage: applicantProfile?.currentStage || baseProfile.currentStage,
+      phone: applicantProfile?.phone || '',
+      education: applicantProfile?.education || '',
+      degree: applicantProfile?.degree || '',
+      unitName: applicantProfile?.unitName || user.orgName || '',
+      occupation: applicantProfile?.occupation || '',
+      roleLabel: user.roles[0]?.label || '入党申请人',
+      scopeLabel: roleScopeLabel(user),
+      profileType: profileRecord?.profileType || 'applicant',
+    };
+  }
+  return {
+    ...baseProfile,
+    ...parseJson(profileRecord?.profileJson, {}),
+    userId: user.id,
+    username: user.username,
+    name: user.name,
+    orgName: user.orgName,
+    branchName: user.branchName,
+    roleLabel: user.roles[0]?.label || '系统用户',
+    scopeLabel: roleScopeLabel(user),
+    profileType: profileRecord?.profileType || profileTypeForRole(user.primaryRole),
+  };
+}
+
+async function upsertUserProfile(user, payload) {
+  const profileType = profileTypeForRole(user.primaryRole);
+  await query(
+    `INSERT INTO user_profiles (user_id, profile_type, profile_json, updated_at)
+     VALUES (:userId, :profileType, :profileJson, :updatedAt)
+     ON DUPLICATE KEY UPDATE
+       profile_type = VALUES(profile_type),
+       profile_json = VALUES(profile_json),
+       updated_at = VALUES(updated_at)`,
+    {
+      userId: user.id,
+      profileType,
+      profileJson: JSON.stringify(payload),
+      updatedAt: now(),
+    },
   );
 }
 
@@ -347,7 +470,7 @@ async function dashboardForUser(user) {
   });
   return {
     welcome: `${user.roles[0]?.label || '用户'} · ${user.name}`,
-    scopeLabel: user.primaryRole === 'applicant' ? '本人数据' : user.primaryRole === 'branchSecretary' ? '本支部数据' : ['secretary', 'deputySecretary', 'organizer'].includes(user.primaryRole) ? '本单位数据' : '全校数据',
+    scopeLabel: roleScopeLabel(user),
     currentStage: user.roles[0]?.label || '系统用户',
     metrics: [
       { label: '申请人数', value: applicants.length, desc: '当前权限范围内台账人数' },
@@ -578,21 +701,7 @@ app.get('/api/dashboard/me', requireAuth(), async (req, res) => {
 
 app.get('/api/profile/me', requireAuth(), async (req, res) => {
   try {
-    const profile = await getProfileByUserId(req.user.id);
-    ok(res, {
-      ...parseJson(profile?.profileJson, {}),
-      userId: profile?.userId,
-      username: profile?.username,
-      name: profile?.name,
-      orgName: profile?.orgName,
-      branchName: profile?.branchName,
-      currentStage: profile?.currentStage,
-      phone: profile?.phone,
-      education: profile?.education,
-      degree: profile?.degree,
-      unitName: profile?.unitName,
-      occupation: profile?.occupation,
-    });
+    ok(res, await getProfileViewByUser(req.user));
   } catch (error) {
     fail(res, 500, error.message);
   }
@@ -601,28 +710,33 @@ app.get('/api/profile/me', requireAuth(), async (req, res) => {
 app.put('/api/profile/me', requireAuth(), async (req, res) => {
   try {
     const payload = req.body || {};
-    await query(
-      `UPDATE applicant_profiles
-       SET phone = :phone,
-           education = :education,
-           degree = :degree,
-           unit_name = :unitName,
-           occupation = :occupation,
-           profile_json = :profileJson,
-           updated_at = :updatedAt
-       WHERE user_id = :userId`,
-      {
-        phone: payload.phone || '',
-        education: payload.education || '',
-        degree: payload.degree || '',
-        unitName: payload.unitName || '',
-        occupation: payload.occupation || '',
-        profileJson: JSON.stringify(payload),
-        updatedAt: now(),
-        userId: req.user.id,
-      },
-    );
-    await logAudit('applicant_profiles', req.user.id, 'update_profile', req.user.id, payload);
+    await upsertUserProfile(req.user, payload);
+    if (req.user.primaryRole === 'applicant') {
+      await query(
+        `UPDATE applicant_profiles
+         SET phone = :phone,
+             education = :education,
+             degree = :degree,
+             unit_name = :unitName,
+             occupation = :occupation,
+             profile_json = :profileJson,
+             updated_at = :updatedAt
+         WHERE user_id = :userId`,
+        {
+          phone: payload.phone || '',
+          education: payload.education || '',
+          degree: payload.degree || '',
+          unitName: payload.unitName || '',
+          occupation: payload.occupation || '',
+          profileJson: JSON.stringify(payload),
+          updatedAt: now(),
+          userId: req.user.id,
+        },
+      );
+      await logAudit('applicant_profiles', req.user.id, 'update_profile', req.user.id, payload);
+    } else {
+      await logAudit('user_profiles', req.user.id, 'update_profile', req.user.id, payload);
+    }
     ok(res, true, '资料已保存');
   } catch (error) {
     fail(res, 500, error.message);
@@ -657,7 +771,7 @@ app.get('/api/applicants', requireAuth(), async (req, res) => {
 app.get('/api/applicants/:id', requireAuth(), async (req, res) => {
   try {
     if (!(await canAccessApplicant(req.user, req.params.id))) return fail(res, 403, '无权查看该申请人');
-    const profile = await getProfileByUserId(req.params.id);
+    const profile = await getApplicantProfileByUserId(req.params.id);
     ok(res, {
       ...parseJson(profile?.profileJson, {}),
       userId: profile?.userId,

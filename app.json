@@ -6,7 +6,8 @@
     "pages/dashboard/index",
     "pages/workflow/index",
     "pages/step-detail/index",
-    "pages/profile/index"
+    "pages/profile/index",
+    "pages/admin-webview/index"
   ],
   "subpackages": [],
   "window": {
@@ -15,13 +16,7 @@
     "navigationBarTextStyle": "black",
     "backgroundColor": "#f3f2ef"
   },
-  "usingComponents": {
-    "t-button": "tdesign-miniprogram/button/button",
-    "t-icon": "tdesign-miniprogram/icon/icon",
-    "t-tag": "tdesign-miniprogram/tag/tag",
-    "t-cell": "tdesign-miniprogram/cell/cell",
-    "t-cell-group": "tdesign-miniprogram/cell-group/cell-group"
-  },
+  "usingComponents": {},
   "sitemapLocation": "sitemap.json",
   "lazyCodeLoading": "requiredComponents",
   "rendererOptions": {

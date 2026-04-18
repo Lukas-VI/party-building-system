@@ -7,6 +7,47 @@ function hashPassword(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
+function profileTypeForRole(roleId) {
+  if (roleId === 'applicant') return 'applicant';
+  if (['branchSecretary', 'organizer'].includes(roleId)) return 'cadre';
+  return 'admin';
+}
+
+function profileJsonForUser(user, roleId) {
+  if (roleId === 'applicant') {
+    return {
+      name: user[3],
+      phone: '13800001234',
+      education: '高中',
+      degree: '无',
+      unitName: user[5] === 'org-literature' ? '河南师范大学文学院' : user[5] === 'org-math' ? '河南师范大学数学与统计学院' : '河南师范大学物理学院',
+      occupation: '根据学籍信息维护',
+      specialty: '根据本人申报维护',
+      resume: '根据档案材料完善',
+      familyInfo: '根据政审材料完善',
+      awards: '根据奖惩材料完善',
+    };
+  }
+  if (['branchSecretary', 'organizer'].includes(roleId)) {
+    return {
+      name: user[3],
+      username: user[1],
+      phone: '13800004567',
+      roleLabel: roleId === 'organizer' ? '组织员' : '党支部书记',
+      dutySummary: roleId === 'organizer' ? '负责本单位注册审核、流程推进与联系人分配。' : '负责支部级流程审核、支部大会材料核对与导出。',
+      workFocus: roleId === 'organizer' ? '重点跟进积极分子、发展对象培养与政审节点。' : '重点跟进支部大会、材料完整性和转正讨论。',
+    };
+  }
+  return {
+    name: user[3],
+    username: user[1],
+    phone: '13800007890',
+    roleLabel: roleId === 'superAdmin' ? '超级管理员' : roleId === 'orgDept' ? '校党委组织部人员' : roleId === 'secretary' ? '二级单位党委/总支书记' : '二级单位党委/总支副书记',
+    managementScope: roleId === 'superAdmin' ? '维护全局组织结构、角色权限与流程配置。' : '负责统计汇总、审核监管和组织范围内流程协调。',
+    systemNote: roleId === 'superAdmin' ? '用于演示系统级配置和权限控制。' : '用于演示单位级或全校级数据监管。',
+  };
+}
+
 async function runSqlFile(fileName) {
   const sql = fs.readFileSync(path.join(__dirname, '..', 'deploy', fileName), 'utf8');
   await raw(sql);
@@ -15,7 +56,10 @@ async function runSqlFile(fileName) {
 async function ensureSeedData() {
   await runSqlFile('mysql-init.sql');
   const role = await first('SELECT id FROM roles LIMIT 1');
-  if (role) return;
+  if (role) {
+    await ensureUserProfiles();
+    return;
+  }
 
   const permissions = [
     ['view_dashboard', '查看工作台'],
@@ -120,6 +164,25 @@ async function ensureSeedData() {
   ];
   for (const [userId, roleId] of userRoles) {
     await query('INSERT INTO user_roles (user_id, role_id) VALUES (:userId, :roleId)', { userId, roleId });
+  }
+
+  for (const user of users) {
+    const [, , , , , orgId, branchId] = user;
+    const roleId = userRoles.find((item) => item[0] === user[0])?.[1] || 'applicant';
+    await query(
+      `INSERT INTO user_profiles (user_id, profile_type, profile_json, updated_at)
+       VALUES (:userId, :profileType, :profileJson, :updatedAt)`,
+      {
+        userId: user[0],
+        profileType: profileTypeForRole(roleId),
+        profileJson: JSON.stringify({
+          ...profileJsonForUser(user, roleId),
+          orgId,
+          branchId,
+        }),
+        updatedAt: '2026-04-17 08:00:00',
+      },
+    );
   }
 
   const profiles = [
@@ -235,6 +298,39 @@ async function ensureSeedData() {
         }
       );
     }
+  }
+}
+
+async function ensureUserProfiles() {
+  const users = await query(
+    `SELECT
+        u.id,
+        u.username,
+        u.name,
+        u.org_id AS orgId,
+        u.branch_id AS branchId,
+        r.id AS roleId
+     FROM users u
+     INNER JOIN user_roles ur ON ur.user_id = u.id
+     INNER JOIN roles r ON r.id = ur.role_id`,
+  );
+  for (const user of users) {
+    const existing = await first('SELECT id FROM user_profiles WHERE user_id = :userId', { userId: user.id });
+    if (existing) continue;
+    await query(
+      `INSERT INTO user_profiles (user_id, profile_type, profile_json, updated_at)
+       VALUES (:userId, :profileType, :profileJson, :updatedAt)`,
+      {
+        userId: user.id,
+        profileType: profileTypeForRole(user.roleId),
+        profileJson: JSON.stringify({
+          ...profileJsonForUser([user.id, user.username, '', user.name, '', user.orgId, user.branchId], user.roleId),
+          orgId: user.orgId,
+          branchId: user.branchId,
+        }),
+        updatedAt: '2026-04-17 08:00:00',
+      },
+    );
   }
 }
 

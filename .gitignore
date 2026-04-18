@@ -8,6 +8,7 @@ server/data/*.sqlite*
 server/uploads/*
 !server/uploads/.gitkeep
 dist/
+analyse-data.json
 !.env.example
 !admin-web/.env.example
 !server/.env.example

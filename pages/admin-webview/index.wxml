@@ -1,0 +1,10 @@
+<view wx:if="{{src}}">
+  <web-view src="{{src}}"></web-view>
+</view>
+
+<view wx:else class="page-shell {{themeClass}}">
+  <view class="section-card card">
+    <view class="page-title">{{pageTitle}}</view>
+    <view class="page-subtitle" style="margin-top: 20rpx;">{{invalidReason}}</view>
+  </view>
+</view>
