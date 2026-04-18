@@ -8,7 +8,7 @@
     "dev:1919": "vite --host 0.0.0.0 --port 1919",
     "build": "vite build",
     "preview": "vite preview",
-    "preview:1919": "vite preview --host 0.0.0.0 --port 1919"
+    "preview:1919": "node scripts/serve-preview.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

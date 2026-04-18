@@ -62,8 +62,8 @@ npm run dev
 ```bash
 npm run dev:1919
 ```
-如需通过 `https://域名/admin/` 反向代理到 Vite Preview：
-- `admin-web/vite.config.js` 已允许 `havensky.cn` 等主机访问
+如需通过 `https://域名/admin/` 反向代理到后台预览：
+- `npm run preview:1919` 会在 `1919` 端口提供 `/admin/` 子路径静态预览服务
 - 后台构建资源基址已固定为 `/admin/`
 
 ### 3. 启动小程序
