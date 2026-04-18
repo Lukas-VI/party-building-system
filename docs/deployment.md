@@ -19,7 +19,8 @@
 示例：
 - API：`https://havensky.cn/DJ_api`
 - Admin：`https://havensky.cn/admin/`
-- 小程序内嵌后台入口：`adminWebUrl` 必须填写 HTTPS 地址
+- Mobile Admin：`https://havensky.cn/m-admin/`
+- 小程序内嵌后台入口：`adminWebUrl` 必须填写 HTTPS 地址，建议指向移动后台
 
 开发联调阶段可先使用：
 - 可先使用局域网开发服务器进行联调
@@ -61,7 +62,7 @@ npm install -g pm2
 
 当前开发服务器可用性状态请记录在单独调试文档中。
 
-## 5. 后台部署
+## 5. 桌面后台部署
 ```bash
 cd /var/www/party-building/admin-web
 npm install
@@ -81,7 +82,19 @@ npm run dev:1919
 - `npm run preview:1919` 会提供挂载在 `/admin/` 下的静态预览服务
 - 反向代理需将 `/admin/` 转发到 Ubuntu 的 `127.0.0.1:1919`
 
-## 6. 环境变量
+## 6. 移动后台部署
+```bash
+cd /var/www/party-building/admin-mobile
+npm install
+npm run build
+```
+
+如需通过路径反代到移动后台，例如 `https://havensky.cn/m-admin/`：
+- `admin-mobile` 构建资源基址固定为 `/m-admin/`
+- `npm run preview:1919` 会提供挂载在 `/m-admin/` 下的静态预览服务
+- 反向代理需将 `/m-admin/` 转发到 Ubuntu 的 `127.0.0.1:1919`
+
+## 7. 环境变量
 - `PORT`：服务端监听端口
 - `NODE_ENV`：运行环境
 - `JWT_SECRET`：JWT 签名密钥
@@ -97,7 +110,7 @@ npm run dev:1919
 - `WECHAT_APP_SECRET`：微信小程序 AppSecret
 - `WECHAT_SESSION_SECRET`：微信 session_key 加密密钥
 
-## 7. 开发环境修复命令
+## 8. 开发环境修复命令
 重置演示/开发管理员账号：
 ```bash
 cd server
@@ -108,18 +121,18 @@ npm run reset-admin
 - 用户名：`admin`
 - 密码：`123456`
 
-## 8. frp 端口规划
+## 9. frp 端口规划
 - `1145 -> 3000`：服务端 API 穿透
-- `1919 -> 1919`：后台前端联调穿透
+- `1919 -> 1919`：移动后台前端联调穿透
 - 示例文件：`server/deploy/frpc.toml.example`
 - 数据库不建议通过 frp 暴露；Navicat 推荐走 VMware NAT、内网白名单或 SSH 隧道
 
-## 9. 文件上传目录
+## 10. 文件上传目录
 - 目录建议：`/data/party-building/uploads`
 - 确保 Node 进程对该目录有读写权限
 - 建议定期备份上传目录
 
-## 10. 发布与回滚
+## 11. 发布与回滚
 发布步骤：
 1. 拉取最新代码
 2. 安装依赖
@@ -132,11 +145,11 @@ npm run reset-admin
 2. 重新构建后台
 3. 重启 PM2 和 Nginx
 
-## 11. 生产建议
+## 12. 生产建议
 - 为 MySQL 配置定期备份
 - 为上传目录配置定期备份
 - 为 Nginx 和 Node 服务启用日志轮转
 - 后续建议接入对象存储和更强密码哈希算法
 
-## 12. 开发服务器清理记录
+## 13. 开发服务器清理记录
 具体清理记录已迁移到独立调试文档，仅保留项目部署说明。
