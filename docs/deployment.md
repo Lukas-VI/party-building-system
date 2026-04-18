@@ -19,6 +19,7 @@
 示例：
 - API：`https://havensky.cn/DJ_api`
 - Admin：`https://admin.your-domain.com`
+- 小程序内嵌后台入口：`adminWebUrl` 必须填写 HTTPS 地址
 
 开发联调阶段可先使用：
 - 可先使用局域网开发服务器进行联调
@@ -70,6 +71,11 @@ npm run build
 将构建产物通过 Nginx 托管，参考：
 - `server/deploy/nginx.conf.example`
 
+如需在 Ubuntu 开发服务器直接提供前端联调服务，可使用：
+```bash
+npm run dev:1919
+```
+
 ## 6. 环境变量
 - `PORT`：服务端监听端口
 - `NODE_ENV`：运行环境
@@ -86,12 +92,29 @@ npm run build
 - `WECHAT_APP_SECRET`：微信小程序 AppSecret
 - `WECHAT_SESSION_SECRET`：微信 session_key 加密密钥
 
-## 7. 文件上传目录
+## 7. 开发环境修复命令
+重置演示/开发管理员账号：
+```bash
+cd server
+npm run reset-admin
+```
+
+默认会重置为：
+- 用户名：`admin`
+- 密码：`123456`
+
+## 8. frp 端口规划
+- `1145 -> 3000`：服务端 API 穿透
+- `1919 -> 1919`：后台前端联调穿透
+- 示例文件：`server/deploy/frpc.toml.example`
+- 数据库不建议通过 frp 暴露；Navicat 推荐走 VMware NAT、内网白名单或 SSH 隧道
+
+## 9. 文件上传目录
 - 目录建议：`/data/party-building/uploads`
 - 确保 Node 进程对该目录有读写权限
 - 建议定期备份上传目录
 
-## 8. 发布与回滚
+## 10. 发布与回滚
 发布步骤：
 1. 拉取最新代码
 2. 安装依赖
@@ -104,11 +127,11 @@ npm run build
 2. 重新构建后台
 3. 重启 PM2 和 Nginx
 
-## 9. 生产建议
+## 11. 生产建议
 - 为 MySQL 配置定期备份
 - 为上传目录配置定期备份
 - 为 Nginx 和 Node 服务启用日志轮转
 - 后续建议接入对象存储和更强密码哈希算法
 
-## 10. 开发服务器清理记录
+## 12. 开发服务器清理记录
 具体清理记录已迁移到独立调试文档，仅保留项目部署说明。

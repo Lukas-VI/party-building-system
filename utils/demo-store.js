@@ -57,6 +57,20 @@ const DEMO_ACCOUNTS = [
     scopeLabel: '全校数据',
     currentStage: '全校统计',
   },
+  {
+    id: 'u-admin-001',
+    username: 'admin',
+    password: '123456',
+    name: 'Name',
+    role: 'superAdmin',
+    roleLabel: '超级管理员',
+    orgId: '',
+    orgName: '系统管理',
+    branchId: '',
+    branchName: '',
+    scopeLabel: '全局数据',
+    currentStage: '系统配置',
+  },
 ];
 
 const WORKFLOW_STEPS = [
@@ -119,25 +133,55 @@ function buildDefaultWorkflow() {
   });
 }
 
-function buildDefaultProfile() {
+function buildDefaultProfile(user) {
+  if (user.role === 'applicant') {
+    return {
+      name: 'Name',
+      idNo: '410123199910101234',
+      gender: '男',
+      ethnicity: '汉族',
+      nativePlace: '河南省新乡市',
+      birthPlace: '河南省新乡市',
+      phone: '13800001234',
+      education: '高中',
+      degree: '无',
+      occupation: '河南师范大学文学院汉语言文学专业2023级1班班长',
+      specialty: '写作、演讲',
+      unitName: '河南师范大学文学院',
+      leagueJoinDate: '2015-05',
+      resume: '2010.09-2016.06 新乡市实验小学 学生；2016.09-2022.06 新乡市第一中学 学生；2023.09至今 河南师范大学文学院 学生',
+      familyInfo: '家庭与社会关系材料待补充',
+      awards: '2024年校级优秀学生干部；2025年一等奖学金',
+    };
+  }
+  if (['branchSecretary', 'organizer'].includes(user.role)) {
+    return {
+      name: 'Name',
+      username: user.username,
+      phone: '13800004567',
+      orgName: user.orgName,
+      branchName: user.branchName,
+      roleLabel: user.roleLabel,
+      dutySummary: user.role === 'organizer' ? '负责本单位注册审核、流程推进与联系人分配。' : '负责支部级流程审核、支部大会材料核对与导出。',
+      workFocus: user.role === 'organizer' ? '重点跟进入党积极分子确定和发展对象培养环节。' : '重点跟进支部大会讨论、材料完整性与节点时限。',
+    };
+  }
   return {
     name: 'Name',
-    idNo: '410123199910101234',
-    gender: '男',
-    ethnicity: '汉族',
-    nativePlace: '河南省新乡市',
-    birthPlace: '河南省新乡市',
-    phone: '13800001234',
-    education: '高中',
-    degree: '无',
-    occupation: '河南师范大学文学院汉语言文学专业2023级1班班长',
-    specialty: '写作、演讲',
-    unitName: '河南师范大学文学院',
-    leagueJoinDate: '2015-05',
-    resume: '2010.09-2016.06 新乡市实验小学 学生；2016.09-2022.06 新乡市第一中学 学生；2023.09至今 河南师范大学文学院 学生',
-    familyInfo: '家庭与社会关系材料待补充',
-    awards: '2024年校级优秀学生干部；2025年一等奖学金',
+    username: user.username,
+    phone: '13800007890',
+    roleLabel: user.roleLabel,
+    scopeLabel: user.scopeLabel,
+    managementScope: user.role === 'superAdmin' ? '维护全局组织结构、角色权限与流程配置。' : '负责全校统计汇总、跨单位审核与数据导出。',
+    systemNote: user.role === 'superAdmin' ? '用于演示管理员配置流程与后台权限控制。' : '用于演示组织部全校统计与流程监管。',
   };
+}
+
+function buildDefaultProfiles() {
+  return DEMO_ACCOUNTS.reduce((result, user) => {
+    result[user.id] = buildDefaultProfile(user);
+    return result;
+  }, {});
 }
 
 function getStorage(key, fallback) {
@@ -158,11 +202,31 @@ function setStorage(key, value) {
 }
 
 function ensureSeed() {
-  if (!getStorage('dj_workflow_seeded', false)) {
-    setStorage('dj_accounts', DEMO_ACCOUNTS);
-    setStorage('dj_profile', buildDefaultProfile());
+  const seeded = getStorage('dj_workflow_seeded', false);
+  const storedAccounts = getStorage('dj_accounts', []);
+  const storedProfiles = getStorage('dj_profiles', {});
+  const mergedAccounts = DEMO_ACCOUNTS.map((account) => {
+    const existing = storedAccounts.find((item) => item.username === account.username);
+    return existing ? { ...account, ...existing } : account;
+  });
+  const mergedProfiles = {
+    ...buildDefaultProfiles(),
+    ...storedProfiles,
+  };
+  setStorage('dj_accounts', mergedAccounts);
+  setStorage('dj_profiles', mergedProfiles);
+  const currentUser = getStorage('dj_user', null);
+  if (currentUser?.username) {
+    const refreshedUser = mergedAccounts.find((item) => item.username === currentUser.username);
+    if (refreshedUser) {
+      setStorage('dj_user', refreshedUser);
+    }
+  }
+  if (!seeded) {
     setStorage('dj_workflow', buildDefaultWorkflow());
-    setStorage('dj_user', null);
+    if (!currentUser) {
+      setStorage('dj_user', null);
+    }
     setStorage('dj_registrations', []);
     setStorage('dj_workflow_seeded', true);
   }
@@ -223,14 +287,21 @@ function updateStep(stepCode, payload) {
   return getStep(stepCode);
 }
 
-function getProfile() {
+function getProfile(userId) {
   ensureSeed();
-  return getStorage('dj_profile', buildDefaultProfile());
+  const user = userId ? DEMO_ACCOUNTS.find((item) => item.id === userId) : getCurrentUser();
+  if (!user) return {};
+  const profiles = getStorage('dj_profiles', buildDefaultProfiles());
+  return profiles[user.id] || buildDefaultProfile(user);
 }
 
-function saveProfile(profile) {
-  const merged = { ...getProfile(), ...profile };
-  setStorage('dj_profile', merged);
+function saveProfile(profile, userId) {
+  const user = userId ? DEMO_ACCOUNTS.find((item) => item.id === userId) : getCurrentUser();
+  if (!user) return {};
+  const profiles = getStorage('dj_profiles', buildDefaultProfiles());
+  const merged = { ...getProfile(user.id), ...profile };
+  profiles[user.id] = merged;
+  setStorage('dj_profiles', profiles);
   return merged;
 }
 
@@ -250,16 +321,44 @@ function getDashboardData(user) {
   const approvedCount = workflow.filter((item) => item.status === 'approved').length;
   const reviewingCount = workflow.filter((item) => item.status === 'reviewing').length;
   const pendingCount = workflow.filter((item) => item.status === 'pending').length;
+  const branchApplicantCount = DEMO_ACCOUNTS.filter((item) => item.role === 'applicant' && item.branchId === user.branchId).length;
+  const orgApplicantCount = DEMO_ACCOUNTS.filter((item) => item.role === 'applicant' && item.orgId === user.orgId).length;
+  const totalApplicantCount = DEMO_ACCOUNTS.filter((item) => item.role === 'applicant').length;
+  let metrics = [];
+  if (user.role === 'applicant') {
+    metrics = [
+      { label: '已完成步骤', value: approvedCount, desc: '25 步流程累计' },
+      { label: '待审核事项', value: reviewingCount, desc: '当前待处理节点' },
+      { label: '待填写事项', value: pendingCount, desc: '申请人可继续完善' },
+      { label: '当前阶段', value: user.currentStage, desc: '发展党员流程所处阶段' },
+    ];
+  } else if (user.role === 'branchSecretary') {
+    metrics = [
+      { label: '支部申请人数', value: branchApplicantCount, desc: '本支部演示台账人数' },
+      { label: '支部待审', value: 2, desc: '需支部书记处理的节点' },
+      { label: '材料待补', value: 1, desc: '需督促补充的申请材料' },
+      { label: '查看范围', value: user.scopeLabel, desc: user.branchName || '本支部' },
+    ];
+  } else if (user.role === 'organizer') {
+    metrics = [
+      { label: '单位申请人数', value: orgApplicantCount, desc: '本单位演示台账人数' },
+      { label: '待注册审核', value: 1, desc: '首次注册待审核' },
+      { label: '流程待审', value: 4, desc: '需组织员推进的节点' },
+      { label: '查看范围', value: user.scopeLabel, desc: user.orgName || '本单位' },
+    ];
+  } else {
+    metrics = [
+      { label: '申请人数', value: totalApplicantCount, desc: '当前权限范围内台账人数' },
+      { label: '待注册审核', value: 1, desc: '首次注册待审核' },
+      { label: '待流程审核', value: 4, desc: '待审批节点数量' },
+      { label: '查看范围', value: user.scopeLabel, desc: user.orgName || '系统级数据范围' },
+    ];
+  }
   return {
     welcome: `${user.roleLabel} · ${user.name}`,
     scopeLabel: user.scopeLabel,
     currentStage: user.currentStage,
-    metrics: [
-      { label: '已完成步骤', value: approvedCount, desc: '25 步流程累计' },
-      { label: '待审核事项', value: reviewingCount, desc: '当前待处理节点' },
-      { label: '待填写事项', value: pendingCount, desc: '申请人可继续完善' },
-      { label: '查看范围', value: user.scopeLabel, desc: user.orgName || '系统级范围' },
-    ],
+    metrics,
   };
 }
 

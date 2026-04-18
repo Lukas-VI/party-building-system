@@ -230,18 +230,21 @@ function getMyProfile() {
   return runWithMode(() => {
     const user = getDemoUserOrThrow();
     return {
-      ...demoStore.getProfile(),
+      ...demoStore.getProfile(user.id),
       currentStage: user.currentStage || '入党积极分子',
       orgName: user.orgName || '文学院党委',
       branchName: user.branchName || '文学院学生第一党支部',
       username: user.username || '2023001',
+      roleLabel: user.roleLabel,
+      scopeLabel: user.scopeLabel,
     };
   }, () => request({ url: '/profile/me' }));
 }
 
 function updateMyProfile(payload) {
   return runWithMode(() => {
-    demoStore.saveProfile(payload);
+    const user = getDemoUserOrThrow();
+    demoStore.saveProfile(payload, user.id);
     return true;
   }, () => request({ url: '/profile/me', method: 'PUT', data: payload }));
 }

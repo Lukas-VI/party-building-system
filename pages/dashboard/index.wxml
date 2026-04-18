@@ -8,6 +8,7 @@
       <view class="badge badge-primary">{{dashboard.scopeLabel}}</view>
     </view>
     <view class="dashboard-stage">当前定位：{{dashboard.currentStage}}</view>
+    <view class="dashboard-summary">{{roleSummary}}</view>
     <view wx:if="{{themeMode === 'propaganda'}}" class="dashboard-banner">坚定理想信念  严格发展程序  强化过程留痕</view>
   </view>
 

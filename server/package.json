@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
-    "check": "node --check src/index.js"
+    "check": "node --check src/index.js",
+    "reset-admin": "node scripts/reset-admin-password.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
