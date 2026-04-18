@@ -18,7 +18,7 @@
 
 示例：
 - API：`https://havensky.cn/DJ_api`
-- Admin：`https://admin.your-domain.com`
+- Admin：`https://havensky.cn/admin/`
 - 小程序内嵌后台入口：`adminWebUrl` 必须填写 HTTPS 地址
 
 开发联调阶段可先使用：
@@ -75,6 +75,11 @@ npm run build
 ```bash
 npm run dev:1919
 ```
+
+如需通过路径反代到后台前端，例如 `https://havensky.cn/admin/`：
+- `admin-web` 构建资源基址需为 `/admin/`
+- Vite Preview 需允许目标域名访问，当前已放行 `havensky.cn`
+- 反向代理需将 `/admin/` 转发到 Ubuntu 的 `127.0.0.1:1919`
 
 ## 6. 环境变量
 - `PORT`：服务端监听端口

@@ -62,6 +62,9 @@ npm run dev
 ```bash
 npm run dev:1919
 ```
+如需通过 `https://域名/admin/` 反向代理到 Vite Preview：
+- `admin-web/vite.config.js` 已允许 `havensky.cn` 等主机访问
+- 后台构建资源基址已固定为 `/admin/`
 
 ### 3. 启动小程序
 - 使用微信开发者工具打开仓库根目录
@@ -82,7 +85,7 @@ npm run dev:1919
 - 个人资料页支持微信账号绑定与解绑
 - 演示场景下可直接使用内置样例数据完成流程展示
 - 管理角色可通过“小程序 > 工作台 > PC 后台”进入内嵌 `web-view` 后台入口
-- `web-view` 仅支持 HTTPS 后台地址，需在 `utils/config.js` 中配置 `adminWebUrl`
+- `web-view` 仅支持 HTTPS 后台地址，当前默认指向 `https://havensky.cn/admin/`
 - 个人资料页底部提供“更多选项”，可切换“样式1/样式2”
 
 ## 后台使用说明

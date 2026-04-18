@@ -4,17 +4,17 @@ const ENV = 'dev';
 const ENV_CONFIG = {
   demo: {
     apiBase: '',
-    adminWebUrl: '',
+    adminWebUrl: 'https://havensky.cn/admin/',
     modeLabel: '演示模式',
   },
   dev: {
     apiBase: 'https://havensky.cn/DJ_api',
-    adminWebUrl: '',
+    adminWebUrl: 'https://havensky.cn/admin/',
     modeLabel: '开发联调模式',
   },
   prod: {
     apiBase: 'https://havensky.cn/DJ_api',
-    adminWebUrl: '',
+    adminWebUrl: 'https://havensky.cn/admin/',
     modeLabel: '生产模式',
   },
 };
