@@ -32,6 +32,7 @@ const ROLE_OPTIONS = [
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem('dj_admin_token') || '');
   const [themeMode, setThemeMode] = useState(() => localStorage.getItem('dj_admin_theme') || 'classic');
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 860 : false));
   const [user, setUser] = useState(() => {
     const raw = localStorage.getItem('dj_admin_user');
     return raw ? JSON.parse(raw) : null;
@@ -101,6 +102,16 @@ function App() {
         setUser(null);
       });
   }, [token]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+    const handleResize = () => setIsMobile(window.innerWidth <= 860);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -251,11 +262,11 @@ function App() {
   }
 
   if (!user) {
-    return <LoginScreen onLogin={handleLogin} themeClass={themeClass} onToggleTheme={toggleThemeMode} />;
+    return <LoginScreen onLogin={handleLogin} themeClass={themeClass} onToggleTheme={toggleThemeMode} isMobile={isMobile} />;
   }
 
   return (
-    <div className={`admin-shell ${themeClass}`}>
+    <div className={`admin-shell ${themeClass} ${isMobile ? 'is-mobile' : ''}`}>
       <aside className="admin-sidebar">
         <div>
           <div className="brand-title">党员发展管理系统</div>
@@ -305,8 +316,8 @@ function App() {
               <MetricCard title="超期事项" value={overview.overdueItems} desc="超出配置截止时间的节点" />
             </div>
             <div className="split-grid">
-              <SimpleTableCard title="阶段分布" columns={['阶段', '人数']} rows={overview.stageDistribution.map((item) => [item.stage, item.count])} />
-              <SimpleTableCard title="单位统计" columns={['单位', '申请人数', '入门阶段', '重点审核']} rows={orgStats.map((item) => [item.orgName, item.applicants, item.pending, item.reviewing])} />
+              <SimpleTableCard title="阶段分布" columns={['阶段', '人数']} rows={overview.stageDistribution.map((item) => [item.stage, item.count])} compact={isMobile} />
+              <SimpleTableCard title="单位统计" columns={['单位', '申请人数', '入门阶段', '重点审核']} rows={orgStats.map((item) => [item.orgName, item.applicants, item.pending, item.reviewing])} compact={isMobile} />
             </div>
           </div>
         )}
@@ -455,8 +466,8 @@ function App() {
         {activeView === 'organizations' && (
           <div className="content-stack">
             <div className="split-grid">
-              <SimpleTableCard title="单位清单" columns={['单位名称']} rows={orgs.map((item) => [item.name])} />
-              <SimpleTableCard title="支部清单" columns={['支部名称', '所属单位']} rows={branches.map((item) => [item.name, orgs.find((org) => org.id === item.orgId)?.name || ''])} />
+              <SimpleTableCard title="单位清单" columns={['单位名称']} rows={orgs.map((item) => [item.name])} compact={isMobile} />
+              <SimpleTableCard title="支部清单" columns={['支部名称', '所属单位']} rows={branches.map((item) => [item.name, orgs.find((org) => org.id === item.orgId)?.name || ''])} compact={isMobile} />
             </div>
             <Card title="角色分配">
               <div className="filter-grid">
@@ -475,8 +486,8 @@ function App() {
               <MetricCard title="流程节点待审" value={overview?.pendingReviews || 0} desc="跨单位待办汇总" />
             </div>
             <div className="split-grid">
-              <SimpleTableCard title="按单位统计" columns={['单位', '申请人数', '入门阶段', '重点审核']} rows={orgStats.map((item) => [item.orgName, item.applicants, item.pending, item.reviewing])} />
-              <SimpleTableCard title="按支部统计" columns={['支部', '申请人数', '活跃流程数']} rows={branchStats.map((item) => [item.branchName, item.applicants, item.activeSteps])} />
+              <SimpleTableCard title="按单位统计" columns={['单位', '申请人数', '入门阶段', '重点审核']} rows={orgStats.map((item) => [item.orgName, item.applicants, item.pending, item.reviewing])} compact={isMobile} />
+              <SimpleTableCard title="按支部统计" columns={['支部', '申请人数', '活跃流程数']} rows={branchStats.map((item) => [item.branchName, item.applicants, item.activeSteps])} compact={isMobile} />
             </div>
           </div>
         )}
@@ -518,12 +529,12 @@ function App() {
   );
 }
 
-function LoginScreen({ onLogin, themeClass, onToggleTheme }) {
+function LoginScreen({ onLogin, themeClass, onToggleTheme, isMobile }) {
   const [username, setUsername] = useState('zz001');
   const [password, setPassword] = useState('123456');
 
   return (
-    <div className={`login-screen ${themeClass}`}>
+    <div className={`login-screen ${themeClass} ${isMobile ? 'is-mobile' : ''}`}>
       <div className="login-panel">
         <div>
           <div className="login-title">党员发展管理后台</div>
@@ -604,7 +615,25 @@ function GuidancePanel() {
   );
 }
 
-function SimpleTableCard({ title, columns, rows }) {
+function SimpleTableCard({ title, columns, rows, compact = false }) {
+  if (compact) {
+    return (
+      <Card title={title}>
+        <div className="simple-list">
+          {rows.map((row, index) => (
+            <div className="simple-list-card" key={`${title}-${index}`}>
+              {columns.map((column, columnIndex) => (
+                <div className="simple-list-row" key={`${column}-${columnIndex}`}>
+                  <div className="simple-list-label">{column}</div>
+                  <div className="simple-list-value">{row[columnIndex] || '-'}</div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </Card>
+    );
+  }
   return (
     <Card title={title}>
       <div className="table-scroll">

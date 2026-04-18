@@ -22,15 +22,14 @@
       <view class="page-title sample-title">演示账号</view>
       <view class="badge badge-primary">密码统一为 123456</view>
     </view>
-    <block wx:for="{{sampleAccounts}}" wx:key="username">
-      <view class="sample-item" data-username="{{item.username}}" bindtap="fillSample">
-        <view>
-          <view class="sample-name">{{item.roleLabel}} · {{item.name}}</view>
-          <view class="sample-desc">{{item.username}}</view>
+    <view class="sample-grid">
+      <block wx:for="{{sampleAccounts}}" wx:key="username">
+        <view class="sample-chip" data-username="{{item.username}}" bindtap="fillSample">
+          <view class="sample-chip-role">{{item.roleLabel}}</view>
+          <view class="sample-chip-account">{{item.username}}</view>
         </view>
-        <view class="link-text">填充</view>
-      </view>
-    </block>
+      </block>
+    </view>
   </view>
 
   <view class="footer-note">河南师范大学</view>
