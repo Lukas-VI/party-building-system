@@ -6,7 +6,7 @@ Page({
     src: '',
     invalidReason: '',
     pageTitle: 'PC 后台',
-    themeClass: 'theme-classic theme-light',
+    themeClass: 'theme-classic',
   },
 
   onLoad(options = {}) {

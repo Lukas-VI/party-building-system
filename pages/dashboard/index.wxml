@@ -38,5 +38,32 @@
     </block>
   </view>
 
+  <view class="section-card card">
+    <view class="page-title section-title">{{processGuidance.noticeTitle}}</view>
+    <view class="page-subtitle notice-intro">{{processGuidance.noticeIntro}}</view>
+    <block wx:for="{{processGuidance.rules}}" wx:key="*this">
+      <view class="notice-item">
+        <view class="notice-index">{{index + 1}}</view>
+        <view class="notice-text">{{item}}</view>
+      </view>
+    </block>
+  </view>
+
+  <view class="section-card card">
+    <view class="page-title section-title">流程示意</view>
+    <block wx:for="{{processGuidance.stages}}" wx:key="code">
+      <view class="flow-stage">
+        <view class="row-between flow-stage-header">
+          <view class="flow-stage-title">{{item.title}} · {{item.subtitle}}</view>
+          <view class="badge badge-primary">{{item.stepRange}}</view>
+        </view>
+        <view class="flow-stage-summary">{{item.summary}}</view>
+      </view>
+    </block>
+    <block wx:for="{{processGuidance.legends}}" wx:key="*this">
+      <view class="flow-legend">{{item}}</view>
+    </block>
+  </view>
+
   <button class="btn-ghost" style="margin-top: 24rpx;" bindtap="logout">退出登录</button>
 </view>
