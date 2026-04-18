@@ -15,6 +15,7 @@ Page({
   },
 
   async onLoad(options) {
+    theme.bindTheme(this);
     theme.applyTheme(this);
     const user = auth.requireLogin();
     if (!user) {
@@ -42,6 +43,10 @@ Page({
       wx.hideLoading();
       wx.showToast({ title: error.message || '加载失败', icon: 'none' });
     }
+  },
+
+  onUnload() {
+    theme.unbindTheme(this);
   },
 
   onInput(e) {

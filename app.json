@@ -1,5 +1,5 @@
 {
-  "darkmode": false,
+  "darkmode": true,
   "pages": [
     "pages/login/index",
     "pages/register/index",
