@@ -17,7 +17,7 @@
 - 小程序需要将 API 域名加入微信合法域名配置
 
 示例：
-- API：`https://api.your-domain.com`
+- API：`https://havensky.cn/DJ_api`
 - Admin：`https://admin.your-domain.com`
 
 开发联调阶段可先使用：
