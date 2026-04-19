@@ -23,7 +23,7 @@ const routes = [
 ];
 
 const router = createRouter({
-  history: createWebHashHistory('/m-admin/'),
+  history: createWebHashHistory('/web-admin/mobile/'),
   routes,
 });
 
