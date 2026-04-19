@@ -1,8 +1,9 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { showConfirmDialog } from 'vant';
 import { DESKTOP_ADMIN_URL } from '../config';
+import { isDesktopDevice, mobileToDesktopUrl, shouldSkipAutoRoute } from '../deviceRoute';
 import { clearSession, roleTabs, sessionState } from '../session';
 
 const route = useRoute();
@@ -32,6 +33,12 @@ async function handleLogout() {
 function openDesktop() {
   window.location.href = DESKTOP_ADMIN_URL;
 }
+
+onMounted(() => {
+  if (shouldSkipAutoRoute()) return;
+  if (!isDesktopDevice()) return;
+  window.location.replace(mobileToDesktopUrl());
+});
 </script>
 
 <template>

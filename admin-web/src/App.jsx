@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Input, MessagePlugin, Select, Space, Tag } from 'tdesign-react';
 import { PROCESS_GUIDANCE } from './processGuidance';
+import { desktopToMobileUrl, isMobileDevice, shouldSkipAutoRoute } from './deviceRoute';
 
 const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? 'https://havensky.cn/DJ_api' : '/DJ_api');
 const SAMPLE_ACCOUNTS = [
@@ -53,6 +54,15 @@ function App() {
   const [branchStats, setBranchStats] = useState([]);
   const [configs, setConfigs] = useState([]);
   const [assignForm, setAssignForm] = useState({ userId: '', roleId: 'branchSecretary' });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (shouldSkipAutoRoute()) return;
+    if (!isMobileDevice()) return;
+    const currentPath = window.location.pathname || '';
+    if (!currentPath.startsWith('/admin')) return;
+    window.location.replace(desktopToMobileUrl());
+  }, []);
 
   const menus = useMemo(() => {
     if (!user) return [];
