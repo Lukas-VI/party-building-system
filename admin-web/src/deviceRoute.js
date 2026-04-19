@@ -23,10 +23,10 @@ export function isMobileDevice() {
 
 export function desktopToMobileUrl() {
   if (typeof window === 'undefined') {
-    return '/m-admin/';
+    return '/web-admin/mobile/';
   }
   const url = new URL(window.location.href);
-  url.pathname = '/m-admin/';
+  url.pathname = '/web-admin/mobile/';
   url.hash = '';
   return url.toString();
 }

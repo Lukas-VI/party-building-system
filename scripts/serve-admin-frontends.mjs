@@ -6,8 +6,8 @@ const host = process.env.HOST || '0.0.0.0';
 const port = Number(process.env.PREVIEW_PORT || 1919);
 
 const mounts = [
-  { basePath: '/admin', distDir: resolve(process.cwd(), 'admin-web', 'dist') },
-  { basePath: '/m-admin', distDir: resolve(process.cwd(), 'admin-mobile', 'dist') },
+  { basePath: '/web-admin/desktop', distDir: resolve(process.cwd(), 'admin-web', 'dist') },
+  { basePath: '/web-admin/mobile', distDir: resolve(process.cwd(), 'admin-mobile', 'dist') },
 ];
 
 const mimeTypes = {
@@ -27,6 +27,10 @@ const mimeTypes = {
 
 function findMount(requestPath) {
   return mounts.find((mount) => requestPath === mount.basePath || requestPath.startsWith(`${mount.basePath}/`));
+}
+
+function isMobileDevice(userAgent = '') {
+  return /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(userAgent);
 }
 
 function sendFile(res, filePath) {
@@ -50,6 +54,26 @@ function resolveAsset(distDir, basePath, requestPath) {
 createServer((req, res) => {
   const requestUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const requestPath = requestUrl.pathname;
+
+  if (requestPath === '/web-admin' || requestPath === '/web-admin/') {
+    const target = isMobileDevice(req.headers['user-agent'] || '') ? '/web-admin/mobile/' : '/web-admin/desktop/';
+    res.writeHead(302, { Location: target });
+    res.end();
+    return;
+  }
+
+  if (requestPath === '/admin' || requestPath === '/admin/') {
+    res.writeHead(302, { Location: '/web-admin/desktop/' });
+    res.end();
+    return;
+  }
+
+  if (requestPath === '/m-admin' || requestPath === '/m-admin/') {
+    res.writeHead(302, { Location: '/web-admin/mobile/' });
+    res.end();
+    return;
+  }
+
   const mount = findMount(requestPath);
 
   if (!mount) {
