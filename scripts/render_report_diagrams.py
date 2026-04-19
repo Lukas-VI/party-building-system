@@ -102,22 +102,19 @@ def render_dfd():
     img = Image.new("RGB", (1800, 1120), COLOR_BG)
     draw = ImageDraw.Draw(img)
 
-    draw.text((56, 28), "数据流图（DFD，标准记法）", font=font(34, bold=True), fill=COLOR_PRIMARY)
-    draw.text((56, 76), "符号约定：矩形表示外部实体，圆形表示处理过程，开口矩形表示数据存储，箭头表示数据流。", font=font(18), fill=COLOR_SUB)
-
     externals = {
-        "e1": (70, 170, 250, 240, "外部实体 E1\n入党申请人"),
-        "e2": (70, 350, 250, 440, "外部实体 E2\n基层管理角色"),
-        "e3": (70, 540, 250, 620, "外部实体 E3\n组织部 / 超级管理员"),
+        "e1": (70, 140, 250, 210, "E1\n入党申请人"),
+        "e2": (70, 320, 250, 410, "E2\n基层管理角色"),
+        "e3": (70, 500, 250, 580, "E3\n组织部 / 超级管理员"),
     }
     processes = {
-        "p1": ((470, 210), 86, "P1\n小程序办理"),
-        "p2": ((470, 400), 86, "P2\n后台办理"),
-        "p3": ((930, 320), 110, "P3\n统一业务处理"),
+        "p1": ((470, 180), 86, "P1\n小程序办理"),
+        "p2": ((470, 370), 86, "P2\n后台办理"),
+        "p3": ((930, 280), 110, "P3\n统一业务处理"),
     }
     stores = {
-        "d1": (1300, 150, 1600, 240, "D1 业务数据库\nMySQL"),
-        "d2": (1300, 320, 1600, 410, "D2 附件存储\n上传文件目录"),
+        "d1": (1300, 120, 1600, 210, "D1 业务数据库\nMySQL"),
+        "d2": (1300, 300, 1600, 390, "D2 附件存储\n上传文件目录"),
     }
 
     for _, (x1, y1, x2, y2, text) in externals.items():
@@ -132,44 +129,33 @@ def render_dfd():
         draw_datastore(draw, (x1, y1, x2, y2))
         centered_text(draw, (x1 + 18, y1, x2, y2), text, font(21, bold=True), fill=COLOR_TEXT)
 
-    arrow(draw, (250, 205), (384, 205))
-    label(draw, (318, 186), "登录 / 填报 / 上传", 16)
+    arrow(draw, (250, 175), (384, 175))
+    label(draw, (318, 156), "登录 / 填报 / 上传", 16)
 
-    arrow(draw, (250, 395), (384, 395))
-    label(draw, (318, 374), "审核 / 查询 / 统计", 16)
+    arrow(draw, (250, 365), (384, 365))
+    label(draw, (318, 344), "审核 / 查询 / 统计", 16)
 
-    arrow(draw, (250, 580), (384, 430))
-    label(draw, (326, 520), "配置 / 导出 / 全局管理", 16)
+    arrow(draw, (250, 540), (384, 400))
+    label(draw, (326, 480), "配置 / 导出 / 全局管理", 16)
 
-    arrow(draw, (556, 250), (820, 290))
-    label(draw, (674, 248), "业务请求", 16)
+    arrow(draw, (556, 220), (820, 250))
+    label(draw, (674, 222), "业务请求", 16)
 
-    arrow(draw, (556, 400), (820, 350))
-    label(draw, (688, 378), "后台请求", 16)
+    arrow(draw, (556, 370), (820, 310))
+    label(draw, (688, 348), "后台请求", 16)
 
-    arrow(draw, (1040, 270), (1300, 195))
-    label(draw, (1172, 214), "业务数据读写", 16)
-    arrow(draw, (1300, 225), (1040, 300))
+    arrow(draw, (1040, 230), (1300, 165))
+    label(draw, (1172, 184), "业务数据读写", 16)
+    arrow(draw, (1300, 195), (1040, 260))
 
-    arrow(draw, (1040, 345), (1300, 365))
-    label(draw, (1172, 344), "附件读写", 16)
-    arrow(draw, (1300, 392), (1040, 380))
+    arrow(draw, (1040, 305), (1300, 345))
+    label(draw, (1172, 304), "附件读写", 16)
+    arrow(draw, (1300, 372), (1040, 340))
 
-    arrow(draw, (1040, 340), (384, 220))
-    label(draw, (710, 248), "查询结果 / 状态回显", 15)
-    arrow(draw, (1040, 390), (384, 455))
-    label(draw, (710, 452), "审核结果 / 统计结果 / 导出结果", 15)
-
-    note = (300, 760, 1680, 1020)
-    draw_box(draw, note, fill=COLOR_FILL, outline="#D7CCC8", width=2, radius=12)
-    draw.text((330, 790), "说明：", font=font(22, bold=True), fill=COLOR_PRIMARY)
-    lines = [
-        "1. 本图按 DFD 常规元素表达主链路，重点区分“外部实体、处理过程、数据存储、数据流”。",
-        "2. 为避免概念混淆，Excel 导出在本图中视为 P3 的输出结果，不单独作为数据存储绘制。",
-        "3. 当前图反映的是逻辑主流程，不代表备份、告警、异常补偿等运维链路已经全部实现。",
-        "4. 小程序与后台最终都通过统一业务处理过程访问数据库和附件存储，符合当前系统结构。",
-    ]
-    draw_multiline(draw, 335, 835, lines, font(18), fill=COLOR_TEXT, spacing=14)
+    arrow(draw, (1040, 300), (384, 190))
+    label(draw, (710, 218), "查询结果 / 状态回显", 15)
+    arrow(draw, (1040, 350), (384, 425))
+    label(draw, (710, 422), "审核结果 / 统计结果 / 导出结果", 15)
 
     img.save(OUT_DIR / "report-dfd.png", optimize=True)
 
@@ -178,26 +164,23 @@ def render_er():
     img = Image.new("RGB", (2200, 1500), COLOR_BG)
     draw = ImageDraw.Draw(img)
 
-    draw.text((40, 20), "实体关系图（ER，严格版）", font=font(34, bold=True), fill=COLOR_PRIMARY)
-    draw.text((40, 68), "表达方式：实体表 + 主键/外键字段 + 基数关系。仅绘制当前表结构中可明确成立的核心关系。", font=font(18), fill=COLOR_SUB)
-
     entities = {
-        "users": (40, 120, 320, 320, "USERS", ["PK id", "username", "password_hash", "name", "status", "FK org_id", "FK branch_id", "created_at"]),
-        "org_units": (430, 120, 650, 240, "ORG_UNITS", ["PK id", "name"]),
-        "branches": (760, 120, 1000, 260, "BRANCHES", ["PK id", "name", "FK org_id"]),
-        "roles": (40, 420, 260, 560, "ROLES", ["PK id", "label", "scope_level"]),
-        "user_roles": (340, 400, 620, 570, "USER_ROLES", ["PK id", "FK user_id", "FK role_id", "UNIQUE(user_id, role_id)"]),
-        "permissions": (720, 420, 940, 540, "PERMISSIONS", ["PK id", "label"]),
-        "role_permissions": (1040, 390, 1370, 590, "ROLE_PERMISSIONS", ["PK id", "FK role_id", "FK permission_id", "UNIQUE(role_id, permission_id)"]),
-        "registration_requests": (40, 650, 330, 880, "REGISTRATION_REQUESTS", ["PK id", "request_no", "FK user_id", "name", "id_no", "employee_no", "status", "created_at", "reviewed_at"]),
-        "applicant_profiles": (420, 650, 760, 930, "APPLICANT_PROFILES", ["PK id", "FK user_id", "current_stage", "phone", "education", "degree", "unit_name", "occupation", "profile_json", "updated_at"]),
-        "user_profiles": (860, 650, 1150, 850, "USER_PROFILES", ["PK id", "FK user_id", "profile_type", "profile_json", "updated_at"]),
-        "wechat_bindings": (1250, 650, 1600, 930, "WECHAT_BINDINGS", ["PK id", "FK user_id", "openid", "unionid", "session_key_encrypted", "nickname", "avatar_url", "status", "bound_at", "last_login_at"]),
-        "audit_logs": (40, 1040, 340, 1280, "AUDIT_LOGS", ["PK id", "target_type", "target_id", "action", "FK operator_id", "detail_json", "created_at"]),
-        "workflow_instances": (450, 1060, 760, 1220, "WORKFLOW_INSTANCES", ["PK id", "FK applicant_id", "current_stage", "updated_at"]),
-        "step_records": (860, 1020, 1180, 1280, "WORKFLOW_STEP_RECORDS", ["PK id", "FK instance_id", "FK step_code", "status", "form_data_json", "review_comment", "FK last_operator_id", "operated_at", "deadline"]),
-        "step_defs": (1280, 1020, 1640, 1260, "WORKFLOW_STEP_DEFINITIONS", ["PK step_code", "sort_order", "name", "phase", "allowed_roles_json", "form_schema_json", "start_at", "end_at"]),
-        "attachments": (860, 1330, 1160, 1490, "ATTACHMENTS", ["PK id", "FK step_record_id", "file_name", "file_url", "mime_type", "created_at"]),
+        "users": (40, 60, 320, 260, "USERS", ["PK id", "username", "password_hash", "name", "status", "FK org_id", "FK branch_id", "created_at"]),
+        "org_units": (430, 60, 650, 180, "ORG_UNITS", ["PK id", "name"]),
+        "branches": (760, 60, 1000, 200, "BRANCHES", ["PK id", "name", "FK org_id"]),
+        "roles": (40, 360, 260, 500, "ROLES", ["PK id", "label", "scope_level"]),
+        "user_roles": (340, 340, 620, 510, "USER_ROLES", ["PK id", "FK user_id", "FK role_id", "UNIQUE(user_id, role_id)"]),
+        "permissions": (720, 360, 940, 480, "PERMISSIONS", ["PK id", "label"]),
+        "role_permissions": (1040, 330, 1370, 530, "ROLE_PERMISSIONS", ["PK id", "FK role_id", "FK permission_id", "UNIQUE(role_id, permission_id)"]),
+        "registration_requests": (40, 590, 330, 820, "REGISTRATION_REQUESTS", ["PK id", "request_no", "FK user_id", "name", "id_no", "employee_no", "status", "created_at", "reviewed_at"]),
+        "applicant_profiles": (420, 590, 760, 870, "APPLICANT_PROFILES", ["PK id", "FK user_id", "current_stage", "phone", "education", "degree", "unit_name", "occupation", "profile_json", "updated_at"]),
+        "user_profiles": (860, 590, 1150, 790, "USER_PROFILES", ["PK id", "FK user_id", "profile_type", "profile_json", "updated_at"]),
+        "wechat_bindings": (1250, 590, 1600, 870, "WECHAT_BINDINGS", ["PK id", "FK user_id", "openid", "unionid", "session_key_encrypted", "nickname", "avatar_url", "status", "bound_at", "last_login_at"]),
+        "audit_logs": (40, 980, 340, 1220, "AUDIT_LOGS", ["PK id", "target_type", "target_id", "action", "FK operator_id", "detail_json", "created_at"]),
+        "workflow_instances": (450, 1000, 760, 1160, "WORKFLOW_INSTANCES", ["PK id", "FK applicant_id", "current_stage", "updated_at"]),
+        "step_records": (860, 960, 1180, 1220, "WORKFLOW_STEP_RECORDS", ["PK id", "FK instance_id", "FK step_code", "status", "form_data_json", "review_comment", "FK last_operator_id", "operated_at", "deadline"]),
+        "step_defs": (1280, 960, 1640, 1200, "WORKFLOW_STEP_DEFINITIONS", ["PK step_code", "sort_order", "name", "phase", "allowed_roles_json", "form_schema_json", "start_at", "end_at"]),
+        "attachments": (860, 1270, 1160, 1440, "ATTACHMENTS", ["PK id", "FK step_record_id", "file_name", "file_url", "mime_type", "created_at"]),
     }
 
     for _, (x1, y1, x2, y2, title, fields) in entities.items():
@@ -233,17 +216,6 @@ def render_er():
     relation([pt("workflow_instances", "right"), pt("step_records", "left")], "1", "N", (770, 1140), (850, 1140))
     relation([pt("step_defs", "left"), pt("step_records", "right")], "1", "N", (1270, 1140), (1190, 1140))
     relation([pt("step_records", "bottom"), pt("attachments", "top")], "1", "N", (1020, 1295), (1020, 1315))
-
-    note = (1680, 50, 2160, 250)
-    draw_box(draw, note, fill=COLOR_FILL, outline="#D7CCC8", width=2, radius=10)
-    draw.text((1710, 80), "读图说明：", font=font(22, bold=True), fill=COLOR_PRIMARY)
-    lines = [
-        "1. 本图只保留能够在当前表结构中严格成立的主外键关系。",
-        "2. AUDIT_LOGS 使用 target_type / target_id 多态指向目标，因此未把所有业务目标都画成硬外键。",
-        "3. USER_PROFILES 与 APPLICANT_PROFILES 已经分离，体现不同角色资料结构差异。",
-        "4. WORKFLOW_STEP_RECORDS 通过 instance_id 与 step_code 同时关联流程实例和步骤定义。",
-    ]
-    draw_multiline(draw, 1715, 122, lines, font(15), fill=COLOR_TEXT, spacing=10)
 
     img.save(OUT_DIR / "report-er.png", optimize=True)
 
