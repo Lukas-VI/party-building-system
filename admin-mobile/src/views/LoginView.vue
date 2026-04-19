@@ -1,8 +1,9 @@
 <script setup>
-import { reactive, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { showSuccessToast } from 'vant';
 import { loginByPassword } from '../api';
+import { isDesktopDevice, mobileToDesktopUrl, shouldSkipAutoRoute } from '../deviceRoute';
 import { setSession } from '../session';
 
 const router = useRouter();
@@ -35,6 +36,12 @@ function fillAccount(username) {
   form.username = username;
   form.password = '123456';
 }
+
+onMounted(() => {
+  if (shouldSkipAutoRoute()) return;
+  if (!isDesktopDevice()) return;
+  window.location.replace(mobileToDesktopUrl());
+});
 </script>
 
 <template>
