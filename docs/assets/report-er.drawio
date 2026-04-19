@@ -1,0 +1,125 @@
+<mxfile host="app.diagrams.net" modified="2026-04-19T16:10:00.000Z" agent="Codex" version="24.7.17">
+  <diagram id="report-er" name="ER">
+    <mxGraphModel dx="1660" dy="1080" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="1400" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="核心 ER 图（汇报简版）" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=24;fontStyle=1;fontColor=#8D1B1B;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="320" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="用于说明当前系统是否已经具备继续建设的发展党员流程基础数据模型。" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="58" width="460" height="24" as="geometry" />
+        </mxCell>
+
+        <mxCell id="users" value="USERS&#10;用户主表" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=18;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="120" width="170" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="org_units" value="ORG_UNITS&#10;二级单位" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=18;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="280" y="120" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="branches" value="BRANCHES&#10;党支部" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=18;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="550" y="120" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="roles" value="ROLES&#10;角色" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=18;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="280" width="170" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="user_roles" value="USER_ROLES&#10;用户角色关联" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=18;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="280" y="270" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="permissions" value="PERMISSIONS&#10;权限" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=18;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="550" y="280" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="role_permissions" value="ROLE_PERMISSIONS&#10;角色权限关联" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=18;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="790" y="270" width="230" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="registration_requests" value="REGISTRATION_REQUESTS&#10;注册申请" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=17;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="430" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="applicant_profiles" value="APPLICANT_PROFILES&#10;申请人资料" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=17;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="310" y="430" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="user_profiles" value="USER_PROFILES&#10;管理角色资料" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=17;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="590" y="430" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wechat_bindings" value="WECHAT_BINDINGS&#10;微信绑定" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=17;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="860" y="430" width="220" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="workflow_instances" value="WORKFLOW_INSTANCES&#10;流程实例" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=17;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="260" y="620" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="step_records" value="WORKFLOW_STEP_RECORDS&#10;步骤记录" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=17;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="560" y="620" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="step_defs" value="WORKFLOW_STEP_DEFINITIONS&#10;步骤定义" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=17;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="860" y="620" width="240" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="attachments" value="ATTACHMENTS&#10;附件" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=17;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="560" y="810" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="audit_logs" value="AUDIT_LOGS&#10;审计日志" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=17;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="860" y="810" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="note" value="&lt;b&gt;读图说明：&lt;/b&gt;&lt;br&gt;1. 当前数据模型已经覆盖角色、组织、资料、流程、附件和审计等核心实体。&lt;br&gt;2. 申请人资料与管理角色资料已经拆分，符合原始 Word 的资料口径差异要求。&lt;br&gt;3. 流程采用“实例 + 步骤定义 + 步骤记录”方式，技术上适合承接 25 步长流程。&lt;br&gt;4. 本图反映的是当前核心结构，不代表每个字段和每条业务规则都已完全固化。" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D7CCC8;fontColor=#333333;fontSize=15;align=left;spacingLeft=16;spacingRight=16;spacingTop=12;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="960" width="640" height="150" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eu1" value="belongs to" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#8D1B1B;fontColor=#666666;fontSize=13;" edge="1" parent="1" source="users" target="org_units">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eu2" value="contains" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#8D1B1B;fontColor=#666666;fontSize=13;" edge="1" parent="1" source="org_units" target="branches">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eu3" value="assigned to" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#8D1B1B;fontColor=#666666;fontSize=13;" edge="1" parent="1" source="roles" target="user_roles">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eu4" value="maps to" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#8D1B1B;fontColor=#666666;fontSize=13;" edge="1" parent="1" source="user_roles" target="permissions">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eu5" value="governed by" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#8D1B1B;fontColor=#666666;fontSize=13;" edge="1" parent="1" source="permissions" target="role_permissions">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eu6" value="submits" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#8D1B1B;fontColor=#666666;fontSize=13;" edge="1" parent="1" source="users" target="registration_requests">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eu7" value="owns" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#8D1B1B;fontColor=#666666;fontSize=13;" edge="1" parent="1" source="users" target="applicant_profiles">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eu8" value="maintains" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#8D1B1B;fontColor=#666666;fontSize=13;" edge="1" parent="1" source="users" target="user_profiles">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eu9" value="binds" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#8D1B1B;fontColor=#666666;fontSize=13;" edge="1" parent="1" source="users" target="wechat_bindings">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eu10" value="1:1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#8D1B1B;fontColor=#666666;fontSize=13;" edge="1" parent="1" source="applicant_profiles" target="workflow_instances">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eu11" value="contains" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#8D1B1B;fontColor=#666666;fontSize=13;" edge="1" parent="1" source="workflow_instances" target="step_records">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eu12" value="defined by" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#8D1B1B;fontColor=#666666;fontSize=13;" edge="1" parent="1" source="step_records" target="step_defs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eu13" value="includes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#8D1B1B;fontColor=#666666;fontSize=13;" edge="1" parent="1" source="step_records" target="attachments">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eu14" value="writes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#8D1B1B;fontColor=#666666;fontSize=13;" edge="1" parent="1" source="step_records" target="audit_logs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eu15" value="operates" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#8D1B1B;fontColor=#666666;fontSize=13;" edge="1" parent="1" source="users" target="audit_logs">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="210" y="180" />
+              <mxPoint x="210" y="850" />
+              <mxPoint x="860" y="850" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

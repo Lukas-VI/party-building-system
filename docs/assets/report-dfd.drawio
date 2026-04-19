@@ -1,0 +1,74 @@
+<mxfile host="app.diagrams.net" modified="2026-04-19T16:10:00.000Z" agent="Codex" version="24.7.17">
+  <diagram id="report-dfd" name="DFD">
+    <mxGraphModel dx="1660" dy="980" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="数据流图（DFD）" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=24;fontStyle=1;fontColor=#8D1B1B;" vertex="1" parent="1">
+          <mxGeometry x="50" y="26" width="260" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="当前阶段用于说明系统主链路、角色入口和数据归集方向。" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="50" y="64" width="420" height="24" as="geometry" />
+        </mxCell>
+
+        <mxCell id="applicant" value="入党申请人" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF0F0;strokeColor=#D32F2F;fontColor=#8D1B1B;fontStyle=1;fontSize=20;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="160" width="180" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="manager" value="支部书记 / 组织员 /&#10;书记 / 副书记" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF0F0;strokeColor=#D32F2F;fontColor=#8D1B1B;fontStyle=1;fontSize=18;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="320" width="180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="orgadmin" value="组织部 / 超级管理员" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF0F0;strokeColor=#D32F2F;fontColor=#8D1B1B;fontStyle=1;fontSize=18;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="490" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="miniapp" value="微信小程序" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=22;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="360" y="150" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="webadmin" value="后台管理端&#10;（桌面后台 / 移动后台）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=20;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="360" y="320" width="260" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="api" value="Node.js API 服务端" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDECEC;strokeColor=#B71C1C;fontColor=#8D1B1B;fontStyle=1;fontSize=22;strokeWidth=2;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="720" y="250" width="260" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="db" value="MySQL 数据库" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=20;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="120" width="170" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="upload" value="上传文件目录" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=20;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="290" width="170" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="export" value="Excel 导出模块" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D32F2F;fontColor=#333333;fontStyle=1;fontSize=20;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="460" width="170" height="72" as="geometry" />
+        </mxCell>
+
+        <mxCell id="note" value="&lt;b&gt;说明：&lt;/b&gt;&lt;br&gt;1. 申请人以小程序为主；基层管理角色可在小程序轻量办理，也可进入后台处理审核与统计。&lt;br&gt;2. 组织部和超级管理员以后台为主，不建议将复杂配置操作全部压到小程序端。&lt;br&gt;3. 所有核心业务数据最终归集到服务端，再写入数据库、上传目录和导出模块。&lt;br&gt;4. 当前图仅用于汇报主链路，不代表日志、备份和异常处理已完整建设。" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D7CCC8;fontColor=#333333;fontSize=16;align=left;spacingLeft=16;spacingRight=16;spacingTop=12;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="360" y="620" width="910" height="170" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" value="登录 / 提交 / 查询" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8D1B1B;fontColor=#666666;fontSize=14;" edge="1" parent="1" source="applicant" target="miniapp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="审核 / 查询 / 轻量办理" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8D1B1B;fontColor=#666666;fontSize=14;" edge="1" parent="1" source="manager" target="webadmin">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="统计 / 配置 / 导出" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8D1B1B;fontColor=#666666;fontSize=14;" edge="1" parent="1" source="orgadmin" target="webadmin">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="接口请求" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8D1B1B;fontColor=#666666;fontSize=14;" edge="1" parent="1" source="miniapp" target="api">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="后台请求" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8D1B1B;fontColor=#666666;fontSize=14;" edge="1" parent="1" source="webadmin" target="api">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="结构化业务数据" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8D1B1B;fontColor=#666666;fontSize=14;" edge="1" parent="1" source="api" target="db">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="附件文件与访问地址" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8D1B1B;fontColor=#666666;fontSize=14;" edge="1" parent="1" source="api" target="upload">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="统计报表与台账" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#8D1B1B;fontColor=#666666;fontSize=14;" edge="1" parent="1" source="api" target="export">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
