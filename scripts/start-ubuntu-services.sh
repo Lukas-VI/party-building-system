@@ -20,6 +20,19 @@ require_cmd node
 require_cmd npm
 require_cmd pm2
 
+kill_listener() {
+  local port="$1"
+  local pids
+  pids="$(ss -ltnp "( sport = :${port} )" 2>/dev/null | sed -n 's/.*pid=\([0-9]\+\).*/\1/p' | sort -u)"
+  if [ -n "${pids}" ]; then
+    echo "[info] freeing tcp:${port} -> ${pids}"
+    for pid in ${pids}; do
+      kill "$pid" || true
+    done
+    sleep 1
+  fi
+}
+
 wait_for_url() {
   local url="$1"
   local name="$2"
@@ -58,6 +71,9 @@ echo "[info] building admin-web"
 
 echo "[info] building admin-mobile"
 (cd "${ROOT_DIR}/admin-mobile" && npm run build)
+
+kill_listener 3000
+kill_listener 1919
 
 echo "[info] starting or restarting ${SERVER_NAME}"
 pm2 startOrRestart "${ROOT_DIR}/server/ecosystem.config.cjs" --only "${SERVER_NAME}"
