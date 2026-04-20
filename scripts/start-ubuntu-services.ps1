@@ -33,5 +33,6 @@ $remoteLines += "chmod +x '$RepoPath/scripts/start-ubuntu-services.sh'"
 $remoteLines += "'$RepoPath/scripts/start-ubuntu-services.sh'"
 
 $remoteScript = ($remoteLines -join "; ")
+$remoteScriptBase64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($remoteScript))
 
-ssh -i $KeyPath "$UserName@$HostName" "bash -lc $([System.Management.Automation.Language.CodeGeneration]::QuoteArgument($remoteScript))"
+ssh -i $KeyPath "$UserName@$HostName" "echo '$remoteScriptBase64' | base64 -d | bash"
