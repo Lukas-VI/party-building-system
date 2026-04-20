@@ -53,8 +53,20 @@ async function runSqlFile(fileName) {
   await raw(sql);
 }
 
+async function tableExists(tableName) {
+  const rows = await query(
+    `SELECT COUNT(*) AS total
+     FROM information_schema.tables
+     WHERE table_schema = DATABASE() AND table_name = :tableName`,
+    { tableName },
+  );
+  return Number(rows[0]?.total || 0) > 0;
+}
+
 async function ensureSeedData() {
-  await runSqlFile('mysql-init.sql');
+  if (!(await tableExists('roles'))) {
+    await runSqlFile('mysql-init.sql');
+  }
   const role = await first('SELECT id FROM roles LIMIT 1');
   if (role) {
     await ensureUserProfiles();
