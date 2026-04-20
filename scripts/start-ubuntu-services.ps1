@@ -29,8 +29,7 @@ if (-not $SkipPull) {
   $remoteLines += "git pull --ff-only origin '$Branch'"
 }
 
-$remoteLines += "chmod +x '$RepoPath/scripts/start-ubuntu-services.sh'"
-$remoteLines += "'$RepoPath/scripts/start-ubuntu-services.sh'"
+$remoteLines += "bash '$RepoPath/scripts/start-ubuntu-services.sh'"
 
 $remoteScript = ($remoteLines -join "; ")
 $remoteScriptBase64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($remoteScript))
