@@ -20,6 +20,25 @@ require_cmd node
 require_cmd npm
 require_cmd pm2
 
+wait_for_url() {
+  local url="$1"
+  local name="$2"
+  local retries="${3:-10}"
+  local delay="${4:-2}"
+
+  for ((i = 1; i <= retries; i++)); do
+    if curl -fsS "$url" >/dev/null 2>&1; then
+      echo "[info] ${name} ready: ${url}"
+      return 0
+    fi
+    echo "[info] waiting for ${name} (${i}/${retries})"
+    sleep "$delay"
+  done
+
+  echo "[error] ${name} not ready: ${url}" >&2
+  return 1
+}
+
 ensure_deps() {
   local dir="$1"
   if [ ! -d "${dir}/node_modules" ]; then
@@ -63,7 +82,9 @@ echo "[info] pm2 list"
 pm2 list
 
 echo "[info] local health checks"
-curl -fsS "http://127.0.0.1:3000/api/health" || true
+wait_for_url "http://127.0.0.1:3000/api/health" "server api"
+curl -fsS "http://127.0.0.1:3000/api/health"
 echo
-curl -I -fsS "http://127.0.0.1:1919/web-admin/" || true
+wait_for_url "http://127.0.0.1:1919/web-admin/" "admin gateway"
+curl -I -fsS "http://127.0.0.1:1919/web-admin/"
 echo
