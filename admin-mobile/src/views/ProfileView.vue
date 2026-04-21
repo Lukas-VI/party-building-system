@@ -1,13 +1,14 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 import { showSuccessToast } from 'vant';
-import { http } from '../api';
-import { DESKTOP_ADMIN_URL } from '../config';
+import { fetchMobileProfile, fetchWechatBindStatus, saveMobileProfile, startWechatOauth } from '../api';
 import { profileSchema } from '../role-schema';
 import { sessionState } from '../session';
 
 const loading = ref(false);
 const saving = ref(false);
+const oauthLoading = ref(false);
+const binding = ref({ bound: false, binding: null });
 const profile = reactive({});
 
 const sections = computed(() => profileSchema(profile.profileType || 'admin'));
@@ -15,7 +16,9 @@ const sections = computed(() => profileSchema(profile.profileType || 'admin'));
 async function loadProfile() {
   loading.value = true;
   try {
-    Object.assign(profile, await http.get('/profile/me'));
+    const [profileRes, bindRes] = await Promise.all([fetchMobileProfile(), fetchWechatBindStatus()]);
+    Object.assign(profile, profileRes);
+    binding.value = bindRes;
   } finally {
     loading.value = false;
   }
@@ -24,15 +27,21 @@ async function loadProfile() {
 async function saveProfile() {
   saving.value = true;
   try {
-    await http.put('/profile/me', profile);
+    await saveMobileProfile(profile);
     showSuccessToast('资料已保存');
   } finally {
     saving.value = false;
   }
 }
 
-function openDesktop() {
-  window.location.href = DESKTOP_ADMIN_URL;
+async function beginWechatOauth() {
+  oauthLoading.value = true;
+  try {
+    const result = await startWechatOauth('/wx-app/#/profile');
+    window.location.href = result.authorizeUrl;
+  } finally {
+    oauthLoading.value = false;
+  }
 }
 
 onMounted(loadProfile);
@@ -48,7 +57,18 @@ onMounted(loadProfile);
       <div class="section-card__bd">
         <div class="section-actions">
           <van-button type="danger" size="small" :loading="saving" @click="saveProfile">保存资料</van-button>
-          <van-button plain type="danger" size="small" @click="openDesktop">打开桌面后台</van-button>
+          <van-button plain type="danger" size="small" :loading="oauthLoading" @click="beginWechatOauth">
+            {{ binding.bound ? '重新发起微信授权' : '发起微信授权' }}
+          </van-button>
+        </div>
+        <div class="panel-note" style="margin-top: 12px;">
+          <div class="table-row__head">
+            <div class="table-row__title">微信绑定状态</div>
+            <span class="tag-pair">{{ binding.bound ? '已绑定' : '未绑定' }}</span>
+          </div>
+          <div class="panel-note__text">
+            {{ binding.bound ? `当前已绑定微信标识：${binding.binding?.openid || '已绑定'}` : '完成账号登录后，可通过微信网页授权入口建立绑定，用于服务号通知跳转。' }}
+          </div>
         </div>
       </div>
     </section>
@@ -72,7 +92,6 @@ onMounted(loadProfile);
             rows="3"
             autosize
             type="textarea"
-            :readonly="field.type === 'readonly'"
             :placeholder="`请填写${field.label}`"
           />
           <van-field

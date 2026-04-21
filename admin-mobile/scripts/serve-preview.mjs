@@ -4,7 +4,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 
 const host = process.env.HOST || '0.0.0.0';
 const port = Number(process.env.PREVIEW_PORT || 1919);
-const basePath = '/m-admin';
+const basePath = '/wx-app';
 const distDir = resolve(process.cwd(), 'dist');
 const indexHtml = readFileSync(join(distDir, 'index.html'));
 
@@ -65,5 +65,5 @@ createServer((req, res) => {
   }
   sendIndex(res);
 }).listen(port, host, () => {
-  console.log(`mobile admin preview server listening at http://${host}:${port}${basePath}/`);
+  console.log(`wechat workbench preview server listening at http://${host}:${port}${basePath}/`);
 });

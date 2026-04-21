@@ -10,6 +10,7 @@ const { env } = require('./env');
 const { query, first, getPool } = require('./db');
 const { ensureSeedData } = require('./seed');
 const { exchangeCode, encryptSessionKey, signBindToken, verifyBindToken } = require('./wechat');
+const { getStepDetail } = require('./workflow-config');
 
 const app = express();
 fs.mkdirSync(env.UPLOAD_DIR, { recursive: true });
@@ -401,6 +402,11 @@ async function getWorkflowByApplicantId(applicantId) {
      WHERE applicant_id = :applicantId`,
     { applicantId },
   );
+  if (!instance) {
+    const error = new Error('未找到对应流程');
+    error.status = 404;
+    throw error;
+  }
   const steps = await query(
     `SELECT
         r.id,
@@ -410,6 +416,13 @@ async function getWorkflowByApplicantId(applicantId) {
         d.phase,
         d.allowed_roles_json AS allowedRolesJson,
         d.form_schema_json AS formSchemaJson,
+        d.actor_type AS actorType,
+        d.responsible_roles_json AS responsibleRolesJson,
+        d.requires_applicant_action AS requiresApplicantAction,
+        d.requires_reviewer_action AS requiresReviewerAction,
+        d.notification_template AS notificationTemplate,
+        d.material_schema_json AS materialSchemaJson,
+        d.time_rule_json AS timeRuleJson,
         d.start_at AS startAt,
         d.end_at AS endAt,
         r.status,
@@ -419,13 +432,18 @@ async function getWorkflowByApplicantId(applicantId) {
         lu.name AS lastOperatorName,
         r.operated_at AS operatedAt,
         r.deadline,
+        r.task_status AS taskStatus,
+        r.confirmed_at AS confirmedAt,
+        r.reschedule_count AS rescheduleCount,
+        r.reschedule_history_json AS rescheduleHistoryJson,
         (
           SELECT JSON_ARRAYAGG(
             JSON_OBJECT(
               'id', a.id,
               'fileName', a.file_name,
               'fileUrl', a.file_url,
-              'mimeType', a.mime_type
+              'mimeType', a.mime_type,
+              'materialTag', a.material_tag
             )
           )
           FROM attachments a
@@ -444,8 +462,13 @@ async function getWorkflowByApplicantId(applicantId) {
       ...item,
       allowedRoles: parseJson(item.allowedRolesJson, []),
       formSchema: parseJson(item.formSchemaJson, {}),
+      responsibleRoles: parseJson(item.responsibleRolesJson, []),
+      materialSchema: parseJson(item.materialSchemaJson, []),
+      timeRule: parseJson(item.timeRuleJson, {}),
       formData: parseJson(item.formDataJson, {}),
       attachments: parseJson(item.attachmentsJson, []),
+      rescheduleHistory: parseJson(item.rescheduleHistoryJson, []),
+      taskMeta: getStepDetail(item.stepCode, parseJson(item.responsibleRolesJson || item.allowedRolesJson, [])),
       statusText: statusText(item.status),
       statusClassName: statusClass(item.status),
     })),
@@ -480,6 +503,284 @@ async function dashboardForUser(user) {
     ],
     stageDistribution: Object.entries(stageMap).map(([stage, count]) => ({ stage, count })),
   };
+}
+
+function currentRoleIds(user) {
+  return (user.roles || []).map((item) => item.id);
+}
+
+function primaryRoleLabel(user) {
+  return user.roles?.[0]?.label || '系统用户';
+}
+
+function isApplicantActor(user, applicantId, step) {
+  return user.primaryRole === 'applicant' && user.id === applicantId && Number(step.requiresApplicantAction || step.taskMeta?.requiresApplicantAction || 0) === 1;
+}
+
+function isReviewerActor(user, step) {
+  if (user.primaryRole === 'applicant') return false;
+  const responsibleRoles = step.responsibleRoles?.length ? step.responsibleRoles : step.taskMeta?.responsibleRoles || step.allowedRoles || [];
+  return responsibleRoles.some((roleId) => currentRoleIds(user).includes(roleId)) && Number(step.requiresReviewerAction || step.taskMeta?.requiresReviewerAction || 0) === 1;
+}
+
+function mobileTaskStatus(step) {
+  if (step.taskStatus) return step.taskStatus;
+  if (step.status === 'approved') return 'done';
+  if (step.status === 'reviewing') return 'in_review';
+  if (step.status === 'rejected' || step.status === 'terminated') return 'blocked';
+  if (step.status === 'locked') return 'waiting';
+  return 'open';
+}
+
+function buildTodoItem(user, applicant, workflow, step) {
+  const taskOwner = isApplicantActor(user, applicant.userId || applicant.id, step) ? '申请人' : '审核者';
+  return {
+    workflowId: applicant.userId || applicant.id,
+    taskId: step.stepCode,
+    applicantId: applicant.userId || applicant.id,
+    applicantName: applicant.name,
+    stepCode: step.stepCode,
+    stepName: step.name,
+    phase: step.phase,
+    status: step.status,
+    statusText: step.statusText,
+    taskStatus: mobileTaskStatus(step),
+    actorType: step.actorType || step.taskMeta?.actorType || 'reviewer',
+    taskOwner,
+    summary: step.taskMeta?.taskSummary || '请按要求完成当前节点办理。',
+    requiresApplicantAction: Number(step.requiresApplicantAction || step.taskMeta?.requiresApplicantAction || 0) === 1,
+    requiresReviewerAction: Number(step.requiresReviewerAction || step.taskMeta?.requiresReviewerAction || 0) === 1,
+    canSubmit: isApplicantActor(user, applicant.userId || applicant.id, step),
+    canReview: isReviewerActor(user, step),
+    canReschedule: step.stepCode === 'STEP_02' && (isApplicantActor(user, applicant.userId || applicant.id, step) || isReviewerActor(user, step)),
+    materialSchema: step.materialSchema || step.taskMeta?.materialSchema || [],
+    attachments: step.attachments || [],
+    formData: step.formData || {},
+    rescheduleHistory: step.rescheduleHistory || [],
+    operatedAt: step.operatedAt,
+    confirmedAt: step.confirmedAt,
+    reviewComment: step.reviewComment,
+    currentStage: workflow.instance?.currentStage || applicant.currentStage || '',
+  };
+}
+
+async function listMobileTodos(user) {
+  const applicants = user.primaryRole === 'applicant'
+    ? [{ ...(await getApplicantProfileByUserId(user.id)), id: user.id, userId: user.id }]
+    : await getApplicants(user, {});
+
+  const todos = [];
+  for (const applicant of applicants.filter(Boolean)) {
+    const workflow = await getWorkflowByApplicantId(applicant.userId || applicant.id);
+    for (const step of workflow.steps) {
+      const visibleToApplicant = isApplicantActor(user, applicant.userId || applicant.id, step) && ['pending', 'rejected'].includes(step.status);
+      const visibleToReviewer = isReviewerActor(user, step) && ['reviewing', 'pending'].includes(step.status);
+      if (!visibleToApplicant && !visibleToReviewer) continue;
+      todos.push(buildTodoItem(user, applicant, workflow, step));
+    }
+  }
+  return todos.sort((left, right) => {
+    const leftValue = left.operatedAt || '9999-12-31 23:59:59';
+    const rightValue = right.operatedAt || '9999-12-31 23:59:59';
+    return leftValue.localeCompare(rightValue);
+  });
+}
+
+async function listNotifications(user, limit = 20) {
+  const rows = await query(
+    `SELECT
+        id,
+        type,
+        title,
+        content,
+        related_step_code AS relatedStepCode,
+        related_target_type AS relatedTargetType,
+        related_target_id AS relatedTargetId,
+        status,
+        created_at AS createdAt
+     FROM notifications
+     WHERE user_id = :userId
+     ORDER BY created_at DESC
+     LIMIT ${Number(limit)}`,
+    { userId: user.id },
+  );
+  return rows;
+}
+
+async function createNotification(userId, type, title, content, relatedStepCode = null, relatedTargetType = null, relatedTargetId = null) {
+  const createdAt = now();
+  await query(
+    `INSERT INTO notifications
+     (user_id, type, title, content, related_step_code, related_target_type, related_target_id, status, created_at)
+     VALUES (:userId, :type, :title, :content, :relatedStepCode, :relatedTargetType, :relatedTargetId, 'unread', :createdAt)`,
+    { userId, type, title, content, relatedStepCode, relatedTargetType, relatedTargetId, createdAt },
+  );
+}
+
+async function recentAuditLogs(user, limit = 8) {
+  const rows = await query(
+    `SELECT
+        action,
+        target_type AS targetType,
+        target_id AS targetId,
+        created_at AS createdAt,
+        detail_json AS detailJson
+     FROM audit_logs
+     WHERE operator_id = :userId
+     ORDER BY created_at DESC
+     LIMIT ${Number(limit)}`,
+    { userId: user.id },
+  );
+  return rows.map((item) => ({
+    ...item,
+    detail: parseJson(item.detailJson, {}),
+  }));
+}
+
+async function buildMobileWorkflow(user, applicantId) {
+  if (user.primaryRole !== 'applicant' && !(await canAccessApplicant(user, applicantId))) {
+    const error = new Error('无权查看该流程');
+    error.status = 403;
+    throw error;
+  }
+  const applicant = await getApplicantProfileByUserId(applicantId);
+  const workflow = await getWorkflowByApplicantId(applicantId);
+  const currentStep = workflow.steps.find((item) => ['pending', 'reviewing', 'rejected'].includes(item.status)) || workflow.steps[0];
+  const completedSteps = workflow.steps.filter((item) => item.status === 'approved');
+  const todoSteps = workflow.steps
+    .filter((item) => ['pending', 'reviewing', 'rejected'].includes(item.status))
+    .map((item) => buildTodoItem(user, { ...applicant, userId: applicantId }, workflow, item));
+  return {
+    applicant: {
+      userId: applicantId,
+      name: applicant?.name || user.name,
+      username: applicant?.username || user.username,
+      orgName: applicant?.orgName || user.orgName,
+      branchName: applicant?.branchName || user.branchName,
+      currentStage: applicant?.currentStage || workflow.instance?.currentStage || '',
+      phone: applicant?.phone || '',
+    },
+    workflowId: applicantId,
+    currentStage: workflow.instance?.currentStage || '',
+    currentStep: currentStep ? buildTodoItem(user, { ...applicant, userId: applicantId }, workflow, currentStep) : null,
+    completedSteps: completedSteps.map((item) => ({
+      stepCode: item.stepCode,
+      name: item.name,
+      phase: item.phase,
+      operatedAt: item.operatedAt,
+      lastOperatorName: item.lastOperatorName,
+      statusText: item.statusText,
+    })),
+    steps: workflow.steps.map((item) => buildTodoItem(user, { ...applicant, userId: applicantId }, workflow, item)),
+    todos: todoSteps,
+  };
+}
+
+async function buildMobileWorkbench(user) {
+  const dashboard = await dashboardForUser(user);
+  const todos = await listMobileTodos(user);
+  const messages = await listNotifications(user, 5);
+  const logs = await recentAuditLogs(user, 5);
+  const workflowId = user.primaryRole === 'applicant' ? user.id : (todos[0]?.workflowId || null);
+  const workflow = workflowId ? await buildMobileWorkflow(user, workflowId) : null;
+  return {
+    currentUser: {
+      userId: user.id,
+      name: user.name,
+      username: user.username,
+      primaryRole: user.primaryRole,
+      roleLabel: primaryRoleLabel(user),
+      orgName: user.orgName || '',
+      branchName: user.branchName || '',
+      scopeLabel: roleScopeLabel(user),
+    },
+    metrics: dashboard.metrics,
+    nextTask: todos[0] || null,
+    process: workflow
+      ? {
+          currentStage: workflow.currentStage,
+          currentStep: workflow.currentStep,
+          completedCount: workflow.completedSteps.length,
+          totalCount: workflow.steps.length,
+        }
+      : null,
+    todos: todos.slice(0, 6),
+    messages,
+    recentLogs: logs,
+  };
+}
+
+function resolveMobileWorkflowId(user, workflowId) {
+  return workflowId === 'me' ? user.id : workflowId;
+}
+
+function ageFromIdNo(idNo) {
+  if (!/^\d{17}[\dXx]$/.test(idNo || '')) return null;
+  const birth = `${idNo.slice(6, 10)}-${idNo.slice(10, 12)}-${idNo.slice(12, 14)}`;
+  const birthDate = new Date(`${birth}T00:00:00+08:00`);
+  if (Number.isNaN(birthDate.getTime())) return null;
+  const nowDate = new Date();
+  let age = nowDate.getFullYear() - birthDate.getFullYear();
+  const monthGap = nowDate.getMonth() - birthDate.getMonth();
+  if (monthGap < 0 || (monthGap === 0 && nowDate.getDate() < birthDate.getDate())) age -= 1;
+  return age;
+}
+
+async function ensureAdultApplicant(applicantId) {
+  const request = await first(
+    `SELECT id_no AS idNo
+     FROM registration_requests
+     WHERE user_id = :userId
+     ORDER BY id DESC
+     LIMIT 1`,
+    { userId: applicantId },
+  );
+  const age = ageFromIdNo(request?.idNo || '');
+  if (age !== null && age < 18) {
+    const error = new Error('未满18周岁，不能提交入党申请');
+    error.status = 400;
+    throw error;
+  }
+}
+
+async function getUserScopeById(userId) {
+  return first(
+    `SELECT id, org_id AS orgId, branch_id AS branchId
+     FROM users
+     WHERE id = :userId`,
+    { userId },
+  );
+}
+
+function roleMatchesApplicantScope(candidate, applicant) {
+  if (candidate.scopeLevel === 'all') return true;
+  if (candidate.scopeLevel === 'org') return Boolean(candidate.orgId && candidate.orgId === applicant.orgId);
+  if (candidate.scopeLevel === 'branch') return Boolean(candidate.branchId && candidate.branchId === applicant.branchId);
+  if (candidate.scopeLevel === 'self') return candidate.id === applicant.id;
+  return false;
+}
+
+async function notificationRecipientsForStep(step, applicantId, excludeUserIds = []) {
+  const applicantScope = await getUserScopeById(applicantId);
+  const roleIds = step.responsibleRoles?.length ? step.responsibleRoles : step.taskMeta?.responsibleRoles || [];
+  if (!roleIds.length) return [];
+  const rows = await query(
+    `SELECT DISTINCT
+        u.id,
+        u.org_id AS orgId,
+        u.branch_id AS branchId,
+        r.id AS roleId,
+        r.scope_level AS scopeLevel
+     FROM users u
+     INNER JOIN user_roles ur ON ur.user_id = u.id
+     INNER JOIN roles r ON r.id = ur.role_id
+     WHERE r.id IN (${roleIds.map((_, index) => `:roleId${index}`).join(', ')})`,
+    Object.fromEntries(roleIds.map((roleId, index) => [`roleId${index}`, roleId])),
+  );
+  return rows
+    .filter((row) => roleMatchesApplicantScope(row, applicantScope))
+    .filter((row) => !excludeUserIds.includes(row.id))
+    .map((row) => row.id);
 }
 
 function fileUrl(fileName) {
@@ -688,6 +989,337 @@ app.post('/api/wechat/unbind', requireAuth(), async (req, res) => {
     ok(res, true, '微信账号已解绑');
   } catch (error) {
     fail(res, 500, error.message);
+  }
+});
+
+app.get('/api/wechat/oauth/start', async (req, res) => {
+  try {
+    if (!env.WECHAT_SERVICE_APP_ID || !env.WECHAT_SERVICE_REDIRECT_URI) {
+      return fail(res, 501, '微信服务号网页授权配置未完成');
+    }
+    const statePayload = Buffer.from(
+      JSON.stringify({
+        redirectPath: req.query.redirectPath || '/wx-app/',
+        t: Date.now(),
+      }),
+      'utf8',
+    ).toString('base64url');
+    const authorizeUrl =
+      `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${encodeURIComponent(env.WECHAT_SERVICE_APP_ID)}` +
+      `&redirect_uri=${encodeURIComponent(env.WECHAT_SERVICE_REDIRECT_URI)}` +
+      '&response_type=code&scope=snsapi_base' +
+      `&state=${encodeURIComponent(statePayload)}#wechat_redirect`;
+    ok(res, { authorizeUrl });
+  } catch (error) {
+    fail(res, error.status || 500, error.message);
+  }
+});
+
+app.get('/api/wechat/oauth/callback', async (req, res) => {
+  try {
+    if (!env.WECHAT_SERVICE_APP_ID || !env.WECHAT_SERVICE_APP_SECRET) {
+      return fail(res, 501, '微信服务号网页授权配置未完成');
+    }
+    const { code, state = '' } = req.query || {};
+    if (!code) return fail(res, 400, '缺少微信授权 code');
+    const tokenUrl =
+      `https://api.weixin.qq.com/sns/oauth2/access_token?appid=${encodeURIComponent(env.WECHAT_SERVICE_APP_ID)}` +
+      `&secret=${encodeURIComponent(env.WECHAT_SERVICE_APP_SECRET)}` +
+      `&code=${encodeURIComponent(code)}&grant_type=authorization_code`;
+    const response = await fetch(tokenUrl);
+    const data = await response.json();
+    if (!response.ok || data.errcode) {
+      return fail(res, 400, data.errmsg || '微信网页授权失败');
+    }
+    let redirectPath = '/wx-app/';
+    try {
+      redirectPath = JSON.parse(Buffer.from(String(state), 'base64url').toString('utf8')).redirectPath || redirectPath;
+    } catch (error) {
+      redirectPath = '/wx-app/';
+    }
+    ok(res, {
+      openid: data.openid,
+      unionid: data.unionid || '',
+      redirectPath,
+    });
+  } catch (error) {
+    fail(res, error.status || 500, error.message);
+  }
+});
+
+app.get('/api/mobile/workbench', requireAuth(), async (req, res) => {
+  try {
+    ok(res, await buildMobileWorkbench(req.user));
+  } catch (error) {
+    fail(res, error.status || 500, error.message);
+  }
+});
+
+app.get('/api/mobile/todos', requireAuth(), async (req, res) => {
+  try {
+    ok(res, await listMobileTodos(req.user));
+  } catch (error) {
+    fail(res, error.status || 500, error.message);
+  }
+});
+
+app.get('/api/mobile/messages', requireAuth(), async (req, res) => {
+  try {
+    ok(res, await listNotifications(req.user, 50));
+  } catch (error) {
+    fail(res, error.status || 500, error.message);
+  }
+});
+
+app.get('/api/mobile/profile', requireAuth(), async (req, res) => {
+  try {
+    ok(res, await getProfileViewByUser(req.user));
+  } catch (error) {
+    fail(res, error.status || 500, error.message);
+  }
+});
+
+app.put('/api/mobile/profile', requireAuth(), async (req, res) => {
+  try {
+    const payload = req.body || {};
+    await upsertUserProfile(req.user, payload);
+    if (req.user.primaryRole === 'applicant') {
+      await query(
+        `UPDATE applicant_profiles
+         SET phone = :phone,
+             education = :education,
+             degree = :degree,
+             unit_name = :unitName,
+             occupation = :occupation,
+             profile_json = :profileJson,
+             updated_at = :updatedAt
+         WHERE user_id = :userId`,
+        {
+          phone: payload.phone || '',
+          education: payload.education || '',
+          degree: payload.degree || '',
+          unitName: payload.unitName || '',
+          occupation: payload.occupation || '',
+          profileJson: JSON.stringify(payload),
+          updatedAt: now(),
+          userId: req.user.id,
+        },
+      );
+    }
+    await logAudit('mobile_profile', req.user.id, 'save_mobile_profile', req.user.id, payload);
+    ok(res, true, '资料已保存');
+  } catch (error) {
+    fail(res, error.status || 500, error.message);
+  }
+});
+
+app.get('/api/mobile/workflows/:workflowId', requireAuth(), async (req, res) => {
+  try {
+    const applicantId = resolveMobileWorkflowId(req.user, req.params.workflowId);
+    ok(res, await buildMobileWorkflow(req.user, applicantId));
+  } catch (error) {
+    fail(res, error.status || 500, error.message);
+  }
+});
+
+app.post('/api/mobile/workflows/:workflowId/tasks/:taskId/submit', requireAuth(), async (req, res) => {
+  try {
+    const applicantId = resolveMobileWorkflowId(req.user, req.params.workflowId);
+    const workflow = await getWorkflowByApplicantId(applicantId);
+    const step = workflow.steps.find((item) => item.stepCode === req.params.taskId);
+    if (!step) return fail(res, 404, '未找到对应任务');
+    if (!isApplicantActor(req.user, applicantId, step)) return fail(res, 403, '当前账号不能提交该任务');
+    if (step.stepCode === 'STEP_01') {
+      await ensureAdultApplicant(applicantId);
+    }
+    const mergedFormData = {
+      ...step.formData,
+      ...(req.body.formData || req.body || {}),
+    };
+    await query(
+      `UPDATE workflow_step_records
+       SET status = 'reviewing',
+           task_status = 'in_review',
+           form_data_json = :formDataJson,
+           review_comment = :reviewComment,
+           last_operator_id = :operatorId,
+           operated_at = :operatedAt
+       WHERE id = :id`,
+      {
+        formDataJson: JSON.stringify(mergedFormData),
+        reviewComment: req.body.reviewComment || '',
+        operatorId: req.user.id,
+        operatedAt: now(),
+        id: step.id,
+      },
+    );
+    await logAudit('workflow_step_records', step.id, 'mobile_submit_task', req.user.id, req.body || {});
+    const recipients = await notificationRecipientsForStep(step, applicantId, [req.user.id]);
+    for (const userId of recipients) {
+      await createNotification(
+        userId,
+        'task_submitted',
+        `${step.name}待处理`,
+        `${req.user.name}已提交“${step.name}”，请按流程要求及时处理。`,
+        step.stepCode,
+        'workflow',
+        applicantId,
+      );
+    }
+    ok(res, true, '任务已提交');
+  } catch (error) {
+    fail(res, error.status || 500, error.message);
+  }
+});
+
+app.post('/api/mobile/workflows/:workflowId/tasks/:taskId/review', requireAuth(), async (req, res) => {
+  try {
+    const applicantId = resolveMobileWorkflowId(req.user, req.params.workflowId);
+    const workflow = await getWorkflowByApplicantId(applicantId);
+    const step = workflow.steps.find((item) => item.stepCode === req.params.taskId);
+    if (!step) return fail(res, 404, '未找到对应任务');
+    if (!isReviewerActor(req.user, step)) return fail(res, 403, '当前账号不能审核该任务');
+    const nextStatus = req.body.status || 'approved';
+    await query(
+      `UPDATE workflow_step_records
+       SET status = :status,
+           task_status = :taskStatus,
+           review_comment = :reviewComment,
+           last_operator_id = :operatorId,
+           operated_at = :operatedAt,
+           confirmed_at = :confirmedAt
+       WHERE id = :id`,
+      {
+        status: nextStatus,
+        taskStatus: nextStatus === 'approved' ? 'done' : nextStatus === 'rejected' ? 'blocked' : 'in_review',
+        reviewComment: req.body.comment || '',
+        operatorId: req.user.id,
+        operatedAt: now(),
+        confirmedAt: nextStatus === 'approved' ? now() : null,
+        id: step.id,
+      },
+    );
+    await logAudit('workflow_step_records', step.id, 'mobile_review_task', req.user.id, req.body || {});
+    await createNotification(
+      applicantId,
+      'task_reviewed',
+      `${step.name}${nextStatus === 'approved' ? '已通过' : '需补充'}`,
+      nextStatus === 'approved' ? `“${step.name}”已审核通过，请关注下一步通知。` : `“${step.name}”已退回，请根据意见补充材料。`,
+      step.stepCode,
+      'workflow',
+      applicantId,
+    );
+    ok(res, true, '审核结果已保存');
+  } catch (error) {
+    fail(res, error.status || 500, error.message);
+  }
+});
+
+app.post('/api/mobile/workflows/:workflowId/tasks/:taskId/reschedule', requireAuth(), async (req, res) => {
+  try {
+    const applicantId = resolveMobileWorkflowId(req.user, req.params.workflowId);
+    const workflow = await getWorkflowByApplicantId(applicantId);
+    const step = workflow.steps.find((item) => item.stepCode === req.params.taskId);
+    if (!step) return fail(res, 404, '未找到对应任务');
+    if (step.stepCode !== 'STEP_02') return fail(res, 400, '当前任务不支持改期');
+    if (!(isApplicantActor(req.user, applicantId, step) || isReviewerActor(req.user, step))) {
+      return fail(res, 403, '当前账号不能调整该任务时间');
+    }
+    const nextHistory = [
+      ...(step.rescheduleHistory || []),
+      {
+        operatorId: req.user.id,
+        operatorName: req.user.name,
+        requestedAt: now(),
+        scheduledAt: req.body.scheduledAt || '',
+        location: req.body.location || '',
+        reason: req.body.reason || '',
+      },
+    ];
+    await query(
+      `UPDATE workflow_step_records
+       SET task_status = 'reschedule_requested',
+           form_data_json = :formDataJson,
+           reschedule_count = :rescheduleCount,
+           reschedule_history_json = :rescheduleHistoryJson,
+           last_operator_id = :operatorId,
+           operated_at = :operatedAt
+       WHERE id = :id`,
+      {
+        formDataJson: JSON.stringify({
+          ...step.formData,
+          meetingProposal: {
+            scheduledAt: req.body.scheduledAt || '',
+            location: req.body.location || '',
+            reason: req.body.reason || '',
+          },
+        }),
+        rescheduleCount: Number(step.rescheduleCount || 0) + 1,
+        rescheduleHistoryJson: JSON.stringify(nextHistory),
+        operatorId: req.user.id,
+        operatedAt: now(),
+        id: step.id,
+      },
+    );
+    await logAudit('workflow_step_records', step.id, 'mobile_reschedule_task', req.user.id, req.body || {});
+    const recipients = await notificationRecipientsForStep(step, applicantId, [req.user.id]);
+    for (const userId of recipients) {
+      await createNotification(
+        userId,
+        'reschedule_requested',
+        '谈话时间变更待确认',
+        `${req.user.name}提交了新的谈话安排，请尽快确认或调整。`,
+        step.stepCode,
+        'workflow',
+        applicantId,
+      );
+    }
+    ok(res, true, '改期申请已提交');
+  } catch (error) {
+    fail(res, error.status || 500, error.message);
+  }
+});
+
+app.post('/api/mobile/files/upload', requireAuth(), upload.single('file'), async (req, res) => {
+  try {
+    const { workflowId = '', stepCode = '', materialTag = '' } = req.body || {};
+    let attachmentId = null;
+    if (workflowId && stepCode) {
+      const applicantId = resolveMobileWorkflowId(req.user, workflowId);
+      if (req.user.primaryRole !== 'applicant' && !(await canAccessApplicant(req.user, applicantId))) {
+        return fail(res, 403, '无权上传该流程材料');
+      }
+      const instance = await first('SELECT id FROM workflow_instances WHERE applicant_id = :applicantId', { applicantId });
+      const stepRecord = await first(
+        'SELECT id FROM workflow_step_records WHERE instance_id = :instanceId AND step_code = :stepCode',
+        { instanceId: instance.id, stepCode },
+      );
+      if (stepRecord) {
+        const inserted = await query(
+          `INSERT INTO attachments (step_record_id, file_name, file_url, mime_type, material_tag, created_at)
+           VALUES (:stepRecordId, :fileName, :fileUrl, :mimeType, :materialTag, :createdAt)`,
+          {
+            stepRecordId: stepRecord.id,
+            fileName: req.file.originalname,
+            fileUrl: fileUrl(req.file.filename),
+            mimeType: req.file.mimetype,
+            materialTag,
+            createdAt: now(),
+          },
+        );
+        attachmentId = inserted.insertId;
+      }
+    }
+    ok(res, {
+      attachmentId,
+      fileName: req.file.originalname,
+      fileUrl: fileUrl(req.file.filename),
+      mimeType: req.file.mimetype,
+      materialTag,
+      storageName: req.file.filename,
+    });
+  } catch (error) {
+    fail(res, error.status || 500, error.message);
   }
 });
 

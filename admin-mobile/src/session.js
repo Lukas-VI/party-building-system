@@ -1,7 +1,8 @@
 import { computed, reactive } from 'vue';
+import { DESKTOP_ADMIN_URL } from './config';
 
-const TOKEN_KEY = 'dj_mobile_admin_token';
-const USER_KEY = 'dj_mobile_admin_user';
+const TOKEN_KEY = 'dj_wx_app_token';
+const USER_KEY = 'dj_wx_app_user';
 
 function readUser() {
   const raw = localStorage.getItem(USER_KEY);
@@ -34,33 +35,37 @@ export function clearSession() {
   localStorage.removeItem(USER_KEY);
 }
 
-export function roleTabs(user) {
-  if (!user) return [];
-  if (user.primaryRole === 'applicant') {
-    return [
-      { name: 'dashboard', label: '工作台', icon: 'wap-home-o' },
-      { name: 'profile', label: '资料', icon: 'contact-o' },
-    ];
-  }
-  return [
-    { name: 'dashboard', label: '工作台', icon: 'wap-home-o' },
-    { name: 'applicants', label: '台账', icon: 'friends-o' },
-    { name: 'reviews', label: '审核', icon: 'todo-list-o' },
-    { name: 'profile', label: '我的', icon: 'contact-o' },
-  ];
+export function isApplicant(user) {
+  return user?.primaryRole === 'applicant';
 }
 
-export function roleActions(user) {
-  if (!user) return [];
-  if (user.primaryRole === 'applicant') {
+export function roleTabs(user) {
+  const baseTabs = [
+    { name: 'workbench', label: '工作台', icon: 'wap-home-o' },
+    { name: 'messages', label: '消息', icon: 'bell' },
+    { name: 'profile', label: '我的', icon: 'contact-o' },
+  ];
+  if (isApplicant(user)) {
+    baseTabs.splice(2, 0, { name: 'materials', label: '材料', icon: 'description' });
+  }
+  return baseTabs;
+}
+
+export function primaryRoleLabel(user) {
+  return user?.roles?.[0]?.label || '系统角色';
+}
+
+export function workbenchActions(user) {
+  if (isApplicant(user)) {
     return [
-      { title: '我的资料', desc: '维护个人基础信息与材料', route: '/profile' },
-      { title: '桌面后台', desc: '打开桌面端正式后台', external: true },
+      { title: '我的流程', desc: '查看当前步骤、已完成步骤和后续要求', route: '/workflow/me' },
+      { title: '我的材料', desc: '按步骤维护入党申请书、政审材料和补交附件', route: '/materials' },
+      { title: '我的资料', desc: '维护基础信息、本人经历和关键联系方式', route: '/profile' },
     ];
   }
   return [
-    { title: '申请人台账', desc: '查看权限范围内的人员与阶段', route: '/applicants' },
-    { title: '待办审核', desc: '集中处理流程待审节点', route: '/reviews' },
-    { title: '桌面后台', desc: '打开桌面端正式后台', external: true },
+    { title: '待办工作', desc: '集中处理待审核、待确认和待通知任务', route: '/workbench' },
+    { title: '消息提醒', desc: '查看节点提醒、审核结果和改期通知', route: '/messages' },
+    { title: '桌面后台', desc: '进入 PC 端处理台账、统计和复杂配置', external: DESKTOP_ADMIN_URL },
   ];
 }
