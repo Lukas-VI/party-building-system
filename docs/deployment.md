@@ -12,20 +12,19 @@
 - [开发调试记录](dev-notes.md)
 
 ## 2. 域名与 HTTPS
-- 小程序服务端必须使用已备案并配置 HTTPS 的域名
+- 微信服务号网页 App 和服务端必须使用已备案并配置 HTTPS 的域名
 - 后台管理端建议使用独立二级域名
-- 小程序需要将 API 域名加入微信合法域名配置
+- 服务号网页 App 入口建议固定为 `https://域名/wx-app/`
 
 示例：
 - API：`https://havensky.cn/DJ_api`
 - 统一后台入口：`https://havensky.cn/web-admin/`
 - 桌面后台实际路径：`https://havensky.cn/web-admin/desktop/`
-- 移动后台实际路径：`https://havensky.cn/web-admin/mobile/`
-- 小程序内嵌后台入口：`adminWebUrl` 必须填写 HTTPS 地址，建议直接指向统一后台入口
+- 服务号网页 App 实际路径：`https://havensky.cn/wx-app/`
 
 开发联调阶段可先使用：
 - 可先使用局域网开发服务器进行联调
-- 小程序真机测试仍需 HTTPS 合法域名
+- 微信内真机测试仍需 HTTPS 合法域名
 
 ## 3. 数据库准备
 创建数据库：
@@ -81,15 +80,15 @@ npm run dev:1919
 桌面后台构建资源基址固定为：
 - `/web-admin/desktop/`
 
-## 6. 移动后台部署
+## 6. 服务号网页 App 部署
 ```bash
 cd /var/www/party-building/admin-mobile
 npm install
 npm run build
 ```
 
-移动后台构建资源基址固定为：
-- `/web-admin/mobile/`
+服务号网页 App 构建资源基址固定为：
+- `/wx-app/`
 
 ## 7. 统一后台网关
 为避免桌面后台与移动后台争用同一个 `1919` 端口，仓库根目录提供统一网关脚本：
@@ -99,15 +98,14 @@ node scripts/serve-admin-frontends.mjs
 ```
 
 该脚本会：
-- 在 `1919` 端口同时托管 `/web-admin/desktop/` 与 `/web-admin/mobile/`
+- 在 `1919` 端口同时托管 `/web-admin/desktop/` 与 `/wx-app/`
 - 自动将 `/web-admin/` 按设备类型分流
-- 兼容旧路径 `/admin/` 和 `/m-admin/`，并重定向到新路径
+- 兼容旧路径 `/admin/`、`/m-admin/` 和 `/web-admin/mobile/`，并重定向到新路径
 
 公网服务器推荐反代规则：
 - `/DJ_api/` -> `http://127.0.0.1:1145/api/`
 - `/web-admin/` -> `http://127.0.0.1:1919/web-admin/`
-- `/admin/` -> `http://127.0.0.1:1919/admin/`
-- `/m-admin/` -> `http://127.0.0.1:1919/m-admin/`
+- `/wx-app/` -> `http://127.0.0.1:1919/wx-app/`
 
 ## 8. 环境变量
 - `PORT`：服务端监听端口
@@ -121,8 +119,11 @@ node scripts/serve-admin-frontends.mjs
 - `UPLOAD_DIR`：上传文件存储目录
 - `PUBLIC_BASE_URL`：服务公网访问地址
 - `CORS_ORIGINS`：允许访问后台的前端域名
-- `WECHAT_APP_ID`：微信小程序 AppID
-- `WECHAT_APP_SECRET`：微信小程序 AppSecret
+- `WECHAT_APP_ID`：兼容旧微信绑定流程的 AppID
+- `WECHAT_APP_SECRET`：兼容旧微信绑定流程的 AppSecret
+- `WECHAT_SERVICE_APP_ID`：服务号网页授权 AppID
+- `WECHAT_SERVICE_APP_SECRET`：服务号网页授权 AppSecret
+- `WECHAT_SERVICE_REDIRECT_URI`：服务号网页授权回调地址
 - `WECHAT_SESSION_SECRET`：微信 session_key 加密密钥
 
 ## 9. 开发环境修复命令
@@ -138,7 +139,7 @@ npm run reset-admin
 
 ## 10. frp 端口规划
 - `1145 -> 3000`：服务端 API 穿透
-- `1919 -> 1919`：移动后台前端联调穿透
+- `1919 -> 1919`：服务号网页 App / 统一前端网关联调穿透
 - 示例文件：`server/deploy/frpc.toml.example`
 - 数据库不建议通过 frp 暴露；Navicat 推荐走 VMware NAT、内网白名单或 SSH 隧道
 

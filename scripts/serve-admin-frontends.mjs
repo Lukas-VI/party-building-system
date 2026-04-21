@@ -7,7 +7,7 @@ const port = Number(process.env.PREVIEW_PORT || 1919);
 
 const mounts = [
   { basePath: '/web-admin/desktop', distDir: resolve(process.cwd(), 'admin-web', 'dist') },
-  { basePath: '/web-admin/mobile', distDir: resolve(process.cwd(), 'admin-mobile', 'dist') },
+  { basePath: '/wx-app', distDir: resolve(process.cwd(), 'admin-mobile', 'dist') },
 ];
 
 const mimeTypes = {
@@ -56,7 +56,7 @@ createServer((req, res) => {
   const requestPath = requestUrl.pathname;
 
   if (requestPath === '/web-admin' || requestPath === '/web-admin/') {
-    const target = isMobileDevice(req.headers['user-agent'] || '') ? '/web-admin/mobile/' : '/web-admin/desktop/';
+    const target = isMobileDevice(req.headers['user-agent'] || '') ? '/wx-app/' : '/web-admin/desktop/';
     res.writeHead(302, { Location: target });
     res.end();
     return;
@@ -69,7 +69,13 @@ createServer((req, res) => {
   }
 
   if (requestPath === '/m-admin' || requestPath === '/m-admin/') {
-    res.writeHead(302, { Location: '/web-admin/mobile/' });
+    res.writeHead(302, { Location: '/wx-app/' });
+    res.end();
+    return;
+  }
+
+  if (requestPath === '/web-admin/mobile' || requestPath === '/web-admin/mobile/') {
+    res.writeHead(302, { Location: '/wx-app/' });
     res.end();
     return;
   }

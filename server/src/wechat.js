@@ -4,7 +4,7 @@ const { env } = require('./env');
 
 function ensureWechatConfigured() {
   if (!env.WECHAT_APP_ID || !env.WECHAT_APP_SECRET) {
-    const error = new Error('微信小程序配置未完成');
+    const error = new Error('微信授权配置未完成');
     error.status = 501;
     throw error;
   }

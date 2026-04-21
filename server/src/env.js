@@ -25,6 +25,9 @@ const env = {
   ALLOW_ALL_CORS: process.env.ALLOW_ALL_CORS === 'true' || process.env.NODE_ENV === 'development',
   WECHAT_APP_ID: process.env.WECHAT_APP_ID || '',
   WECHAT_APP_SECRET: process.env.WECHAT_APP_SECRET || '',
+  WECHAT_SERVICE_APP_ID: process.env.WECHAT_SERVICE_APP_ID || process.env.WECHAT_APP_ID || '',
+  WECHAT_SERVICE_APP_SECRET: process.env.WECHAT_SERVICE_APP_SECRET || process.env.WECHAT_APP_SECRET || '',
+  WECHAT_SERVICE_REDIRECT_URI: process.env.WECHAT_SERVICE_REDIRECT_URI || '',
   WECHAT_SESSION_SECRET: process.env.WECHAT_SESSION_SECRET || process.env.JWT_SECRET || 'change-this-secret',
 };
 
