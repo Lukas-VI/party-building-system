@@ -2,6 +2,17 @@ import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 
+/**
+ * 前端统一网关。
+ *
+ * 设计目标：
+ * - PC 后台继续挂在 /web-admin/desktop/
+ * - 服务号网页 App 挂在 /wx-app/
+ * - 统一由同一个 1919 入口对外暴露，便于 frp 和反代维护
+ *
+ * 当前这是项目自定义胶水层，不属于框架脚手架。
+ * 变更路径规则时，应同步更新部署文档和移动/桌面端配置。
+ */
 const host = process.env.HOST || '0.0.0.0';
 const port = Number(process.env.PREVIEW_PORT || 1919);
 

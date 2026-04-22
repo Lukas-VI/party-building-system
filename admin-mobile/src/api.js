@@ -3,6 +3,16 @@ import { showFailToast } from 'vant';
 import { API_BASE } from './config';
 import { clearSession, sessionState } from './session';
 
+/**
+ * 服务号网页 App 统一 API 层。
+ *
+ * 当前不在页面组件里直接写 fetch / axios 请求，
+ * 目的是把移动端入口、鉴权和接口演进都集中到这里管理。
+ *
+ * 关联文档：
+ * - docs/maintenance-notes.md
+ * - docs/project-overview.md
+ */
 export const http = axios.create({
   baseURL: API_BASE,
   timeout: 20000,
