@@ -124,6 +124,8 @@ npm run dev:1919
 详细步骤见：
 - [部署文档](docs/deployment.md)
 - [项目总览](docs/project-overview.md)
+- [电子档案整理](docs/electronic-dossier.md)
+- [模块维护说明](docs/maintenance-notes.md)
 - [开发调试记录](docs/dev-notes.md)
 
 ## 当前实现状态

@@ -1,6 +1,18 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
 import { isLoggedIn, roleTabs, sessionState } from './session';
 
+/**
+ * 服务号网页 App 路由入口。
+ *
+ * 当前沿用稳定的 Vue Router + Hash History 方案，是为了：
+ * - 适配微信内 H5 和简单反代部署
+ * - 避免把业务路径规则散落到多个组件中
+ *
+ * 关联文档：
+ * - docs/project-overview.md
+ * - docs/maintenance-notes.md
+ * - docs/electronic-dossier.md
+ */
 const routes = [
   {
     path: '/login',
