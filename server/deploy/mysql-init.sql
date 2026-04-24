@@ -92,6 +92,13 @@ CREATE TABLE IF NOT EXISTS workflow_step_definitions (
   phase VARCHAR(64) NOT NULL,
   allowed_roles_json LONGTEXT NOT NULL,
   form_schema_json LONGTEXT NOT NULL,
+  actor_type VARCHAR(32) NULL,
+  responsible_roles_json LONGTEXT NULL,
+  requires_applicant_action TINYINT(1) NOT NULL DEFAULT 0,
+  requires_reviewer_action TINYINT(1) NOT NULL DEFAULT 0,
+  notification_template VARCHAR(255) NULL,
+  material_schema_json LONGTEXT NULL,
+  time_rule_json LONGTEXT NULL,
   start_at DATE NULL,
   end_at DATE NULL
 );
@@ -106,6 +113,10 @@ CREATE TABLE IF NOT EXISTS workflow_step_records (
   last_operator_id VARCHAR(64) NULL,
   operated_at DATETIME NULL,
   deadline DATE NULL,
+  task_status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  confirmed_at DATETIME NULL,
+  reschedule_count INT NOT NULL DEFAULT 0,
+  reschedule_history_json LONGTEXT NULL,
   UNIQUE KEY uk_instance_step (instance_id, step_code)
 );
 
@@ -115,6 +126,7 @@ CREATE TABLE IF NOT EXISTS attachments (
   file_name VARCHAR(255) NOT NULL,
   file_url VARCHAR(512) NOT NULL,
   mime_type VARCHAR(128) NULL,
+  material_tag VARCHAR(64) NULL,
   created_at DATETIME NOT NULL
 );
 
@@ -141,4 +153,28 @@ CREATE TABLE IF NOT EXISTS wechat_bindings (
   last_login_at DATETIME NULL,
   UNIQUE KEY uk_wechat_user (user_id),
   UNIQUE KEY uk_wechat_openid (openid)
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id VARCHAR(64) NOT NULL,
+  type VARCHAR(64) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  content TEXT NOT NULL,
+  related_step_code VARCHAR(32) NULL,
+  related_target_type VARCHAR(64) NULL,
+  related_target_id VARCHAR(64) NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'unread',
+  created_at DATETIME NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS notification_receipts (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  notification_id BIGINT NOT NULL,
+  user_id VARCHAR(64) NOT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'sent',
+  clicked_at DATETIME NULL,
+  processed_at DATETIME NULL,
+  created_at DATETIME NOT NULL,
+  UNIQUE KEY uk_notification_receipt (notification_id, user_id)
 );

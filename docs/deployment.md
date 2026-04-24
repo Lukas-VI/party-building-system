@@ -12,18 +12,19 @@
 - [开发调试记录](dev-notes.md)
 
 ## 2. 域名与 HTTPS
-- 小程序服务端必须使用已备案并配置 HTTPS 的域名
+- 微信服务号网页 App 和服务端必须使用已备案并配置 HTTPS 的域名
 - 后台管理端建议使用独立二级域名
-- 小程序需要将 API 域名加入微信合法域名配置
+- 服务号网页 App 入口建议固定为 `https://域名/wx-app/`
 
 示例：
 - API：`https://havensky.cn/DJ_api`
-- Admin：`https://havensky.cn/admin/`
-- 小程序内嵌后台入口：`adminWebUrl` 必须填写 HTTPS 地址
+- 统一后台入口：`https://havensky.cn/web-admin/`
+- 桌面后台实际路径：`https://havensky.cn/web-admin/desktop/`
+- 服务号网页 App 实际路径：`https://havensky.cn/wx-app/`
 
 开发联调阶段可先使用：
 - 可先使用局域网开发服务器进行联调
-- 小程序真机测试仍需 HTTPS 合法域名
+- 微信内真机测试仍需 HTTPS 合法域名
 
 ## 3. 数据库准备
 创建数据库：
@@ -61,7 +62,7 @@ npm install -g pm2
 
 当前开发服务器可用性状态请记录在单独调试文档中。
 
-## 5. 后台部署
+## 5. 桌面后台部署
 ```bash
 cd /var/www/party-building/admin-web
 npm install
@@ -76,12 +77,37 @@ npm run build
 npm run dev:1919
 ```
 
-如需通过路径反代到后台前端，例如 `https://havensky.cn/admin/`：
-- `admin-web` 构建资源基址需为 `/admin/`
-- `npm run preview:1919` 会提供挂载在 `/admin/` 下的静态预览服务
-- 反向代理需将 `/admin/` 转发到 Ubuntu 的 `127.0.0.1:1919`
+桌面后台构建资源基址固定为：
+- `/web-admin/desktop/`
 
-## 6. 环境变量
+## 6. 服务号网页 App 部署
+```bash
+cd /var/www/party-building/admin-mobile
+npm install
+npm run build
+```
+
+服务号网页 App 构建资源基址固定为：
+- `/wx-app/`
+
+## 7. 统一后台网关
+为避免桌面后台与移动后台争用同一个 `1919` 端口，仓库根目录提供统一网关脚本：
+
+```bash
+node scripts/serve-admin-frontends.mjs
+```
+
+该脚本会：
+- 在 `1919` 端口同时托管 `/web-admin/desktop/` 与 `/wx-app/`
+- 自动将 `/web-admin/` 按设备类型分流
+- 兼容旧路径 `/admin/`、`/m-admin/` 和 `/web-admin/mobile/`，并重定向到新路径
+
+公网服务器推荐反代规则：
+- `/DJ_api/` -> `http://127.0.0.1:1145/api/`
+- `/web-admin/` -> `http://127.0.0.1:1919/web-admin/`
+- `/wx-app/` -> `http://127.0.0.1:1919/wx-app/`
+
+## 8. 环境变量
 - `PORT`：服务端监听端口
 - `NODE_ENV`：运行环境
 - `JWT_SECRET`：JWT 签名密钥
@@ -93,11 +119,14 @@ npm run dev:1919
 - `UPLOAD_DIR`：上传文件存储目录
 - `PUBLIC_BASE_URL`：服务公网访问地址
 - `CORS_ORIGINS`：允许访问后台的前端域名
-- `WECHAT_APP_ID`：微信小程序 AppID
-- `WECHAT_APP_SECRET`：微信小程序 AppSecret
+- `WECHAT_APP_ID`：兼容旧微信绑定流程的 AppID
+- `WECHAT_APP_SECRET`：兼容旧微信绑定流程的 AppSecret
+- `WECHAT_SERVICE_APP_ID`：服务号网页授权 AppID
+- `WECHAT_SERVICE_APP_SECRET`：服务号网页授权 AppSecret
+- `WECHAT_SERVICE_REDIRECT_URI`：服务号网页授权回调地址
 - `WECHAT_SESSION_SECRET`：微信 session_key 加密密钥
 
-## 7. 开发环境修复命令
+## 9. 开发环境修复命令
 重置演示/开发管理员账号：
 ```bash
 cd server
@@ -108,18 +137,18 @@ npm run reset-admin
 - 用户名：`admin`
 - 密码：`123456`
 
-## 8. frp 端口规划
+## 10. frp 端口规划
 - `1145 -> 3000`：服务端 API 穿透
-- `1919 -> 1919`：后台前端联调穿透
+- `1919 -> 1919`：服务号网页 App / 统一前端网关联调穿透
 - 示例文件：`server/deploy/frpc.toml.example`
 - 数据库不建议通过 frp 暴露；Navicat 推荐走 VMware NAT、内网白名单或 SSH 隧道
 
-## 9. 文件上传目录
+## 11. 文件上传目录
 - 目录建议：`/data/party-building/uploads`
 - 确保 Node 进程对该目录有读写权限
 - 建议定期备份上传目录
 
-## 10. 发布与回滚
+## 12. 发布与回滚
 发布步骤：
 1. 拉取最新代码
 2. 安装依赖
@@ -132,11 +161,11 @@ npm run reset-admin
 2. 重新构建后台
 3. 重启 PM2 和 Nginx
 
-## 11. 生产建议
+## 13. 生产建议
 - 为 MySQL 配置定期备份
 - 为上传目录配置定期备份
 - 为 Nginx 和 Node 服务启用日志轮转
 - 后续建议接入对象存储和更强密码哈希算法
 
-## 12. 开发服务器清理记录
+## 14. 开发服务器清理记录
 具体清理记录已迁移到独立调试文档，仅保留项目部署说明。

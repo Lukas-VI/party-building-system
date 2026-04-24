@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { query, first, raw } = require('./db');
+const { getStepDetail } = require('./workflow-config');
 
 function hashPassword(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
@@ -53,11 +54,156 @@ async function runSqlFile(fileName) {
   await raw(sql);
 }
 
+async function tableExists(tableName) {
+  const rows = await query(
+    `SELECT COUNT(*) AS total
+     FROM information_schema.tables
+     WHERE table_schema = DATABASE() AND table_name = :tableName`,
+    { tableName },
+  );
+  return Number(rows[0]?.total || 0) > 0;
+}
+
+async function columnExists(tableName, columnName) {
+  const rows = await query(
+    `SELECT COUNT(*) AS total
+     FROM information_schema.columns
+     WHERE table_schema = DATABASE() AND table_name = :tableName AND column_name = :columnName`,
+    { tableName, columnName },
+  );
+  return Number(rows[0]?.total || 0) > 0;
+}
+
+async function ensureColumn(tableName, columnName, columnSql) {
+  if (await columnExists(tableName, columnName)) return;
+  await raw(`ALTER TABLE ${tableName} ADD COLUMN ${columnSql}`);
+}
+
+async function ensureAdditiveMigrations() {
+  if (!(await tableExists('workflow_step_definitions'))) return;
+
+  await ensureColumn('workflow_step_definitions', 'actor_type', 'actor_type VARCHAR(32) NULL');
+  await ensureColumn('workflow_step_definitions', 'responsible_roles_json', 'responsible_roles_json LONGTEXT NULL');
+  await ensureColumn('workflow_step_definitions', 'requires_applicant_action', 'requires_applicant_action TINYINT(1) NOT NULL DEFAULT 0');
+  await ensureColumn('workflow_step_definitions', 'requires_reviewer_action', 'requires_reviewer_action TINYINT(1) NOT NULL DEFAULT 0');
+  await ensureColumn('workflow_step_definitions', 'notification_template', 'notification_template VARCHAR(255) NULL');
+  await ensureColumn('workflow_step_definitions', 'material_schema_json', 'material_schema_json LONGTEXT NULL');
+  await ensureColumn('workflow_step_definitions', 'time_rule_json', 'time_rule_json LONGTEXT NULL');
+
+  await ensureColumn('workflow_step_records', 'task_status', "task_status VARCHAR(32) NOT NULL DEFAULT 'pending'");
+  await ensureColumn('workflow_step_records', 'confirmed_at', 'confirmed_at DATETIME NULL');
+  await ensureColumn('workflow_step_records', 'reschedule_count', 'reschedule_count INT NOT NULL DEFAULT 0');
+  await ensureColumn('workflow_step_records', 'reschedule_history_json', 'reschedule_history_json LONGTEXT NULL');
+
+  await ensureColumn('attachments', 'material_tag', 'material_tag VARCHAR(64) NULL');
+
+  await raw(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id BIGINT PRIMARY KEY AUTO_INCREMENT,
+      user_id VARCHAR(64) NOT NULL,
+      type VARCHAR(64) NOT NULL,
+      title VARCHAR(255) NOT NULL,
+      content TEXT NOT NULL,
+      related_step_code VARCHAR(32) NULL,
+      related_target_type VARCHAR(64) NULL,
+      related_target_id VARCHAR(64) NULL,
+      status VARCHAR(32) NOT NULL DEFAULT 'unread',
+      created_at DATETIME NOT NULL
+    );
+  `);
+
+  await raw(`
+    CREATE TABLE IF NOT EXISTS notification_receipts (
+      id BIGINT PRIMARY KEY AUTO_INCREMENT,
+      notification_id BIGINT NOT NULL,
+      user_id VARCHAR(64) NOT NULL,
+      status VARCHAR(32) NOT NULL DEFAULT 'sent',
+      clicked_at DATETIME NULL,
+      processed_at DATETIME NULL,
+      created_at DATETIME NOT NULL,
+      UNIQUE KEY uk_notification_receipt (notification_id, user_id)
+    );
+  `);
+}
+
+async function ensureWorkflowDefinitionDetails() {
+  if (!(await tableExists('workflow_step_definitions'))) return;
+  const definitions = await query(
+    `SELECT step_code AS stepCode, allowed_roles_json AS allowedRolesJson
+     FROM workflow_step_definitions`,
+  );
+  for (const definition of definitions) {
+    const roleIds = JSON.parse(definition.allowedRolesJson || '[]');
+    const detail = getStepDetail(definition.stepCode, roleIds);
+    await query(
+      `UPDATE workflow_step_definitions
+       SET actor_type = :actorType,
+           responsible_roles_json = :responsibleRolesJson,
+           requires_applicant_action = :requiresApplicantAction,
+           requires_reviewer_action = :requiresReviewerAction,
+           notification_template = :notificationTemplate,
+           material_schema_json = :materialSchemaJson,
+           time_rule_json = :timeRuleJson
+       WHERE step_code = :stepCode`,
+      {
+        stepCode: definition.stepCode,
+        actorType: detail.actorType,
+        responsibleRolesJson: JSON.stringify(detail.responsibleRoles || []),
+        requiresApplicantAction: detail.requiresApplicantAction ? 1 : 0,
+        requiresReviewerAction: detail.requiresReviewerAction ? 1 : 0,
+        notificationTemplate: detail.notificationTemplate || null,
+        materialSchemaJson: JSON.stringify(detail.materialSchema || []),
+        timeRuleJson: JSON.stringify(detail.timeRule || {}),
+      },
+    );
+  }
+}
+
+async function ensureWorkflowRecordTaskDefaults() {
+  if (!(await tableExists('workflow_step_records'))) return;
+  await raw(`
+    UPDATE workflow_step_records
+    SET task_status = CASE
+      WHEN status IN ('pending', 'reviewing') THEN 'open'
+      WHEN status = 'approved' THEN 'done'
+      WHEN status IN ('rejected', 'terminated') THEN 'blocked'
+      ELSE 'waiting'
+    END
+    WHERE task_status IS NULL OR task_status = '';
+  `);
+}
+
+async function ensureNotificationSeeds() {
+  if (!(await tableExists('notifications'))) return;
+  const existing = await first('SELECT id FROM notifications LIMIT 1');
+  if (existing) return;
+
+  const rows = [
+    ['u-applicant-001', 'workflow_notice', '已进入入党积极分子培养阶段', '请按要求完善培养考察相关信息，并留意后续谈话通知。', 'STEP_03', 'workflow', 'wf-u-applicant-001'],
+    ['u-branch-001', 'review_notice', '支部存在待确认谈话安排', '请确认谈话时间，如需变更请在系统内发起调整。', 'STEP_02', 'workflow', 'wf-u-applicant-001'],
+    ['u-organizer-001', 'material_notice', '政审材料待审核', '申请人已提交政审材料，请尽快完成初审并填写审核意见。', 'STEP_09', 'workflow', 'wf-u-applicant-002'],
+  ];
+  for (const [userId, type, title, content, stepCode, targetType, targetId] of rows) {
+    await query(
+      `INSERT INTO notifications
+       (user_id, type, title, content, related_step_code, related_target_type, related_target_id, status, created_at)
+       VALUES (:userId, :type, :title, :content, :stepCode, :targetType, :targetId, 'unread', :createdAt)`,
+      { userId, type, title, content, stepCode, targetType, targetId, createdAt: '2026-04-20 09:00:00' },
+    );
+  }
+}
+
 async function ensureSeedData() {
-  await runSqlFile('mysql-init.sql');
+  await ensureAdditiveMigrations();
+  if (!(await tableExists('roles'))) {
+    await runSqlFile('mysql-init.sql');
+  }
   const role = await first('SELECT id FROM roles LIMIT 1');
   if (role) {
     await ensureUserProfiles();
+    await ensureWorkflowDefinitionDetails();
+    await ensureWorkflowRecordTaskDefaults();
+    await ensureNotificationSeeds();
     return;
   }
 
@@ -250,8 +396,12 @@ async function ensureSeedData() {
   for (let index = 0; index < stepNames.length; index += 1) {
     await query(
       `INSERT INTO workflow_step_definitions
-        (step_code, sort_order, name, phase, allowed_roles_json, form_schema_json, start_at, end_at)
-       VALUES (:stepCode, :sortOrder, :name, :phase, :allowedRolesJson, :formSchemaJson, :startAt, :endAt)`,
+        (step_code, sort_order, name, phase, allowed_roles_json, form_schema_json, start_at, end_at,
+         actor_type, responsible_roles_json, requires_applicant_action, requires_reviewer_action,
+         notification_template, material_schema_json, time_rule_json)
+       VALUES (:stepCode, :sortOrder, :name, :phase, :allowedRolesJson, :formSchemaJson, :startAt, :endAt,
+         :actorType, :responsibleRolesJson, :requiresApplicantAction, :requiresReviewerAction,
+         :notificationTemplate, :materialSchemaJson, :timeRuleJson)`,
       {
         stepCode: `STEP_${String(index + 1).padStart(2, '0')}`,
         sortOrder: index + 1,
@@ -260,7 +410,20 @@ async function ensureSeedData() {
         allowedRolesJson: JSON.stringify(index < 10 ? ['applicant', 'organizer', 'branchSecretary'] : ['organizer', 'secretary', 'orgDept']),
         formSchemaJson: JSON.stringify({ fields: ['summary', 'note'], attachment: index === 0 || index === 8 }),
         startAt: '2026-04-01',
-        endAt: index < 10 ? '2026-05-31' : '2026-07-31'
+        endAt: index < 10 ? '2026-05-31' : '2026-07-31',
+        ...(() => {
+          const roleIds = index < 10 ? ['applicant', 'organizer', 'branchSecretary'] : ['organizer', 'secretary', 'orgDept'];
+          const detail = getStepDetail(`STEP_${String(index + 1).padStart(2, '0')}`, roleIds);
+          return {
+            actorType: detail.actorType,
+            responsibleRolesJson: JSON.stringify(detail.responsibleRoles || []),
+            requiresApplicantAction: detail.requiresApplicantAction ? 1 : 0,
+            requiresReviewerAction: detail.requiresReviewerAction ? 1 : 0,
+            notificationTemplate: detail.notificationTemplate || null,
+            materialSchemaJson: JSON.stringify(detail.materialSchema || []),
+            timeRuleJson: JSON.stringify(detail.timeRule || {}),
+          };
+        })(),
       }
     );
   }
@@ -299,6 +462,8 @@ async function ensureSeedData() {
       );
     }
   }
+
+  await ensureNotificationSeeds();
 }
 
 async function ensureUserProfiles() {
