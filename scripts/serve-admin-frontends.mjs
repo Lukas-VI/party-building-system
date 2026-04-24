@@ -36,14 +36,17 @@ const mimeTypes = {
   '.woff2': 'font/woff2',
 };
 
+// 根据请求路径判断应该命中桌面后台还是服务号网页 App 的构建产物。
 function findMount(requestPath) {
   return mounts.find((mount) => requestPath === mount.basePath || requestPath.startsWith(`${mount.basePath}/`));
 }
 
+// 这里只做非常保守的设备识别，目标是桌面/手机两套入口自动分流，不承担业务鉴权判断。
 function isMobileDevice(userAgent = '') {
   return /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(userAgent);
 }
 
+// 静态文件和 index.html 都从统一出口发出，便于 frp、Nginx 和 1Panel 只维护一个 1919 入口。
 function sendFile(res, filePath) {
   const ext = extname(filePath).toLowerCase();
   res.writeHead(200, {
@@ -53,6 +56,7 @@ function sendFile(res, filePath) {
   createReadStream(filePath).pipe(res);
 }
 
+// 只允许读取挂载目录内的真实文件，避免路径穿越问题。
 function resolveAsset(distDir, basePath, requestPath) {
   const relativePath = requestPath.slice(basePath.length).replace(/^\/+/, '');
   const filePath = normalize(join(distDir, relativePath));

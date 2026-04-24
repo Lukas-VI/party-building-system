@@ -18,6 +18,10 @@ export const http = axios.create({
   timeout: 20000,
 });
 
+/**
+ * 所有移动端请求统一从这里注入 token。
+ * 如果后续切换到服务号网页授权票据或双 token 机制，也应优先改这里。
+ */
 http.interceptors.request.use((config) => {
   if (sessionState.token) {
     config.headers.Authorization = `Bearer ${sessionState.token}`;
@@ -25,6 +29,10 @@ http.interceptors.request.use((config) => {
   return config;
 });
 
+/**
+ * 统一处理后端 `{ code, message, data }` 响应格式。
+ * 页面层只消费 data，避免每个视图重复写状态判断和 401 处理。
+ */
 http.interceptors.response.use(
   (response) => {
     const payload = response.data;
@@ -50,12 +58,14 @@ http.interceptors.response.use(
   },
 );
 
+// 认证与会话接口
 export function loginByPassword(form) {
   return http.post('/auth/login', form, {
     headers: { 'Content-Type': 'application/json' },
   });
 }
 
+// 工作台、待办、消息三类首页数据
 export function fetchWorkbench() {
   return http.get('/mobile/workbench');
 }
@@ -68,6 +78,7 @@ export function fetchMessages() {
   return http.get('/mobile/messages');
 }
 
+// 资料与流程接口
 export function fetchMobileProfile() {
   return http.get('/mobile/profile');
 }
@@ -80,6 +91,7 @@ export function fetchMobileWorkflow(workflowId = 'me') {
   return http.get(`/mobile/workflows/${workflowId}`);
 }
 
+// 任务类动作统一按 submit / review / reschedule 区分，便于后端继续细化 25 步
 export function submitMobileTask(workflowId, taskId, payload) {
   return http.post(`/mobile/workflows/${workflowId}/tasks/${taskId}/submit`, payload);
 }
@@ -98,6 +110,7 @@ export function uploadMobileFile(formData) {
   });
 }
 
+// 微信绑定与网页授权保持单独分组，避免和业务流程接口混杂
 export function fetchWechatBindStatus() {
   return http.get('/wechat/bind/status');
 }
