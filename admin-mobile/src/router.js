@@ -39,6 +39,10 @@ const router = createRouter({
   routes,
 });
 
+/**
+ * 这里集中做登录态和角色入口校验。
+ * 角色差异优先通过路由守卫和统一 tabs 控制，不要在每个页面里重复拦截。
+ */
 router.beforeEach((to) => {
   if (to.path !== '/login' && !isLoggedIn.value) return '/login';
   if (to.path === '/login' && isLoggedIn.value) return '/workbench';
@@ -51,6 +55,7 @@ router.beforeEach((to) => {
   return true;
 });
 
+// 文档标题在路由层统一设置，避免各页面重复维护相同站点名。
 router.afterEach((to) => {
   document.title = `${to.meta.title || '服务号工作台'} - 党员发展管理系统`;
 });

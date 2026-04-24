@@ -12,6 +12,17 @@ const { ensureSeedData } = require('./seed');
 const { exchangeCode, encryptSessionKey, signBindToken, verifyBindToken } = require('./wechat');
 const { getStepDetail } = require('./workflow-config');
 
+/**
+ * 服务端主入口。
+ *
+ * 当前职责：
+ * - 为 PC 后台和服务号网页 App 提供统一认证、流程、资料、统计、上传接口
+ * - 把业务规则尽量集中在服务端与配置层，而不是散落在前端页面里
+ *
+ * 维护提示：
+ * - 25 步细化规则优先扩展 workflow-config.js
+ * - 《发展党员全程记实表》当前只作为研发参考，应结合会议纪要继续细化字段与材料要求
+ */
 const app = express();
 fs.mkdirSync(env.UPLOAD_DIR, { recursive: true });
 const upload = multer({ dest: env.UPLOAD_DIR });
@@ -84,12 +95,14 @@ function roleScopeLabel(user) {
   return '全校数据';
 }
 
+// 当前仍按申请人、基层管理、管理员三类资料视图区分，不要回退成一套混合表单。
 function profileTypeForRole(role) {
   if (role === 'applicant') return 'applicant';
   if (['branchSecretary', 'organizer'].includes(role)) return 'cadre';
   return 'admin';
 }
 
+// 这里只生成资料视图默认值，不在这里写死后续可能变化的完整业务字段。
 function buildDefaultProfilePayload(user) {
   if (user.primaryRole === 'applicant') {
     return {
@@ -189,6 +202,7 @@ async function getUserWithAuth(userId) {
   };
 }
 
+// 统一认证中间件，后续如果调整为服务号网页登录票据，也应优先从这里扩展。
 function requireAuth() {
   return async (req, res, next) => {
     try {
@@ -206,6 +220,7 @@ function requireAuth() {
   };
 }
 
+// 数据范围约束集中维护在这里，避免每个查询接口手写一套权限过滤。
 function scopeClause(user, applicantAlias = 'u') {
   if (user.primaryRole === 'applicant') {
     return { sql: ` AND ${applicantAlias}.id = :scopeUserId`, params: { scopeUserId: user.id } };
@@ -532,6 +547,7 @@ function mobileTaskStatus(step) {
   return 'open';
 }
 
+// 移动端待办对象在这里统一组装，页面层只消费结果，不再自行拼装流程规则。
 function buildTodoItem(user, applicant, workflow, step) {
   const taskOwner = isApplicantActor(user, applicant.userId || applicant.id, step) ? '申请人' : '审核者';
   return {
@@ -1746,6 +1762,7 @@ app.get('/api/export/stats', requireAuth(), async (req, res) => {
   }
 });
 
+// 启动阶段只负责准备基础数据和监听端口，不在这里叠加运维副作用。
 async function bootstrap() {
   await ensureSeedData();
   app.listen(env.PORT, () => {
