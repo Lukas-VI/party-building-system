@@ -156,6 +156,25 @@ npm run reset-admin
 4. 检查 `.env`
 5. 重启 PM2 和 Nginx
 
+如果 Ubuntu 服务器无法直接访问 GitHub，可改用“本机打包同步”的方式发布：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\deploy-to-ubuntu.ps1
+```
+
+该脚本会：
+- 从本机当前已提交分支生成 git bundle
+- 通过 SSH/SCP 同步到 Ubuntu
+- 在 Ubuntu 上更新 `main` 与当前分支引用
+- 强制将 Ubuntu 仓库远程保持为 GitHub
+- 自动执行 `scripts/start-ubuntu-services.sh`
+
+对应的 Bash 版本脚本：
+
+```bash
+bash ./scripts/deploy-to-ubuntu.sh
+```
+
 回滚步骤：
 1. 回到上一个 Git commit
 2. 重新构建后台
