@@ -9,13 +9,13 @@
  */
 const STEP_DETAIL_OVERRIDES = {
   STEP_01: {
-    actorType: 'applicant',
-    responsibleRoles: ['applicant'],
+    actorType: 'collaborative',
+    responsibleRoles: ['applicant', 'organizer', 'branchSecretary'],
     requiresApplicantAction: 1,
-    requiresReviewerAction: 0,
+    requiresReviewerAction: 1,
     notificationTemplate: 'application_submitted',
     materialSchema: [
-      { key: 'applicationLetter', label: '入党申请书', tag: 'application', accept: ['pdf', 'image'], required: true },
+      { key: 'applicationLetter', label: '入党申请书', tag: 'application', accept: ['pdf'], required: true },
     ],
     timeRule: { keepOnly: ['submittedAt'], allowManualEdit: false },
     taskSummary: '提交入党申请书并补全基础信息',

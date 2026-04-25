@@ -9,7 +9,6 @@ const jwt = require('jsonwebtoken');
 const { env } = require('./env');
 const { query, first, getPool } = require('./db');
 const { ensureSeedData } = require('./seed');
-const { exchangeCode, encryptSessionKey, signBindToken, verifyBindToken } = require('./wechat');
 const { getStepDetail } = require('./workflow-config');
 
 /**
@@ -26,6 +25,19 @@ const { getStepDetail } = require('./workflow-config');
 const app = express();
 fs.mkdirSync(env.UPLOAD_DIR, { recursive: true });
 const upload = multer({ dest: env.UPLOAD_DIR });
+const MVP_MAX_STEP_ORDER = 12;
+const HIGH_PRIVILEGE_ROLES = new Set(['superAdmin', 'orgDept']);
+const ALLOWED_REVIEW_STATUSES = new Set(['approved', 'rejected']);
+const FILE_ACCEPT_RULES = {
+  pdf: {
+    extensions: ['.pdf'],
+    mimeTypes: ['application/pdf'],
+  },
+  image: {
+    extensions: ['.jpg', '.jpeg', '.png'],
+    mimeTypes: ['image/jpeg', 'image/png'],
+  },
+};
 
 app.use(
   cors({
@@ -220,6 +232,17 @@ function requireAuth() {
   };
 }
 
+function hasPermission(user, permissionId) {
+  return (user.permissions || []).some((item) => item.id === permissionId);
+}
+
+function requirePermission(permissionId) {
+  return (req, res, next) => {
+    if (!hasPermission(req.user, permissionId)) return fail(res, 403, '无权执行该操作');
+    return next();
+  };
+}
+
 // 数据范围约束集中维护在这里，避免每个查询接口手写一套权限过滤。
 function scopeClause(user, applicantAlias = 'u') {
   if (user.primaryRole === 'applicant') {
@@ -274,6 +297,34 @@ async function getApplicants(user, filters = {}) {
 async function canAccessApplicant(user, applicantId) {
   const rows = await getApplicants(user, {});
   return rows.some((item) => item.id === applicantId);
+}
+
+function errorWithStatus(message, status = 400) {
+  const error = new Error(message);
+  error.status = status;
+  return error;
+}
+
+function stepOrder(stepCode) {
+  const match = /^STEP_(\d+)$/.exec(stepCode || '');
+  return match ? Number(match[1]) : null;
+}
+
+function isMvpStep(step) {
+  return Number(step.sortOrder || stepOrder(step.stepCode) || 0) <= MVP_MAX_STEP_ORDER;
+}
+
+function canAccessScopedRecord(user, record) {
+  if (user.primaryRole === 'applicant') return user.id === record.id || user.id === record.userId;
+  if (user.primaryRole === 'branchSecretary') return Boolean(user.branchId && user.branchId === record.branchId);
+  if (['secretary', 'deputySecretary', 'organizer'].includes(user.primaryRole)) return Boolean(user.orgId && user.orgId === record.orgId);
+  return true;
+}
+
+async function assertCanAccessApplicant(user, applicantId) {
+  if (!(await canAccessApplicant(user, applicantId))) {
+    throw errorWithStatus('无权访问该申请人', 403);
+  }
 }
 
 async function getApplicantProfileByUserId(userId) {
@@ -538,6 +589,72 @@ function isReviewerActor(user, step) {
   return responsibleRoles.some((roleId) => currentRoleIds(user).includes(roleId)) && Number(step.requiresReviewerAction || step.taskMeta?.requiresReviewerAction || 0) === 1;
 }
 
+function ensureMvpStep(step) {
+  if (!isMvpStep(step)) {
+    throw errorWithStatus('该流程节点暂未纳入前12步MVP，暂不开放办理', 400);
+  }
+}
+
+function ensurePreviousStepApproved(workflow, step) {
+  const previous = workflow.steps
+    .filter((item) => isMvpStep(item) && Number(item.sortOrder || 0) < Number(step.sortOrder || 0))
+    .sort((left, right) => Number(right.sortOrder || 0) - Number(left.sortOrder || 0))[0];
+  if (previous && previous.status !== 'approved') {
+    throw errorWithStatus('上一流程节点未完成，不能办理当前节点', 400);
+  }
+}
+
+function assertWorkflowActor(user, applicantId, workflow, step, action) {
+  if (!step) throw errorWithStatus('未找到对应任务', 404);
+  ensureMvpStep(step);
+  ensurePreviousStepApproved(workflow, step);
+  if (action === 'submit') {
+    if (!['pending', 'rejected'].includes(step.status)) throw errorWithStatus('当前节点不能提交', 400);
+    if (!isApplicantActor(user, applicantId, step)) throw errorWithStatus('当前账号不能提交该任务', 403);
+    return;
+  }
+  if (action === 'review') {
+    if (!['pending', 'reviewing'].includes(step.status)) throw errorWithStatus('当前节点不能审核', 400);
+    if (!isReviewerActor(user, step)) throw errorWithStatus('当前账号不能审核该任务', 403);
+    return;
+  }
+  throw errorWithStatus('未知流程动作', 400);
+}
+
+function nextTaskStatus(status) {
+  if (status === 'approved') return 'done';
+  if (status === 'rejected') return 'blocked';
+  return 'in_review';
+}
+
+async function advanceAfterReview(workflow, step, nextStatus) {
+  if (nextStatus === 'approved') {
+    const nextStep = workflow.steps
+      .filter((item) => isMvpStep(item) && Number(item.sortOrder || 0) > Number(step.sortOrder || 0))
+      .sort((left, right) => Number(left.sortOrder || 0) - Number(right.sortOrder || 0))[0];
+    if (nextStep && nextStep.status === 'locked') {
+      await query(
+        `UPDATE workflow_step_records
+         SET status = 'pending', task_status = 'open'
+         WHERE id = :id`,
+        { id: nextStep.id },
+      );
+    }
+    return;
+  }
+  if (nextStatus === 'rejected') {
+    const laterSteps = workflow.steps.filter((item) => isMvpStep(item) && Number(item.sortOrder || 0) > Number(step.sortOrder || 0) && item.status !== 'approved');
+    for (const item of laterSteps) {
+      await query(
+        `UPDATE workflow_step_records
+         SET status = 'locked', task_status = 'waiting'
+         WHERE id = :id`,
+        { id: item.id },
+      );
+    }
+  }
+}
+
 function mobileTaskStatus(step) {
   if (step.taskStatus) return step.taskStatus;
   if (step.status === 'approved') return 'done';
@@ -588,7 +705,7 @@ async function listMobileTodos(user) {
   const todos = [];
   for (const applicant of applicants.filter(Boolean)) {
     const workflow = await getWorkflowByApplicantId(applicant.userId || applicant.id);
-    for (const step of workflow.steps) {
+    for (const step of workflow.steps.filter(isMvpStep)) {
       const visibleToApplicant = isApplicantActor(user, applicant.userId || applicant.id, step) && ['pending', 'rejected'].includes(step.status);
       const visibleToReviewer = isReviewerActor(user, step) && ['reviewing', 'pending'].includes(step.status);
       if (!visibleToApplicant && !visibleToReviewer) continue;
@@ -654,17 +771,18 @@ async function recentAuditLogs(user, limit = 8) {
 }
 
 async function buildMobileWorkflow(user, applicantId) {
-  if (user.primaryRole !== 'applicant' && !(await canAccessApplicant(user, applicantId))) {
+  if (!(await canAccessApplicant(user, applicantId))) {
     const error = new Error('无权查看该流程');
     error.status = 403;
     throw error;
   }
   const applicant = await getApplicantProfileByUserId(applicantId);
   const workflow = await getWorkflowByApplicantId(applicantId);
-  const currentStep = workflow.steps.find((item) => ['pending', 'reviewing', 'rejected'].includes(item.status)) || workflow.steps[0];
-  const completedSteps = workflow.steps.filter((item) => item.status === 'approved');
+  const mvpSteps = workflow.steps.filter(isMvpStep);
+  const currentStep = mvpSteps.find((item) => ['pending', 'reviewing', 'rejected'].includes(item.status)) || mvpSteps[0];
+  const completedSteps = mvpSteps.filter((item) => item.status === 'approved');
   const todoSteps = workflow.steps
-    .filter((item) => ['pending', 'reviewing', 'rejected'].includes(item.status))
+    .filter((item) => isMvpStep(item) && ['pending', 'reviewing', 'rejected'].includes(item.status))
     .map((item) => buildTodoItem(user, { ...applicant, userId: applicantId }, workflow, item));
   return {
     applicant: {
@@ -687,7 +805,7 @@ async function buildMobileWorkflow(user, applicantId) {
       lastOperatorName: item.lastOperatorName,
       statusText: item.statusText,
     })),
-    steps: workflow.steps.map((item) => buildTodoItem(user, { ...applicant, userId: applicantId }, workflow, item)),
+    steps: mvpSteps.map((item) => buildTodoItem(user, { ...applicant, userId: applicantId }, workflow, item)),
     todos: todoSteps,
   };
 }
@@ -803,6 +921,27 @@ function fileUrl(fileName) {
   return `${env.PUBLIC_BASE_URL.replace(/\/$/, '')}/uploads/${fileName}`;
 }
 
+function acceptedTypesForMaterial(step, materialTag) {
+  const material = (step.materialSchema || step.taskMeta?.materialSchema || []).find((item) => item.tag === materialTag);
+  if (!material) throw errorWithStatus('材料类型不属于当前步骤', 400);
+  return material.accept || [];
+}
+
+function validateUploadedFile(file, acceptTypes) {
+  if (!file) throw errorWithStatus('未上传文件', 400);
+  const extension = path.extname(file.originalname || '').toLowerCase();
+  const allowed = acceptTypes.flatMap((type) => {
+    const rule = FILE_ACCEPT_RULES[type] || { extensions: [], mimeTypes: [] };
+    return rule.extensions.map((item) => ({ extension: item, mimeTypes: rule.mimeTypes }));
+  });
+  if (!allowed.length) return;
+  const extensionAllowed = allowed.some((item) => item.extension === extension);
+  const mimeAllowed = acceptTypes.some((type) => (FILE_ACCEPT_RULES[type]?.mimeTypes || []).includes(file.mimetype));
+  if (!extensionAllowed || !mimeAllowed) {
+    throw errorWithStatus('上传文件类型不符合当前材料要求', 400);
+  }
+}
+
 function workbookBuffer(sheets) {
   const workbook = XLSX.utils.book_new();
   sheets.forEach(({ name, rows }) => {
@@ -865,119 +1004,51 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-app.post('/api/auth/approve-registration', requireAuth(), async (req, res) => {
+app.post('/api/auth/approve-registration', requireAuth(), requirePermission('approve_registration'), async (req, res) => {
   try {
     const { requestNo, status = 'approved' } = req.body || {};
+    if (!ALLOWED_REVIEW_STATUSES.has(status)) return fail(res, 400, '注册审核状态不合法');
+    const request = await first(
+      `SELECT
+          rr.request_no AS requestNo,
+          rr.status,
+          rr.user_id AS userId,
+          u.id,
+          u.org_id AS orgId,
+          u.branch_id AS branchId
+       FROM registration_requests rr
+       INNER JOIN users u ON u.id = rr.user_id
+       WHERE rr.request_no = :requestNo`,
+      { requestNo },
+    );
+    if (!request) return fail(res, 404, '未找到注册申请');
+    if (request.status !== 'pending') return fail(res, 400, '该注册申请已处理');
+    if (!canAccessScopedRecord(req.user, request)) return fail(res, 403, '无权审核该注册申请');
     await query('UPDATE registration_requests SET status = :status, reviewed_at = :reviewedAt WHERE request_no = :requestNo', {
       status,
       reviewedAt: now(),
       requestNo,
     });
+    if (status === 'approved') {
+      await query('UPDATE users SET status = :status WHERE id = :userId', {
+        status: 'active',
+        userId: request.userId,
+      });
+      const currentRole = await first('SELECT id FROM user_roles WHERE user_id = :userId AND role_id = :roleId', {
+        userId: request.userId,
+        roleId: 'applicant',
+      });
+      if (!currentRole) {
+        await query('INSERT INTO user_roles (user_id, role_id) VALUES (:userId, :roleId)', {
+          userId: request.userId,
+          roleId: 'applicant',
+        });
+      }
+    }
     await logAudit('registration_requests', requestNo, 'approve_registration', req.user.id, { status });
     ok(res, true);
   } catch (error) {
     fail(res, 500, error.message);
-  }
-});
-
-app.post('/api/wechat/bind/start', requireAuth(), async (req, res) => {
-  try {
-    const { code } = req.body || {};
-    const session = await exchangeCode(code);
-    const existing = await first(
-      `SELECT user_id AS userId, status
-       FROM wechat_bindings
-       WHERE openid = :openid
-       LIMIT 1`,
-      { openid: session.openid },
-    );
-    if (existing && existing.userId !== req.user.id && existing.status === 'active') {
-      return fail(res, 409, '该微信账号已绑定其他系统账号');
-    }
-    ok(res, {
-      bindToken: signBindToken({
-        openid: session.openid,
-        unionid: session.unionid,
-        sessionKeyEncrypted: encryptSessionKey(session.sessionKey),
-      }),
-      openid: session.openid,
-      unionid: session.unionid,
-      alreadyBoundToCurrentUser: !!existing && existing.userId === req.user.id,
-    });
-  } catch (error) {
-    fail(res, error.status || 500, error.message);
-  }
-});
-
-app.post('/api/wechat/bind/confirm', requireAuth(), async (req, res) => {
-  try {
-    const { bindToken, nickname = '', avatarUrl = '' } = req.body || {};
-    const payload = verifyBindToken(bindToken);
-    await query('UPDATE wechat_bindings SET status = :inactive WHERE user_id = :userId', {
-      inactive: 'inactive',
-      userId: req.user.id,
-    });
-    await query(
-      `INSERT INTO wechat_bindings
-        (user_id, openid, unionid, session_key_encrypted, nickname, avatar_url, status, bound_at, last_login_at)
-       VALUES
-        (:userId, :openid, :unionid, :sessionKeyEncrypted, :nickname, :avatarUrl, 'active', :boundAt, :lastLoginAt)
-       ON DUPLICATE KEY UPDATE
-        user_id = VALUES(user_id),
-        unionid = VALUES(unionid),
-        session_key_encrypted = VALUES(session_key_encrypted),
-        nickname = VALUES(nickname),
-        avatar_url = VALUES(avatar_url),
-        status = 'active',
-        bound_at = VALUES(bound_at),
-        last_login_at = VALUES(last_login_at)`,
-      {
-        userId: req.user.id,
-        openid: payload.openid,
-        unionid: payload.unionid || '',
-        sessionKeyEncrypted: payload.sessionKeyEncrypted,
-        nickname,
-        avatarUrl,
-        boundAt: now(),
-        lastLoginAt: now(),
-      },
-    );
-    await logAudit('wechat_bindings', req.user.id, 'bind_wechat', req.user.id, { openid: payload.openid });
-    ok(res, true, '微信账号绑定成功');
-  } catch (error) {
-    fail(res, error.status || 500, error.message);
-  }
-});
-
-app.post('/api/wechat/login', async (req, res) => {
-  try {
-    const { code } = req.body || {};
-    const session = await exchangeCode(code);
-    const binding = await first(
-      `SELECT user_id AS userId
-       FROM wechat_bindings
-       WHERE openid = :openid AND status = 'active'
-       LIMIT 1`,
-      { openid: session.openid },
-    );
-    if (!binding) {
-      return fail(res, 404, '当前微信号尚未绑定系统账号');
-    }
-    await query(
-      `UPDATE wechat_bindings
-       SET session_key_encrypted = :sessionKeyEncrypted,
-           last_login_at = :lastLoginAt
-       WHERE openid = :openid`,
-      {
-        sessionKeyEncrypted: encryptSessionKey(session.sessionKey),
-        lastLoginAt: now(),
-        openid: session.openid,
-      },
-    );
-    const user = await getUserWithAuth(binding.userId);
-    ok(res, { token: signToken(user), expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(), user });
-  } catch (error) {
-    fail(res, error.status || 500, error.message);
   }
 });
 
@@ -1141,10 +1212,10 @@ app.get('/api/mobile/workflows/:workflowId', requireAuth(), async (req, res) => 
 app.post('/api/mobile/workflows/:workflowId/tasks/:taskId/submit', requireAuth(), async (req, res) => {
   try {
     const applicantId = resolveMobileWorkflowId(req.user, req.params.workflowId);
+    await assertCanAccessApplicant(req.user, applicantId);
     const workflow = await getWorkflowByApplicantId(applicantId);
     const step = workflow.steps.find((item) => item.stepCode === req.params.taskId);
-    if (!step) return fail(res, 404, '未找到对应任务');
-    if (!isApplicantActor(req.user, applicantId, step)) return fail(res, 403, '当前账号不能提交该任务');
+    assertWorkflowActor(req.user, applicantId, workflow, step, 'submit');
     if (step.stepCode === 'STEP_01') {
       await ensureAdultApplicant(applicantId);
     }
@@ -1191,11 +1262,12 @@ app.post('/api/mobile/workflows/:workflowId/tasks/:taskId/submit', requireAuth()
 app.post('/api/mobile/workflows/:workflowId/tasks/:taskId/review', requireAuth(), async (req, res) => {
   try {
     const applicantId = resolveMobileWorkflowId(req.user, req.params.workflowId);
+    await assertCanAccessApplicant(req.user, applicantId);
     const workflow = await getWorkflowByApplicantId(applicantId);
     const step = workflow.steps.find((item) => item.stepCode === req.params.taskId);
-    if (!step) return fail(res, 404, '未找到对应任务');
-    if (!isReviewerActor(req.user, step)) return fail(res, 403, '当前账号不能审核该任务');
+    assertWorkflowActor(req.user, applicantId, workflow, step, 'review');
     const nextStatus = req.body.status || 'approved';
+    if (!ALLOWED_REVIEW_STATUSES.has(nextStatus)) return fail(res, 400, '审核状态不合法');
     await query(
       `UPDATE workflow_step_records
        SET status = :status,
@@ -1207,7 +1279,7 @@ app.post('/api/mobile/workflows/:workflowId/tasks/:taskId/review', requireAuth()
        WHERE id = :id`,
       {
         status: nextStatus,
-        taskStatus: nextStatus === 'approved' ? 'done' : nextStatus === 'rejected' ? 'blocked' : 'in_review',
+        taskStatus: nextTaskStatus(nextStatus),
         reviewComment: req.body.comment || '',
         operatorId: req.user.id,
         operatedAt: now(),
@@ -1215,6 +1287,7 @@ app.post('/api/mobile/workflows/:workflowId/tasks/:taskId/review', requireAuth()
         id: step.id,
       },
     );
+    await advanceAfterReview(workflow, step, nextStatus);
     await logAudit('workflow_step_records', step.id, 'mobile_review_task', req.user.id, req.body || {});
     await createNotification(
       applicantId,
@@ -1234,6 +1307,7 @@ app.post('/api/mobile/workflows/:workflowId/tasks/:taskId/review', requireAuth()
 app.post('/api/mobile/workflows/:workflowId/tasks/:taskId/reschedule', requireAuth(), async (req, res) => {
   try {
     const applicantId = resolveMobileWorkflowId(req.user, req.params.workflowId);
+    await assertCanAccessApplicant(req.user, applicantId);
     const workflow = await getWorkflowByApplicantId(applicantId);
     const step = workflow.steps.find((item) => item.stepCode === req.params.taskId);
     if (!step) return fail(res, 404, '未找到对应任务');
@@ -1299,12 +1373,15 @@ app.post('/api/mobile/workflows/:workflowId/tasks/:taskId/reschedule', requireAu
 app.post('/api/mobile/files/upload', requireAuth(), upload.single('file'), async (req, res) => {
   try {
     const { workflowId = '', stepCode = '', materialTag = '' } = req.body || {};
+    validateUploadedFile(req.file, ['pdf', 'image']);
     let attachmentId = null;
     if (workflowId && stepCode) {
       const applicantId = resolveMobileWorkflowId(req.user, workflowId);
-      if (req.user.primaryRole !== 'applicant' && !(await canAccessApplicant(req.user, applicantId))) {
-        return fail(res, 403, '无权上传该流程材料');
-      }
+      await assertCanAccessApplicant(req.user, applicantId);
+      const workflow = await getWorkflowByApplicantId(applicantId);
+      const step = workflow.steps.find((item) => item.stepCode === stepCode);
+      assertWorkflowActor(req.user, applicantId, workflow, step, 'submit');
+      validateUploadedFile(req.file, acceptedTypesForMaterial(step, materialTag));
       const instance = await first('SELECT id FROM workflow_instances WHERE applicant_id = :applicantId', { applicantId });
       const stepRecord = await first(
         'SELECT id FROM workflow_step_records WHERE instance_id = :instanceId AND step_code = :stepCode',
@@ -1458,14 +1535,17 @@ app.get('/api/workflows/:applicantId', requireAuth(), async (req, res) => {
 
 app.post('/api/workflows/:applicantId/steps/:stepCode/submit', requireAuth(), async (req, res) => {
   try {
-    const instance = await first('SELECT id FROM workflow_instances WHERE applicant_id = :applicantId', { applicantId: req.params.applicantId });
-    const stepRecord = await first('SELECT id FROM workflow_step_records WHERE instance_id = :instanceId AND step_code = :stepCode', {
-      instanceId: instance.id,
-      stepCode: req.params.stepCode,
-    });
+    await assertCanAccessApplicant(req.user, req.params.applicantId);
+    const workflow = await getWorkflowByApplicantId(req.params.applicantId);
+    const step = workflow.steps.find((item) => item.stepCode === req.params.stepCode);
+    assertWorkflowActor(req.user, req.params.applicantId, workflow, step, 'submit');
+    if (step.stepCode === 'STEP_01') {
+      await ensureAdultApplicant(req.params.applicantId);
+    }
     await query(
       `UPDATE workflow_step_records
        SET status = 'reviewing',
+           task_status = 'in_review',
            form_data_json = :formDataJson,
            review_comment = :reviewComment,
            last_operator_id = :operatorId,
@@ -1476,42 +1556,48 @@ app.post('/api/workflows/:applicantId/steps/:stepCode/submit', requireAuth(), as
         reviewComment: req.body.reviewComment || '',
         operatorId: req.user.id,
         operatedAt: now(),
-        id: stepRecord.id,
+        id: step.id,
       },
     );
-    await logAudit('workflow_step_records', stepRecord.id, 'submit_step', req.user.id, req.body);
+    await logAudit('workflow_step_records', step.id, 'submit_step', req.user.id, req.body);
     ok(res, true, '步骤已提交');
   } catch (error) {
-    fail(res, 500, error.message);
+    fail(res, error.status || 500, error.message);
   }
 });
 
 app.post('/api/workflows/:applicantId/steps/:stepCode/review', requireAuth(), async (req, res) => {
   try {
-    const instance = await first('SELECT id FROM workflow_instances WHERE applicant_id = :applicantId', { applicantId: req.params.applicantId });
-    const stepRecord = await first('SELECT id FROM workflow_step_records WHERE instance_id = :instanceId AND step_code = :stepCode', {
-      instanceId: instance.id,
-      stepCode: req.params.stepCode,
-    });
+    await assertCanAccessApplicant(req.user, req.params.applicantId);
+    const workflow = await getWorkflowByApplicantId(req.params.applicantId);
+    const step = workflow.steps.find((item) => item.stepCode === req.params.stepCode);
+    assertWorkflowActor(req.user, req.params.applicantId, workflow, step, 'review');
+    const nextStatus = req.body.status || 'approved';
+    if (!ALLOWED_REVIEW_STATUSES.has(nextStatus)) return fail(res, 400, '审核状态不合法');
     await query(
       `UPDATE workflow_step_records
        SET status = :status,
+           task_status = :taskStatus,
            review_comment = :reviewComment,
            last_operator_id = :operatorId,
-           operated_at = :operatedAt
+           operated_at = :operatedAt,
+           confirmed_at = :confirmedAt
        WHERE id = :id`,
       {
-        status: req.body.status,
+        status: nextStatus,
+        taskStatus: nextTaskStatus(nextStatus),
         reviewComment: req.body.comment || '',
         operatorId: req.user.id,
         operatedAt: now(),
-        id: stepRecord.id,
+        confirmedAt: nextStatus === 'approved' ? now() : null,
+        id: step.id,
       },
     );
-    await logAudit('workflow_step_records', stepRecord.id, 'review_step', req.user.id, req.body);
+    await advanceAfterReview(workflow, step, nextStatus);
+    await logAudit('workflow_step_records', step.id, 'review_step', req.user.id, req.body);
     ok(res, true, '审核结果已保存');
   } catch (error) {
-    fail(res, 500, error.message);
+    fail(res, error.status || 500, error.message);
   }
 });
 
@@ -1530,7 +1616,7 @@ app.get('/api/workflow-steps/config', requireAuth(), async (req, res) => {
   }
 });
 
-app.put('/api/workflow-steps/config/:stepCode', requireAuth(), async (req, res) => {
+app.put('/api/workflow-steps/config/:stepCode', requireAuth(), requirePermission('configure_workflow'), async (req, res) => {
   try {
     await query(
       `UPDATE workflow_step_definitions
@@ -1587,9 +1673,20 @@ app.post('/api/orgs/import-staff', requireAuth(), async (req, res) => {
   }
 });
 
-app.post('/api/orgs/assign-role', requireAuth(), async (req, res) => {
+app.post('/api/orgs/assign-role', requireAuth(), requirePermission('assign_roles'), async (req, res) => {
   try {
     const { userId, roleId } = req.body || {};
+    const targetUser = await first(
+      `SELECT id, org_id AS orgId, branch_id AS branchId
+       FROM users
+       WHERE id = :userId`,
+      { userId },
+    );
+    if (!targetUser) return fail(res, 404, '未找到目标用户');
+    if (!canAccessScopedRecord(req.user, targetUser)) return fail(res, 403, '无权为该用户分配角色');
+    const role = await first('SELECT id FROM roles WHERE id = :roleId', { roleId });
+    if (!role) return fail(res, 400, '角色不存在');
+    if (HIGH_PRIVILEGE_ROLES.has(roleId) && req.user.primaryRole !== 'superAdmin') return fail(res, 403, '无权分配高权限角色');
     const current = await first('SELECT id FROM user_roles WHERE user_id = :userId AND role_id = :roleId', { userId, roleId });
     if (!current) {
       await query('INSERT INTO user_roles (user_id, role_id) VALUES (:userId, :roleId)', { userId, roleId });
