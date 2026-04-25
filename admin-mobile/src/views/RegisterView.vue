@@ -14,12 +14,28 @@ const form = reactive({
   confirmPassword: '',
 });
 
+function ageFromIdNo(idNo) {
+  if (!/^\d{17}[\dXx]$/.test(idNo || '')) return null;
+  const birth = `${idNo.slice(6, 10)}-${idNo.slice(10, 12)}-${idNo.slice(12, 14)}`;
+  const birthDate = new Date(`${birth}T00:00:00+08:00`);
+  if (Number.isNaN(birthDate.getTime())) return null;
+  const nowDate = new Date();
+  let age = nowDate.getFullYear() - birthDate.getFullYear();
+  const monthGap = nowDate.getMonth() - birthDate.getMonth();
+  if (monthGap < 0 || (monthGap === 0 && nowDate.getDate() < birthDate.getDate())) age -= 1;
+  return age;
+}
+
 function validate() {
   if (!form.name.trim()) return '请输入姓名';
   if (!form.employeeNo.trim()) return '请输入学号或工号';
   if (!form.idNo.trim()) return '请输入身份证号';
+  if (!/^\d{17}[\dXx]$/.test(form.idNo.trim())) return '请输入18位有效身份证号';
+  const age = ageFromIdNo(form.idNo.trim());
+  if (age === null) return '身份证号格式不正确';
+  if (age < 18) return '未满18周岁，不能提交入党申请';
   if (!form.password) return '请设置登录密码';
-  if (form.password.length < 6) return '密码至少 6 位';
+  if (form.password.length < 8) return '密码至少 8 位';
   if (form.password !== form.confirmPassword) return '两次输入的密码不一致';
   return '';
 }
@@ -77,7 +93,7 @@ async function submit() {
         </div>
         <div class="field-block">
           <div class="field-label">登录密码</div>
-          <van-field v-model="form.password" type="password" placeholder="请设置至少 6 位密码" clearable />
+          <van-field v-model="form.password" type="password" placeholder="请设置至少 8 位密码" clearable />
         </div>
         <div class="field-block">
           <div class="field-label">确认密码</div>
@@ -86,6 +102,9 @@ async function submit() {
         <div class="field-block dual-actions">
           <van-button type="danger" block round :loading="loading" @click="submit">提交注册</van-button>
           <van-button plain type="danger" block round to="/login">返回登录</van-button>
+        </div>
+        <div class="section-card__desc" style="padding-top: 8px;">
+          注册时会校验姓名、学工号和身份证号格式；未满 18 周岁不能提交入党申请。
         </div>
       </div>
     </section>

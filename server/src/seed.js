@@ -1,12 +1,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const crypto = require('node:crypto');
 const { query, first, raw } = require('./db');
 const { getStepDetail } = require('./workflow-config');
-
-function hashPassword(password) {
-  return crypto.createHash('sha256').update(password).digest('hex');
-}
+const { hashPassword } = require('./password');
 
 function profileTypeForRole(roleId) {
   if (roleId === 'applicant') return 'applicant';

@@ -1,12 +1,8 @@
-const crypto = require('node:crypto');
 const { query, first, getPool } = require('../src/db');
+const { hashPassword } = require('../src/password');
 
 const username = process.argv[2] || 'admin';
 const password = process.argv[3] || '123456';
-
-function hashPassword(value) {
-  return crypto.createHash('sha256').update(value).digest('hex');
-}
 
 async function main() {
   const adminUser = await first('SELECT id, username FROM users WHERE username = :username', { username });
