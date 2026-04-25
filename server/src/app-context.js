@@ -828,13 +828,23 @@ function resolveMobileWorkflowId(user, workflowId) {
 
 function ageFromIdNo(idNo) {
   if (!/^\d{17}[\dXx]$/.test(idNo || '')) return null;
-  const birth = `${idNo.slice(6, 10)}-${idNo.slice(10, 12)}-${idNo.slice(12, 14)}`;
-  const birthDate = new Date(`${birth}T00:00:00+08:00`);
+  const year = Number(idNo.slice(6, 10));
+  const month = Number(idNo.slice(10, 12));
+  const day = Number(idNo.slice(12, 14));
+  if (!year || month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const birthDate = new Date(Date.UTC(year, month - 1, day));
   if (Number.isNaN(birthDate.getTime())) return null;
+  if (
+    birthDate.getUTCFullYear() !== year ||
+    birthDate.getUTCMonth() !== month - 1 ||
+    birthDate.getUTCDate() !== day
+  ) {
+    return null;
+  }
   const nowDate = new Date();
-  let age = nowDate.getFullYear() - birthDate.getFullYear();
-  const monthGap = nowDate.getMonth() - birthDate.getMonth();
-  if (monthGap < 0 || (monthGap === 0 && nowDate.getDate() < birthDate.getDate())) age -= 1;
+  let age = nowDate.getFullYear() - year;
+  const monthGap = nowDate.getMonth() + 1 - month;
+  if (monthGap < 0 || (monthGap === 0 && nowDate.getDate() < day)) age -= 1;
   return age;
 }
 
