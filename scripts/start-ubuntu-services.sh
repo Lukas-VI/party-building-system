@@ -19,6 +19,7 @@ require_cmd() {
 require_cmd node
 require_cmd npm
 require_cmd pm2
+require_cmd curl
 
 kill_listener() {
   local port="$1"
@@ -50,6 +51,23 @@ wait_for_url() {
 
   echo "[error] ${name} not ready: ${url}" >&2
   return 1
+}
+
+ensure_active_service() {
+  local service_name="$1"
+
+  if systemctl list-unit-files --full --all | awk '{print $1}' | grep -qx "${service_name}"; then
+    echo "[info] restarting ${service_name}"
+    systemctl restart "${service_name}"
+    if ! systemctl is-active --quiet "${service_name}"; then
+      echo "[error] ${service_name} failed to start" >&2
+      systemctl status "${service_name}" --no-pager || true
+      return 1
+    fi
+    systemctl status "${service_name}" --no-pager || true
+  else
+    echo "[warn] systemd service not found: ${service_name}"
+  fi
 }
 
 ensure_deps() {
@@ -85,12 +103,7 @@ else
   pm2 start "${ROOT_DIR}/scripts/serve-admin-frontends.mjs" --name "${GATEWAY_NAME}" --cwd "${ROOT_DIR}"
 fi
 
-if systemctl list-unit-files | grep -q "^${FRPC_SERVICE_NAME}"; then
-  echo "[info] restarting ${FRPC_SERVICE_NAME}"
-  systemctl restart "${FRPC_SERVICE_NAME}"
-else
-  echo "[warn] systemd service not found: ${FRPC_SERVICE_NAME}"
-fi
+ensure_active_service "${FRPC_SERVICE_NAME}"
 
 pm2 save
 
@@ -104,3 +117,8 @@ echo
 wait_for_url "http://127.0.0.1:1919/web-admin/" "admin gateway"
 curl -I -fsS "http://127.0.0.1:1919/web-admin/"
 echo
+
+if systemctl list-unit-files --full --all | awk '{print $1}' | grep -qx "${FRPC_SERVICE_NAME}"; then
+  echo "[info] verifying ${FRPC_SERVICE_NAME}"
+  systemctl is-active --quiet "${FRPC_SERVICE_NAME}"
+fi
