@@ -42,8 +42,8 @@ set -euo pipefail
 cd '${REPO_PATH}'
 git remote set-url origin 'https://github.com/Lukas-VI/party-building-system'
 git fetch '${REMOTE_BUNDLE_PATH}' '+refs/heads/*:refs/remotes/local-bundle/*'
-if git show-ref --verify --quiet refs/remotes/local-bundle/main; then git branch -f main refs/remotes/local-bundle/main; fi
-if git show-ref --verify --quiet refs/remotes/local-bundle/${BRANCH}; then git checkout -B '${BRANCH}' refs/remotes/local-bundle/${BRANCH}; else git checkout '${BRANCH}'; fi
+if git show-ref --verify --quiet refs/remotes/local-bundle/main; then git checkout -B main refs/remotes/local-bundle/main; fi
+if [ '${BRANCH}' != 'main' ] && git show-ref --verify --quiet refs/remotes/local-bundle/${BRANCH}; then git checkout -B '${BRANCH}' refs/remotes/local-bundle/${BRANCH}; fi
 rm -f '${REMOTE_BUNDLE_PATH}'
 bash '${REPO_PATH}/scripts/start-ubuntu-services.sh'
 EOF

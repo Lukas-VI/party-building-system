@@ -46,8 +46,8 @@ $remoteLines = @(
   "cd '$RepoPath'",
   "git remote set-url origin 'https://github.com/Lukas-VI/party-building-system'",
   "git fetch '$remoteBundlePath' '+refs/heads/*:refs/remotes/local-bundle/*'",
-  "if git show-ref --verify --quiet refs/remotes/local-bundle/main; then git branch -f main refs/remotes/local-bundle/main; fi",
-  "if git show-ref --verify --quiet refs/remotes/local-bundle/$Branch; then git checkout -B '$Branch' refs/remotes/local-bundle/$Branch; else git checkout '$Branch'; fi",
+  "if git show-ref --verify --quiet refs/remotes/local-bundle/main; then git checkout -B main refs/remotes/local-bundle/main; fi",
+  "if [ '$Branch' != 'main' ] && git show-ref --verify --quiet refs/remotes/local-bundle/$Branch; then git checkout -B '$Branch' refs/remotes/local-bundle/$Branch; fi",
   "rm -f '$remoteBundlePath'",
   "bash '$RepoPath/scripts/start-ubuntu-services.sh'"
 )
