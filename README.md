@@ -6,10 +6,9 @@
 - 服务号网页 App：申请人、支部审核者、组织员和学院党委共用的微信内轻量工作台。
 - 服务端：统一认证、权限、流程、统计、导出、附件上传。
 - PC 后台：查看台账、审核审批、统计分析、流程配置、组织与角色管理。
-- 历史小程序：保留为旧实现存档，不再作为当前验收口径。
 
-Gitee 仓库地址：
-- [https://gitee.com/Yanhe06/party-building-mini-app.git](https://gitee.com/Yanhe06/party-building-mini-app.git)
+GitHub 仓库地址：
+- [https://github.com/Lukas-VI/party-building-system](https://github.com/Lukas-VI/party-building-system)
 
 ## 业务场景
 - 发展党员 25 步流程留痕管理
@@ -34,6 +33,7 @@ Gitee 仓库地址：
 ├─ server/           Node.js + MySQL 服务端
 ├─ pages/            历史小程序页面（保留存档）
 ├─ utils/            历史小程序配置与通用脚本
+├─ shared/           前后端共享资料与流程参考数据
 └─ app.json/app.js   历史小程序入口配置
 ```
 
@@ -60,13 +60,14 @@ npm run dev
 ```
 
 可通过 `admin-web/.env.example` 配置 `VITE_API_BASE`。
-如需按开发服务器联调口径启动后台前端：
+如需按开发服务器联调口径启动桌面后台开发服务：
 ```bash
 npm run dev:1919
 ```
 如需通过统一入口 `https://域名/web-admin/` 暴露后台：
-- 桌面后台实际挂载在 `/web-admin/desktop/`
-- 服务号网页 App 实际挂载在 `/wx-app/`
+- 对外前端入口只保留 `/web-admin/`
+- 桌面后台真实挂载在 `/web-admin/desktop/`
+- 服务号网页 App 真实挂载在 `/wx-app/`
 - 统一网关会根据设备类型把 `/web-admin/` 自动分流到桌面版或服务号网页端
 
 ### 3. 启动服务号网页 App
@@ -84,8 +85,10 @@ npm run dev:1919
 - 但手机端正式方向已切换为微信服务号网页 App，不再继续以小程序作为主交付面
 
 ## 服务号网页 App 使用说明
-- 统一移动入口：`https://你的域名/wx-app/`
+- 统一前端入口：`https://你的域名/web-admin/`
+- 服务号网页 App 真实挂载路径：`https://你的域名/wx-app/`
 - 微信内打开时优先作为服务号工作台使用，桌面设备访问会自动跳转到 PC 后台
+- 登录页提供首次注册入口，注册表单提交至 `/api/auth/register`
 - 登录支持账号密码，后续可补充微信网页授权绑定
 - 工作台按角色显示待办、下一步节点、流程概览、消息提醒和最近操作
 - 申请人重点使用：我的流程、我的资料、材料维护
@@ -118,13 +121,15 @@ npm run dev:1919
 - 服务号网页授权：需额外配置 `WECHAT_SERVICE_APP_ID`、`WECHAT_SERVICE_APP_SECRET`、`WECHAT_SERVICE_REDIRECT_URI`
 - frp 端口规划：
   - `1145 -> 3000`：服务端 API
-  - `1919 -> 1919`：后台前端
+  - `1919 -> 1919`：统一前端网关
 - Navicat 数据库管理建议继续通过 VMware NAT 或受控内网访问，不通过 frp 暴露数据库
 
 详细步骤见：
 - [部署文档](docs/deployment.md)
 - [项目总览](docs/project-overview.md)
 - [全程记实表整理与研发参考](docs/electronic-dossier.md)
+- [4月20会议纪要](docs/4月20会议纪要.md)
+- [发展流程说明](docs/assets/党员发展流程说明.md)
 - [模块维护说明](docs/maintenance-notes.md)
 - [开发调试记录](docs/dev-notes.md)
 
@@ -147,6 +152,8 @@ npm run dev:1919
 - 已补充基于原始设计文档提炼的流程提示与流程示意
 - 已将服务号网页 App 固定到 `/wx-app/`
 - 已将桌面后台保留在 `/web-admin/desktop/`，并按设备自动分流
+- 已将对外前端入口收口为 `/web-admin/`，旧 `/admin/`、`/m-admin/`、`/web-admin/mobile/` 不再保留
+- 历史小程序代码仍保留在仓库中，仅作为存档和比对参考
 
 ## 后续建议
 - 接入正式统一身份认证

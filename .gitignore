@@ -15,3 +15,9 @@ analyse-data.json
 !admin-web/.env.example
 !server/.env.example
 !server/.env.production.example
+docs/~$*.docx
+docs/*.docx
+docs/*.pdf
+docs/assets/.$*.bkp
+docs/assets/*.drawio.png
+docs/assets/report-*.png

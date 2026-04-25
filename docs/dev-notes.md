@@ -12,15 +12,13 @@
 - API 健康检查：`http://192.168.31.135/api/health`
 
 ## 当前开发约束
-- 小程序真机测试仍需要 HTTPS 合法域名
-- 微信绑定真实联调仍需要填写小程序 `AppID/AppSecret`
+- 服务号网页 App 正式联调需要 HTTPS 合法域名
+- 微信网页授权真实联调需要填写服务号 `AppID/AppSecret/Redirect URI`
 
 ## 当前模式说明
-- 小程序默认使用 `demo` 模式，便于演示
-- 后台和服务端默认使用 Ubuntu 开发服务器
+- 服务号网页 App、后台和服务端默认使用 Ubuntu 开发服务器
 
 ## 调试说明
-- 若需切换小程序到真实服务端联调，修改 `utils/config.js`
 - 若需重新部署后台静态资源，在 Ubuntu 上重新执行 `admin-web` 构建并覆盖 Nginx 根目录
 
 ## 最近一次故障处理
