@@ -13,14 +13,14 @@
 
 ## 2. 域名与 HTTPS
 - 微信服务号网页 App 和服务端必须使用已备案并配置 HTTPS 的域名
-- 后台管理端建议使用独立二级域名
-- 服务号网页 App 入口建议固定为 `https://域名/wx-app/`
+- 对外保留两个正式入口：前端统一入口 `/web-admin/`，后端 API 入口 `/DJ_api/`
+- `/wx-app/` 和 `/web-admin/desktop/` 是统一前端网关内部真实挂载路径，用于设备分流和静态资源加载
 
 示例：
 - API：`https://havensky.cn/DJ_api`
-- 统一后台入口：`https://havensky.cn/web-admin/`
-- 桌面后台实际路径：`https://havensky.cn/web-admin/desktop/`
-- 服务号网页 App 实际路径：`https://havensky.cn/wx-app/`
+- 前端统一入口：`https://havensky.cn/web-admin/`
+- 桌面后台真实挂载：`https://havensky.cn/web-admin/desktop/`
+- 服务号网页 App 真实挂载：`https://havensky.cn/wx-app/`
 
 开发联调阶段可先使用：
 - 可先使用局域网开发服务器进行联调
@@ -62,25 +62,17 @@ npm install -g pm2
 
 当前开发服务器可用性状态请记录在单独调试文档中。
 
-## 5. 桌面后台部署
+## 5. 桌面后台构建
 ```bash
 cd /var/www/party-building/admin-web
 npm install
 npm run build
 ```
 
-将构建产物通过 Nginx 托管，参考：
-- `server/deploy/nginx.conf.example`
-
-如需在 Ubuntu 开发服务器直接提供前端联调服务，可使用：
-```bash
-npm run dev:1919
-```
-
 桌面后台构建资源基址固定为：
 - `/web-admin/desktop/`
 
-## 6. 服务号网页 App 部署
+## 6. 服务号网页 App 构建
 ```bash
 cd /var/www/party-building/admin-mobile
 npm install
@@ -91,7 +83,7 @@ npm run build
 - `/wx-app/`
 
 ## 7. 统一后台网关
-为避免桌面后台与移动后台争用同一个 `1919` 端口，仓库根目录提供统一网关脚本：
+为避免桌面后台与服务号网页 App 分散暴露，仓库根目录提供统一前端网关脚本：
 
 ```bash
 node scripts/serve-admin-frontends.mjs
@@ -100,7 +92,7 @@ node scripts/serve-admin-frontends.mjs
 该脚本会：
 - 在 `1919` 端口同时托管 `/web-admin/desktop/` 与 `/wx-app/`
 - 自动将 `/web-admin/` 按设备类型分流
-- 兼容旧路径 `/admin/`、`/m-admin/` 和 `/web-admin/mobile/`，并重定向到新路径
+- 不再保留 `/admin/`、`/m-admin/`、`/web-admin/mobile/` 等旧入口
 
 公网服务器推荐反代规则：
 - `/DJ_api/` -> `http://127.0.0.1:1145/api/`
@@ -155,6 +147,25 @@ npm run reset-admin
 3. 执行后台构建
 4. 检查 `.env`
 5. 重启 PM2 和 Nginx
+
+如果 Ubuntu 服务器无法直接访问 GitHub，可改用“本机打包同步”的方式发布：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\deploy-to-ubuntu.ps1
+```
+
+该脚本会：
+- 从本机当前已提交分支生成 git bundle
+- 通过 SSH/SCP 同步到 Ubuntu
+- 在 Ubuntu 上更新 `main` 与当前分支引用
+- 强制将 Ubuntu 仓库远程保持为 GitHub
+- 自动执行 `scripts/start-ubuntu-services.sh`
+
+对应的 Bash 版本脚本：
+
+```bash
+bash ./scripts/deploy-to-ubuntu.sh
+```
 
 回滚步骤：
 1. 回到上一个 Git commit

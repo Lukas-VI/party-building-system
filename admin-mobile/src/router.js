@@ -21,6 +21,12 @@ const routes = [
     meta: { title: '登录' },
   },
   {
+    path: '/register',
+    name: 'register',
+    component: () => import('./views/RegisterView.vue'),
+    meta: { title: '首次注册' },
+  },
+  {
     path: '/',
     component: () => import('./layout/MobileLayout.vue'),
     children: [
@@ -44,8 +50,9 @@ const router = createRouter({
  * 角色差异优先通过路由守卫和统一 tabs 控制，不要在每个页面里重复拦截。
  */
 router.beforeEach((to) => {
-  if (to.path !== '/login' && !isLoggedIn.value) return '/login';
-  if (to.path === '/login' && isLoggedIn.value) return '/workbench';
+  const publicPages = ['/login', '/register'];
+  if (!publicPages.includes(to.path) && !isLoggedIn.value) return '/login';
+  if (publicPages.includes(to.path) && isLoggedIn.value) return '/workbench';
   if (isLoggedIn.value) {
     const tabs = roleTabs(sessionState.user);
     if (to.name === 'materials' && !tabs.some((item) => item.name === 'materials')) {

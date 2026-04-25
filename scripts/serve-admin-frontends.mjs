@@ -6,9 +6,10 @@ import { extname, join, normalize, resolve } from 'node:path';
  * 前端统一网关。
  *
  * 设计目标：
- * - PC 后台继续挂在 /web-admin/desktop/
- * - 服务号网页 App 挂在 /wx-app/
- * - 统一由同一个 1919 入口对外暴露，便于 frp 和反代维护
+ * - 对外主入口收口到 /web-admin/
+ * - 桌面设备分流到 /web-admin/desktop/
+ * - 手机和微信内访问分流到 /wx-app/
+ * - 统一由同一个 1919 端口承载前端静态资源，便于 frp 和反代维护
  *
  * 当前这是项目自定义胶水层，不属于框架脚手架。
  * 变更路径规则时，应同步更新部署文档和移动/桌面端配置。
@@ -77,6 +78,7 @@ createServer((req, res) => {
     return;
   }
 
+  // 兼容旧入口，避免已下发的历史链接立刻失效。
   if (requestPath === '/admin' || requestPath === '/admin/') {
     res.writeHead(302, { Location: '/web-admin/desktop/' });
     res.end();

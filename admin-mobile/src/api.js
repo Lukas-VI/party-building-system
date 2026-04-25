@@ -65,6 +65,12 @@ export function loginByPassword(form) {
   });
 }
 
+export function registerAccount(form) {
+  return http.post('/auth/register', form, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
 // 工作台、待办、消息三类首页数据
 export function fetchWorkbench() {
   return http.get('/mobile/workbench');

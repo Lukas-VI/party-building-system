@@ -408,6 +408,21 @@ textarea {
   gap: 10px;
 }
 
+.auth-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--text-subtle);
+}
+
+.auth-switch a {
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+
 .upload-list {
   display: grid;
   gap: 8px;
