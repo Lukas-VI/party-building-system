@@ -57,7 +57,6 @@ onMounted(loadData);
     <section class="section-card" v-if="nextTask">
       <div class="section-card__hd">
         <div class="section-card__title">下一项重点任务</div>
-        <div class="section-card__desc">首页只突出当前最需要处理的节点，其余待办下移。</div>
       </div>
       <div class="section-card__bd">
         <button type="button" class="task-hero" @click="openTask(nextTask)">
@@ -80,7 +79,6 @@ onMounted(loadData);
     <section class="section-card">
       <div class="section-card__hd">
         <div class="section-card__title">快捷入口</div>
-        <div class="section-card__desc">申请人仅保留资料、流程和材料入口；审核者可直接进入待办与流程查询。</div>
       </div>
       <div class="section-card__bd">
         <div class="mini-grid">
@@ -94,7 +92,6 @@ onMounted(loadData);
     <section class="section-card">
       <div class="section-card__hd">
         <div class="section-card__title">待办事项</div>
-        <div class="section-card__desc">已完成节点不再挤在首屏，待办优先展示，便于在微信内快速处理。</div>
       </div>
       <div class="section-card__bd">
         <div class="table-like" v-if="todoItems.length">
@@ -114,7 +111,6 @@ onMounted(loadData);
     <section class="section-card" v-if="workbench?.process">
       <div class="section-card__hd">
         <div class="section-card__title">流程概览</div>
-        <div class="section-card__desc">已完成步骤折叠至流程页，本处只保留阶段、进度和当前节点。</div>
       </div>
       <div class="section-card__bd">
         <div class="kv-grid">
@@ -137,7 +133,6 @@ onMounted(loadData);
     <section class="section-card">
       <div class="section-card__hd">
         <div class="section-card__title">消息提醒</div>
-        <div class="section-card__desc">系统会围绕节点创建、审核结果、改期确认和关键时间提醒推送消息。</div>
       </div>
       <div class="section-card__bd">
         <div class="table-like" v-if="previewMessages.length">
@@ -158,7 +153,6 @@ onMounted(loadData);
     <section class="section-card" v-if="workbench?.recentLogs?.length">
       <div class="section-card__hd">
         <div class="section-card__title">最近操作</div>
-        <div class="section-card__desc">所有关键修改均留痕，不允许无痕改时间或材料状态。</div>
       </div>
       <div class="section-card__bd">
         <div class="table-like">

@@ -40,7 +40,6 @@ onMounted(loadProfile);
     <section class="section-card section-card--compact">
       <div class="section-card__hd">
         <div class="section-card__title">{{ sessionState.user?.name || '个人资料' }}</div>
-        <div class="section-card__desc">请维护当前账号的基础信息、经历和联系方式。</div>
       </div>
       <div class="section-card__bd">
         <div class="section-actions">

@@ -59,15 +59,12 @@ onMounted(() => {
   <div class="login-shell">
     <section class="login-brand">
       <div class="login-brand__title">党员发展服务号工作台</div>
-      <div class="login-brand__desc">
-        该入口用于申请人、党支部书记、组织员、学院党委与组织部门协同办理发展党员流程。手机端聚焦待办、材料、通知和留痕，复杂台账与配置转至 PC 后台。
-      </div>
     </section>
 
     <section class="section-card" style="margin-top: 14px;">
       <div class="section-card__hd">
         <div class="section-card__title">账号登录</div>
-        <div class="section-card__desc">请输入账号和密码。测试环境账号提示由服务端动态提供，正式使用前建议先完成微信绑定。</div>
+        <div class="section-card__desc">请输入账号和密码。</div>
       </div>
       <div class="section-card__bd">
         <div class="field-block">
@@ -95,7 +92,7 @@ onMounted(() => {
     <section class="section-card" v-if="bootstrap.loginHints?.length">
       <div class="section-card__hd">
         <div class="section-card__title">快速填充账号</div>
-        <div class="section-card__desc">点击可快速填充账号。账号清单来自当前测试库，不在页面内硬编码维护。</div>
+        <div class="section-card__desc">点击可快速填充账号。</div>
       </div>
       <div class="section-card__bd">
         <div class="login-demo-grid">

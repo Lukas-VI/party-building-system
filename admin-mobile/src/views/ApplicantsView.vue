@@ -34,7 +34,6 @@ onMounted(loadApplicants);
     <section class="section-card">
       <div class="section-card__hd">
         <div class="section-card__title">申请人台账</div>
-        <div class="section-card__desc">保留高频查询与流程查看，批量导出和复杂筛选建议使用桌面端</div>
       </div>
       <div class="section-card__bd">
         <van-search v-model="keyword" placeholder="姓名 / 学号 / 单位关键字" shape="round" @search="loadApplicants" />

@@ -130,7 +130,6 @@ onMounted(loadWorkflow);
         <div class="page-toolbar">
           <div>
             <div class="section-card__title">流程办理</div>
-            <div class="section-card__desc">当前仅突出本人或当前权限范围内最需要处理的节点，已完成步骤折叠到下方。</div>
           </div>
           <van-button plain type="danger" size="small" @click="router.back()">返回</van-button>
         </div>
@@ -213,7 +212,6 @@ onMounted(loadWorkflow);
     <section class="section-card">
       <div class="section-card__hd">
         <div class="section-card__title">步骤总览</div>
-        <div class="section-card__desc">当前步骤和后续待办保留在前面，已完成步骤折叠展示。</div>
       </div>
       <div class="section-card__bd">
         <div class="step-list" v-if="allSteps.length">

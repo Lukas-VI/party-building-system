@@ -42,7 +42,6 @@ onMounted(loadWorkflow);
     <section class="section-card">
       <div class="section-card__hd">
         <div class="section-card__title">材料维护</div>
-        <div class="section-card__desc">材料按流程节点和标签归集，不单独拆出总档案夹。请优先补齐申请书、政审材料和发展材料。</div>
       </div>
       <div class="section-card__bd">
         <div class="table-like" v-if="materialSteps.length">

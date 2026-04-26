@@ -56,7 +56,6 @@ onMounted(loadReviews);
     <section class="section-card">
       <div class="section-card__hd">
         <div class="section-card__title">待办审核</div>
-        <div class="section-card__desc">移动端保留通过与退回等高频操作，复杂批量办理建议转桌面端</div>
       </div>
       <div class="section-card__bd">
         <van-button type="danger" plain block round @click="loadReviews">刷新待办</van-button>
@@ -72,7 +71,6 @@ onMounted(loadReviews);
     <section class="section-card" v-else-if="hasPermission(sessionState.user, 'approve_registration')">
       <div class="section-card__hd">
         <div class="section-card__title">待审核注册</div>
-        <div class="section-card__desc">先完成首次注册审核，再进入后续流程办理。</div>
       </div>
       <div class="section-card__bd" v-if="registrationRequests.length">
         <div class="table-like">
@@ -108,7 +106,6 @@ onMounted(loadReviews);
     <section class="section-card" v-else>
       <div class="section-card__hd">
         <div class="section-card__title">待审核流程</div>
-        <div class="section-card__desc">当前角色权限范围内需要处理的流程节点。</div>
       </div>
       <div class="section-card__bd" v-if="reviews.length">
         <div class="table-like">

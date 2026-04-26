@@ -331,8 +331,6 @@ function App() {
       <aside className="admin-sidebar">
         <div>
           <div className="brand-title">党员发展管理系统</div>
-          <div className="brand-subtitle">规范发展党员全过程管理</div>
-          {themeMode === 'propaganda' && <div className="brand-banner">坚持标准  严格程序  纪实留痕  逐级把关</div>}
         </div>
         <div className="sidebar-user">
           <div className="sidebar-user-name">{user.name}</div>
@@ -362,7 +360,6 @@ function App() {
         <header className="content-header">
           <div>
             <h1>{MENU_LABELS[activeView]}</h1>
-            {themeMode === 'propaganda' && <div className="content-slogan">坚持政治标准 严把发展关口 规范留痕管理</div>}
           </div>
           <Tag theme="danger" variant="light">{loading ? '加载中' : '实时数据'}</Tag>
         </header>
@@ -669,8 +666,6 @@ function LoginScreen({ onLogin, themeClass, onToggleTheme, isMobile, bootstrap }
       <div className="login-panel">
         <div>
           <div className="login-title">党员发展管理后台</div>
-          <div className="login-subtitle">用于台账查看、审核审批、统计分析和流程配置</div>
-          {themeClass === 'theme-propaganda' && <div className="login-banner">高标准推进党员发展工作信息化建设</div>}
         </div>
         <Input value={username} onChange={setUsername} placeholder="账号" size="large" />
         <Input type="password" value={password} onChange={setPassword} placeholder="密码" size="large" />

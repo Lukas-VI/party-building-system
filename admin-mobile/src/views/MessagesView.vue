@@ -22,7 +22,6 @@ onMounted(loadMessages);
     <section class="section-card">
       <div class="section-card__hd">
         <div class="section-card__title">消息中心</div>
-        <div class="section-card__desc">记录节点创建、审核结果、时间变更和关键提醒，后续可与服务号模板消息一一对应。</div>
       </div>
       <div class="section-card__bd">
         <div class="table-like" v-if="messages.length">

@@ -46,7 +46,6 @@ onMounted(loadDetail);
         <div class="page-toolbar">
           <div>
             <div class="section-card__title">流程详情</div>
-            <div class="section-card__desc">查看单个申请人的资料、当前阶段与二十五步办理记录</div>
           </div>
           <van-button size="small" plain type="danger" @click="router.back()">返回</van-button>
         </div>
@@ -69,7 +68,6 @@ onMounted(loadDetail);
     <section class="section-card">
       <div class="section-card__hd">
         <div class="section-card__title">二十五步流程</div>
-        <div class="section-card__desc">按时间顺序查看节点状态、办理说明与最近操作信息</div>
       </div>
       <div class="section-card__bd">
         <div class="step-list" v-if="stepRows.length">

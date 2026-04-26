@@ -78,15 +78,11 @@ async function submit() {
   <div class="login-shell">
     <section class="login-brand">
       <div class="login-brand__title">首次注册</div>
-      <div class="login-brand__desc">
-        使用学校预置的学号或工号提交注册信息，审核通过后即可登录服务号工作台办理流程、维护资料和查看通知。
-      </div>
     </section>
 
     <section class="section-card" style="margin-top: 14px;">
       <div class="section-card__hd">
         <div class="section-card__title">身份核验</div>
-        <div class="section-card__desc">请填写与后台人员库一致的信息。提交后由管理员审核。</div>
       </div>
       <div class="section-card__bd">
         <div class="field-block">
@@ -112,9 +108,6 @@ async function submit() {
         <div class="field-block dual-actions">
           <van-button type="danger" block round :loading="loading" @click="submit">提交注册</van-button>
           <van-button plain type="danger" block round to="/login">返回登录</van-button>
-        </div>
-        <div class="section-card__desc" style="padding-top: 8px;">
-          注册时会校验姓名、学工号和身份证号格式；未满 18 周岁不能提交入党申请。
         </div>
       </div>
     </section>
