@@ -224,21 +224,37 @@ async function ensureNotificationSeeds() {
  * end to end without resetting the database.
  */
 async function ensureRegistrationCandidateSeed() {
-  const existing = await first('SELECT id FROM users WHERE username = :username', { username: '2023999' });
-  if (existing) return;
+  const candidate = {
+    id: 'u-registration-001',
+    username: '2428624001',
+    passwordHash: hashPassword('12345678'),
+    name: 'Name',
+    status: 'inactive',
+    orgId: 'org-literature',
+    branchId: 'branch-literature-2',
+    createdAt: '2026-04-26 08:00:00',
+  };
+  const existingById = await first('SELECT id FROM users WHERE id = :id', { id: candidate.id });
+  if (existingById) {
+    await query(
+      `UPDATE users
+       SET username = :username,
+           password_hash = :passwordHash,
+           name = :name,
+           status = :status,
+           org_id = :orgId,
+           branch_id = :branchId
+       WHERE id = :id`,
+      candidate,
+    );
+    return;
+  }
+  const existingByUsername = await first('SELECT id FROM users WHERE username = :username', { username: candidate.username });
+  if (existingByUsername) return;
   await query(
     `INSERT INTO users (id, username, password_hash, name, status, org_id, branch_id, created_at)
      VALUES (:id, :username, :passwordHash, :name, :status, :orgId, :branchId, :createdAt)`,
-    {
-      id: 'u-registration-001',
-      username: '2023999',
-      passwordHash: hashPassword('123456'),
-      name: 'Name',
-      status: 'inactive',
-      orgId: 'org-literature',
-      branchId: 'branch-literature-2',
-      createdAt: '2026-04-26 08:00:00',
-    },
+    candidate,
   );
 }
 

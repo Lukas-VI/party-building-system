@@ -53,8 +53,12 @@ http.interceptors.response.use(
         window.location.hash = '#/login';
       }
     }
+    const normalizedError = new Error(message);
+    normalizedError.status = status;
+    normalizedError.response = error.response;
+    normalizedError.toastShown = true;
     showFailToast(message);
-    return Promise.reject(error);
+    return Promise.reject(normalizedError);
   },
 );
 

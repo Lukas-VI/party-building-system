@@ -65,7 +65,9 @@ async function submit() {
     showSuccessToast('注册信息已提交');
     router.replace('/login');
   } catch (error) {
-    showFailToast(error.message || '注册提交失败');
+    if (!error.toastShown) {
+      showFailToast(error.message || '注册提交失败');
+    }
   } finally {
     loading.value = false;
   }
