@@ -7,6 +7,9 @@ const SCRYPT_P = 1;
 const KEY_LENGTH = 32;
 const SALT_LENGTH = 16;
 
+/**
+ * Compute the legacy unsalted SHA-256 digest for migration-time password verification only.
+ */
 function digestLegacySha256(password) {
   return crypto.createHash('sha256').update(password || '').digest('hex');
 }
@@ -32,6 +35,9 @@ function hashPassword(password) {
   ].join('$');
 }
 
+/**
+ * Verify either the current scrypt password format or a legacy SHA-256 digest.
+ */
 function verifyPassword(password, passwordHash) {
   if (!passwordHash) return false;
   if (!passwordHash.startsWith(`${SCRYPT_PREFIX}$`)) {
@@ -48,6 +54,9 @@ function verifyPassword(password, passwordHash) {
   return crypto.timingSafeEqual(actual, expected);
 }
 
+/**
+ * Detect password hashes that should be upgraded after a successful login.
+ */
 function needsPasswordRehash(passwordHash) {
   return !passwordHash || !passwordHash.startsWith(`${SCRYPT_PREFIX}$`);
 }

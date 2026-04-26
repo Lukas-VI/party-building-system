@@ -28,18 +28,30 @@ const FILE_ACCEPT_RULES = {
  */
 
 // Small HTTP and serialization helpers shared by every route group.
+/**
+ * Send the standard successful API envelope used by all clients.
+ */
 function ok(res, data, message = 'ok') {
   res.json({ code: 0, message, data });
 }
 
+/**
+ * Send the standard error API envelope with an HTTP status code.
+ */
 function fail(res, status, message, code = status) {
   res.status(status).json({ code, message, data: null });
 }
 
+/**
+ * Return a MySQL DATETIME-compatible timestamp for audit and workflow writes.
+ */
 function now() {
   return new Date().toISOString().slice(0, 19).replace('T', ' ');
 }
 
+/**
+ * Parse JSON columns defensively and fall back when legacy rows contain empty or invalid data.
+ */
 function parseJson(value, fallback) {
   if (!value) return fallback;
   try {
@@ -49,10 +61,16 @@ function parseJson(value, fallback) {
   }
 }
 
+/**
+ * Create the short-lived application JWT from the authenticated user snapshot.
+ */
 function signToken(user) {
   return jwt.sign({ uid: user.id, username: user.username, role: user.primaryRole }, env.JWT_SECRET, { expiresIn: '7d' });
 }
 
+/**
+ * Translate backend permissions into frontend menu identifiers.
+ */
 function buildMenus(permissions) {
   const menuMap = {
     view_dashboard: 'dashboard',
@@ -70,6 +88,9 @@ function buildMenus(permissions) {
   return Array.from(new Set(permissions.map((item) => menuMap[item.id]).filter(Boolean)));
 }
 
+/**
+ * Describe the data scope implied by the user primary role.
+ */
 function roleScopeLabel(user) {
   if (user.primaryRole === 'applicant') return '本人数据';
   if (user.primaryRole === 'branchSecretary') return '本支部数据';
@@ -78,6 +99,9 @@ function roleScopeLabel(user) {
 }
 
 // 当前仍按申请人、基层管理、管理员三类资料视图区分，不要回退成一套混合表单。
+/**
+ * Map a role identifier to the profile schema family used by forms and seed data.
+ */
 function profileTypeForRole(role) {
   if (role === 'applicant') return 'applicant';
   if (['branchSecretary', 'organizer'].includes(role)) return 'cadre';
@@ -85,6 +109,9 @@ function profileTypeForRole(role) {
 }
 
 // 这里只生成资料视图默认值，不在这里写死后续可能变化的完整业务字段。
+/**
+ * Build role-specific profile defaults before merging persisted profile fields.
+ */
 function buildDefaultProfilePayload(user) {
   if (user.primaryRole === 'applicant') {
     return {
@@ -125,6 +152,9 @@ function buildDefaultProfilePayload(user) {
   };
 }
 
+/**
+ * Append one audit trail row for security-sensitive or workflow-changing operations.
+ */
 async function logAudit(targetType, targetId, action, operatorId, detail = {}) {
   await query(
     `INSERT INTO audit_logs (target_type, target_id, action, operator_id, detail_json, created_at)
@@ -142,6 +172,9 @@ async function logAudit(targetType, targetId, action, operatorId, detail = {}) {
 
 // Authentication payload assembly is centralized so all clients receive the
 // same role, permission and menu shape after login or token refresh.
+/**
+ * Load a user together with roles, permissions and derived frontend menu access.
+ */
 async function getUserWithAuth(userId) {
   const user = await first(
     `SELECT
@@ -187,6 +220,9 @@ async function getUserWithAuth(userId) {
 }
 
 // 统一认证中间件，后续如果调整为服务号网页登录票据，也应优先从这里扩展。
+/**
+ * Authenticate Bearer JWT requests and attach the hydrated user to req.user.
+ */
 function requireAuth() {
   return async (req, res, next) => {
     try {
@@ -204,10 +240,16 @@ function requireAuth() {
   };
 }
 
+/**
+ * Check whether a hydrated user owns a named backend permission.
+ */
 function hasPermission(user, permissionId) {
   return (user.permissions || []).some((item) => item.id === permissionId);
 }
 
+/**
+ * Build an Express guard that rejects callers missing the required permission.
+ */
 function requirePermission(permissionId) {
   return (req, res, next) => {
     if (!hasPermission(req.user, permissionId)) return fail(res, 403, '无权执行该操作');
@@ -216,6 +258,9 @@ function requirePermission(permissionId) {
 }
 
 // 数据范围约束集中维护在这里，避免每个查询接口手写一套权限过滤。
+/**
+ * Create SQL fragments that constrain applicant queries to the caller data scope.
+ */
 function scopeClause(user, applicantAlias = 'u') {
   if (user.primaryRole === 'applicant') {
     return { sql: ` AND ${applicantAlias}.id = :scopeUserId`, params: { scopeUserId: user.id } };
@@ -229,6 +274,9 @@ function scopeClause(user, applicantAlias = 'u') {
   return { sql: '', params: {} };
 }
 
+/**
+ * List applicant rows visible to the caller, with optional table filters applied inside scope.
+ */
 async function getApplicants(user, filters = {}) {
   const scope = scopeClause(user, 'u');
   return query(
@@ -266,26 +314,41 @@ async function getApplicants(user, filters = {}) {
   );
 }
 
+/**
+ * Check whether the caller data scope covers one applicant user id.
+ */
 async function canAccessApplicant(user, applicantId) {
   const rows = await getApplicants(user, {});
   return rows.some((item) => item.id === applicantId);
 }
 
+/**
+ * Create an Error that route handlers can translate into the intended HTTP status.
+ */
 function errorWithStatus(message, status = 400) {
   const error = new Error(message);
   error.status = status;
   return error;
 }
 
+/**
+ * Extract the numeric order from a STEP_xx workflow code.
+ */
 function stepOrder(stepCode) {
   const match = /^STEP_(\d+)$/.exec(stepCode || '');
   return match ? Number(match[1]) : null;
 }
 
+/**
+ * Tell whether a workflow step is open in the current first-12-step MVP boundary.
+ */
 function isMvpStep(step) {
   return Number(step.sortOrder || stepOrder(step.stepCode) || 0) <= MVP_MAX_STEP_ORDER;
 }
 
+/**
+ * Check data-scope coverage for records that already contain org, branch or user ids.
+ */
 function canAccessScopedRecord(user, record) {
   if (user.primaryRole === 'applicant') return user.id === record.id || user.id === record.userId;
   if (user.primaryRole === 'branchSecretary') return Boolean(user.branchId && user.branchId === record.branchId);
@@ -293,12 +356,18 @@ function canAccessScopedRecord(user, record) {
   return true;
 }
 
+/**
+ * Throw a 403 error when the caller cannot access the applicant workflow owner.
+ */
 async function assertCanAccessApplicant(user, applicantId) {
   if (!(await canAccessApplicant(user, applicantId))) {
     throw errorWithStatus('无权访问该申请人', 403);
   }
 }
 
+/**
+ * Load the applicant profile view model for a user id.
+ */
 async function getApplicantProfileByUserId(userId) {
   return first(
     `SELECT
@@ -323,6 +392,9 @@ async function getApplicantProfileByUserId(userId) {
   );
 }
 
+/**
+ * Load the generic role profile JSON stored for a user.
+ */
 async function getUserProfileRecord(userId) {
   return first(
     `SELECT
@@ -338,6 +410,9 @@ async function getUserProfileRecord(userId) {
 
 // Profile views are role-aware: applicant, cadre and admin users intentionally
 // receive different editable fields while sharing the same endpoint contract.
+/**
+ * Compose the role-aware profile response returned to PC and H5 clients.
+ */
 async function getProfileViewByUser(user) {
   const profileRecord = await getUserProfileRecord(user.id);
   const baseProfile = buildDefaultProfilePayload(user);
@@ -377,6 +452,9 @@ async function getProfileViewByUser(user) {
   };
 }
 
+/**
+ * Persist the role-aware profile JSON for the current user.
+ */
 async function upsertUserProfile(user, payload) {
   const profileType = profileTypeForRole(user.primaryRole);
   await query(
@@ -395,6 +473,9 @@ async function upsertUserProfile(user, payload) {
   );
 }
 
+/**
+ * Load the active service-account WeChat binding for a user.
+ */
 async function getWechatBindingByUserId(userId) {
   return first(
     `SELECT
@@ -413,6 +494,9 @@ async function getWechatBindingByUserId(userId) {
   );
 }
 
+/**
+ * Map internal workflow statuses to display text.
+ */
 function statusText(status) {
   return {
     pending: '待填写',
@@ -424,6 +508,9 @@ function statusText(status) {
   }[status] || status;
 }
 
+/**
+ * Map internal workflow statuses to badge class names expected by the UI.
+ */
 function statusClass(status) {
   return {
     pending: 'badge-warning',
@@ -435,6 +522,9 @@ function statusClass(status) {
   }[status] || 'badge-primary';
 }
 
+/**
+ * Load one workflow instance with parsed step metadata, form data and attachments.
+ */
 async function getWorkflowByApplicantId(applicantId) {
   const instance = await first(
     `SELECT id, applicant_id AS applicantId, current_stage AS currentStage, updated_at AS updatedAt
@@ -515,6 +605,9 @@ async function getWorkflowByApplicantId(applicantId) {
   };
 }
 
+/**
+ * Build dashboard metrics constrained to the caller scope.
+ */
 async function dashboardForUser(user) {
   const applicants = await getApplicants(user, {});
   const pendingRegistrations = await first('SELECT COUNT(*) AS count FROM registration_requests WHERE status = :status', { status: 'pending' });
@@ -547,30 +640,48 @@ async function dashboardForUser(user) {
 
 // Workflow actor checks protect both PC and H5 endpoints. Keep all future step
 // state rules here instead of duplicating them in route handlers.
+/**
+ * Return all role ids carried by the hydrated user.
+ */
 function currentRoleIds(user) {
   return (user.roles || []).map((item) => item.id);
 }
 
+/**
+ * Return the display label of the user primary role.
+ */
 function primaryRoleLabel(user) {
   return user.roles?.[0]?.label || '系统用户';
 }
 
+/**
+ * Check whether the caller may act as the applicant for a workflow step.
+ */
 function isApplicantActor(user, applicantId, step) {
   return user.primaryRole === 'applicant' && user.id === applicantId && Number(step.requiresApplicantAction || step.taskMeta?.requiresApplicantAction || 0) === 1;
 }
 
+/**
+ * Check whether the caller may review a workflow step through any assigned role.
+ */
 function isReviewerActor(user, step) {
   if (user.primaryRole === 'applicant') return false;
   const responsibleRoles = step.responsibleRoles?.length ? step.responsibleRoles : step.taskMeta?.responsibleRoles || step.allowedRoles || [];
   return responsibleRoles.some((roleId) => currentRoleIds(user).includes(roleId)) && Number(step.requiresReviewerAction || step.taskMeta?.requiresReviewerAction || 0) === 1;
 }
 
+/**
+ * Reject workflow actions outside the current first-12-step MVP boundary.
+ */
 function ensureMvpStep(step) {
   if (!isMvpStep(step)) {
     throw errorWithStatus('该流程节点暂未纳入前12步MVP，暂不开放办理', 400);
   }
 }
 
+/**
+ * Reject workflow actions when the nearest prior MVP step is not complete.
+ */
 function ensurePreviousStepApproved(workflow, step) {
   const previous = workflow.steps
     .filter((item) => isMvpStep(item) && Number(item.sortOrder || 0) < Number(step.sortOrder || 0))
@@ -580,6 +691,9 @@ function ensurePreviousStepApproved(workflow, step) {
   }
 }
 
+/**
+ * Enforce workflow step state, ordering and actor rules for submit or review actions.
+ */
 function assertWorkflowActor(user, applicantId, workflow, step, action) {
   if (!step) throw errorWithStatus('未找到对应任务', 404);
   ensureMvpStep(step);
@@ -597,12 +711,18 @@ function assertWorkflowActor(user, applicantId, workflow, step, action) {
   throw errorWithStatus('未知流程动作', 400);
 }
 
+/**
+ * Translate a review result into the task status consumed by mobile workbench views.
+ */
 function nextTaskStatus(status) {
   if (status === 'approved') return 'done';
   if (status === 'rejected') return 'blocked';
   return 'in_review';
 }
 
+/**
+ * Open the next MVP step after approval or relock later unfinished steps after rejection.
+ */
 async function advanceAfterReview(workflow, step, nextStatus) {
   if (nextStatus === 'approved') {
     const nextStep = workflow.steps
@@ -631,6 +751,9 @@ async function advanceAfterReview(workflow, step, nextStatus) {
   }
 }
 
+/**
+ * Normalize workflow status fields into the mobile task-state vocabulary.
+ */
 function mobileTaskStatus(step) {
   if (step.taskStatus) return step.taskStatus;
   if (step.status === 'approved') return 'done';
@@ -641,6 +764,9 @@ function mobileTaskStatus(step) {
 }
 
 // 移动端待办对象在这里统一组装，页面层只消费结果，不再自行拼装流程规则。
+/**
+ * Build the mobile task card shape from workflow, applicant and actor state.
+ */
 function buildTodoItem(user, applicant, workflow, step) {
   const taskOwner = isApplicantActor(user, applicant.userId || applicant.id, step) ? '申请人' : '审核者';
   return {
@@ -673,6 +799,9 @@ function buildTodoItem(user, applicant, workflow, step) {
   };
 }
 
+/**
+ * List actionable mobile tasks visible to the current user.
+ */
 async function listMobileTodos(user) {
   const applicants = user.primaryRole === 'applicant'
     ? [{ ...(await getApplicantProfileByUserId(user.id)), id: user.id, userId: user.id }]
@@ -697,6 +826,9 @@ async function listMobileTodos(user) {
 
 // Notification helpers deliberately operate on user IDs only; data-scope
 // filtering happens before recipient selection.
+/**
+ * List recent notifications for the current user.
+ */
 async function listNotifications(user, limit = 20) {
   const rows = await query(
     `SELECT
@@ -718,6 +850,9 @@ async function listNotifications(user, limit = 20) {
   return rows;
 }
 
+/**
+ * Create a notification row for a specific recipient.
+ */
 async function createNotification(userId, type, title, content, relatedStepCode = null, relatedTargetType = null, relatedTargetId = null) {
   const createdAt = now();
   await query(
@@ -728,6 +863,9 @@ async function createNotification(userId, type, title, content, relatedStepCode 
   );
 }
 
+/**
+ * List recent audit events performed by the current user.
+ */
 async function recentAuditLogs(user, limit = 8) {
   const rows = await query(
     `SELECT
@@ -748,6 +886,9 @@ async function recentAuditLogs(user, limit = 8) {
   }));
 }
 
+/**
+ * Build the mobile workflow detail response while enforcing applicant data scope.
+ */
 async function buildMobileWorkflow(user, applicantId) {
   if (!(await canAccessApplicant(user, applicantId))) {
     const error = new Error('无权查看该流程');
@@ -788,6 +929,9 @@ async function buildMobileWorkflow(user, applicantId) {
   };
 }
 
+/**
+ * Assemble the mobile workbench summary, next task, messages and recent activity.
+ */
 async function buildMobileWorkbench(user) {
   const dashboard = await dashboardForUser(user);
   const todos = await listMobileTodos(user);
@@ -822,10 +966,16 @@ async function buildMobileWorkbench(user) {
   };
 }
 
+/**
+ * Resolve the mobile convenience workflow id alias into a concrete applicant id.
+ */
 function resolveMobileWorkflowId(user, workflowId) {
   return workflowId === 'me' ? user.id : workflowId;
 }
 
+/**
+ * Calculate applicant age from a Chinese identity number when the value is structurally valid.
+ */
 function ageFromIdNo(idNo) {
   if (!/^\d{17}[\dXx]$/.test(idNo || '')) return null;
   const year = Number(idNo.slice(6, 10));
@@ -848,6 +998,9 @@ function ageFromIdNo(idNo) {
   return age;
 }
 
+/**
+ * Reject STEP_01 submission when the latest registration identity number is under 18.
+ */
 async function ensureAdultApplicant(applicantId) {
   const request = await first(
     `SELECT id_no AS idNo
@@ -865,6 +1018,9 @@ async function ensureAdultApplicant(applicantId) {
   }
 }
 
+/**
+ * Load the minimal org and branch identifiers needed for recipient scope checks.
+ */
 async function getUserScopeById(userId) {
   return first(
     `SELECT id, org_id AS orgId, branch_id AS branchId
@@ -874,6 +1030,9 @@ async function getUserScopeById(userId) {
   );
 }
 
+/**
+ * Check whether one candidate reviewer role can cover an applicant scope.
+ */
 function roleMatchesApplicantScope(candidate, applicant) {
   if (candidate.scopeLevel === 'all') return true;
   if (candidate.scopeLevel === 'org') return Boolean(candidate.orgId && candidate.orgId === applicant.orgId);
@@ -882,6 +1041,9 @@ function roleMatchesApplicantScope(candidate, applicant) {
   return false;
 }
 
+/**
+ * Find scoped recipients for the responsible roles of a workflow step.
+ */
 async function notificationRecipientsForStep(step, applicantId, excludeUserIds = []) {
   const applicantScope = await getUserScopeById(applicantId);
   const roleIds = step.responsibleRoles?.length ? step.responsibleRoles : step.taskMeta?.responsibleRoles || [];
@@ -905,18 +1067,27 @@ async function notificationRecipientsForStep(step, applicantId, excludeUserIds =
     .map((row) => row.id);
 }
 
+/**
+ * Build a public upload URL from a multer storage filename.
+ */
 function fileUrl(fileName) {
   return `${env.PUBLIC_BASE_URL.replace(/\/$/, '')}/uploads/${fileName}`;
 }
 
 // Material validation is intentionally server-side. Frontend accept attributes
 // are only hints and must not be trusted for workflow evidence files.
+/**
+ * Resolve accepted upload types for one material tag on a workflow step.
+ */
 function acceptedTypesForMaterial(step, materialTag) {
   const material = (step.materialSchema || step.taskMeta?.materialSchema || []).find((item) => item.tag === materialTag);
   if (!material) throw errorWithStatus('材料类型不属于当前步骤', 400);
   return material.accept || [];
 }
 
+/**
+ * Validate that an uploaded file exists and matches the configured extension and MIME type.
+ */
 function validateUploadedFile(file, acceptTypes) {
   if (!file) throw errorWithStatus('未上传文件', 400);
   const extension = path.extname(file.originalname || '').toLowerCase();
@@ -932,6 +1103,9 @@ function validateUploadedFile(file, acceptTypes) {
   }
 }
 
+/**
+ * Render one or more JSON row sets into an XLSX workbook buffer.
+ */
 function workbookBuffer(sheets) {
   const workbook = XLSX.utils.book_new();
   sheets.forEach(({ name, rows }) => {

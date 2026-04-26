@@ -3,6 +3,9 @@ const { env } = require('./env');
 
 let pool;
 
+/**
+ * Create or return the shared MySQL connection pool.
+ */
 function getPool() {
   if (!pool) {
     pool = mysql.createPool({
@@ -22,16 +25,25 @@ function getPool() {
   return pool;
 }
 
+/**
+ * Execute a named-parameter SQL statement and return its rows.
+ */
 async function query(sql, params = {}) {
   const [rows] = await getPool().execute(sql, params);
   return rows;
 }
 
+/**
+ * Execute a SQL statement and return its first row or null.
+ */
 async function first(sql, params = {}) {
   const rows = await query(sql, params);
   return rows[0] || null;
 }
 
+/**
+ * Execute raw SQL used by schema bootstrap scripts.
+ */
 async function raw(sql) {
   const [rows] = await getPool().query(sql);
   return rows;

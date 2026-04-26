@@ -4,12 +4,18 @@ const { query, first, raw } = require('./db');
 const { getStepDetail } = require('./workflow-config');
 const { hashPassword } = require('./password');
 
+/**
+ * Map a role identifier to the profile schema family used by forms and seed data.
+ */
 function profileTypeForRole(roleId) {
   if (roleId === 'applicant') return 'applicant';
   if (['branchSecretary', 'organizer'].includes(roleId)) return 'cadre';
   return 'admin';
 }
 
+/**
+ * Build representative seed profile JSON for a demo user and role.
+ */
 function profileJsonForUser(user, roleId) {
   if (roleId === 'applicant') {
     return {
@@ -45,11 +51,17 @@ function profileJsonForUser(user, roleId) {
   };
 }
 
+/**
+ * Run one deployment SQL file during database bootstrap.
+ */
 async function runSqlFile(fileName) {
   const sql = fs.readFileSync(path.join(__dirname, '..', 'deploy', fileName), 'utf8');
   await raw(sql);
 }
 
+/**
+ * Check whether a table exists in the current database schema.
+ */
 async function tableExists(tableName) {
   const rows = await query(
     `SELECT COUNT(*) AS total
@@ -60,6 +72,9 @@ async function tableExists(tableName) {
   return Number(rows[0]?.total || 0) > 0;
 }
 
+/**
+ * Check whether a column exists in the current database schema.
+ */
 async function columnExists(tableName, columnName) {
   const rows = await query(
     `SELECT COUNT(*) AS total
@@ -70,11 +85,17 @@ async function columnExists(tableName, columnName) {
   return Number(rows[0]?.total || 0) > 0;
 }
 
+/**
+ * Add a column only when an additive migration has not already created it.
+ */
 async function ensureColumn(tableName, columnName, columnSql) {
   if (await columnExists(tableName, columnName)) return;
   await raw(`ALTER TABLE ${tableName} ADD COLUMN ${columnSql}`);
 }
 
+/**
+ * Apply idempotent schema additions required by the current backend code.
+ */
 async function ensureAdditiveMigrations() {
   if (!(await tableExists('workflow_step_definitions'))) return;
 
@@ -122,6 +143,9 @@ async function ensureAdditiveMigrations() {
   `);
 }
 
+/**
+ * Backfill workflow definition detail columns from workflow-config rules.
+ */
 async function ensureWorkflowDefinitionDetails() {
   if (!(await tableExists('workflow_step_definitions'))) return;
   const definitions = await query(
@@ -155,6 +179,9 @@ async function ensureWorkflowDefinitionDetails() {
   }
 }
 
+/**
+ * Backfill mobile task status fields from legacy workflow record statuses.
+ */
 async function ensureWorkflowRecordTaskDefaults() {
   if (!(await tableExists('workflow_step_records'))) return;
   await raw(`
@@ -169,6 +196,9 @@ async function ensureWorkflowRecordTaskDefaults() {
   `);
 }
 
+/**
+ * Insert demo notifications only when the notification table is empty.
+ */
 async function ensureNotificationSeeds() {
   if (!(await tableExists('notifications'))) return;
   const existing = await first('SELECT id FROM notifications LIMIT 1');
@@ -189,6 +219,9 @@ async function ensureNotificationSeeds() {
   }
 }
 
+/**
+ * Initialize schema, demo data and additive backfills needed for local operation.
+ */
 async function ensureSeedData() {
   await ensureAdditiveMigrations();
   if (!(await tableExists('roles'))) {
@@ -462,6 +495,9 @@ async function ensureSeedData() {
   await ensureNotificationSeeds();
 }
 
+/**
+ * Backfill generic user profile rows for seeded users.
+ */
 async function ensureUserProfiles() {
   const users = await query(
     `SELECT

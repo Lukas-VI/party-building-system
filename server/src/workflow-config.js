@@ -138,6 +138,9 @@ const STEP_DETAIL_OVERRIDES = {
   },
 };
 
+/**
+ * Build fallback workflow metadata for steps without explicit overrides.
+ */
 function defaultStepDetail(stepCode, roleIds = []) {
   const reviewerRoles = roleIds.filter((roleId) => roleId !== 'applicant');
   const hasApplicant = roleIds.includes('applicant');
@@ -153,6 +156,9 @@ function defaultStepDetail(stepCode, roleIds = []) {
   };
 }
 
+/**
+ * Merge fallback workflow metadata with step-specific overrides.
+ */
 function getStepDetail(stepCode, roleIds = []) {
   return {
     ...defaultStepDetail(stepCode, roleIds),

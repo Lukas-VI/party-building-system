@@ -3,6 +3,9 @@ const dotenv = require('dotenv');
 
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
+/**
+ * Parse the comma-separated CORS origin allowlist from environment configuration.
+ */
 function parseOrigins(raw) {
   return (raw || '')
     .split(',')
