@@ -14,6 +14,8 @@
   - 25 步流程仍是主流程模型
   - 前 12 步是第一阶段 MVP 办理边界，13 步以后暂不进入待办和办理接口
   - 后端写接口必须同时校验登录、权限、数据范围和流程节点状态
+  - 服务端正在从原 `server/src/index.js` 拆分为 `server/src/app.js`、`server/src/app-context.js` 和 `server/src/routes/*.js`
+  - 跨路由共享规则集中在 `app-context.js`，包括认证、权限、范围、流程推进、上传类型和导出工作簿等工具
 - 优先参考文档：
   - [electronic-dossier.md](electronic-dossier.md)
   - [project-overview.md](project-overview.md)
@@ -76,6 +78,9 @@
   - 对应文档
 - 对于流程和档案规则，应尽量集中在配置文件中，不要散落在页面组件内部
 - 对于新增接口，应优先沿用现有通用能力，而不是复制旧接口再做一套
+- 服务端新增接口优先放入已有 `routes/*` 分组；只有跨模块规则才进入 `app-context.js`
+- `app-context.js` 允许集中放安全和业务推进规则，但应避免继续膨胀为新的超大业务文件
+- `server/src/index.js` 应保留为进程启动入口，不再继续堆叠具体 HTTP handler
 
 ## 6. 当前不应再做的事
 - 不再继续把手机端主线建立在小程序页面之上

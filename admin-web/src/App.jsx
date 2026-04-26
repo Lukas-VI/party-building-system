@@ -73,6 +73,14 @@ function App() {
 
   const themeClass = themeMode === 'propaganda' ? 'theme-propaganda' : 'theme-classic';
 
+
+  /**
+   * 发送API请求的通用函数
+   * @param {string} path - API路径（相对于API_BASE）
+   * @param {object} options - fetch选项，包括method、body等
+   * @returns {Promise<any>} 返回API响应数据或Blob
+   * @throws {Error} 当请求失败或响应码不为0时抛出错误
+   */
   async function api(path, options = {}) {
     const response = await fetch(`${API_BASE}${path}`, {
       headers: {

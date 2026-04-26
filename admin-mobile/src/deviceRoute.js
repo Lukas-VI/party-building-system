@@ -21,6 +21,7 @@ export function isDesktopDevice() {
   return !uaMobile && window.innerWidth > MOBILE_BREAKPOINT;
 }
 
+// 
 export function mobileToDesktopUrl() {
   if (typeof window === 'undefined') {
     return '/web-admin/desktop/';
