@@ -49,7 +49,7 @@ textarea {
 .page-shell {
   min-height: 100vh;
   background:
-    linear-gradient(180deg, rgba(163, 23, 23, 0.08), transparent 180px),
+    linear-gradient(180deg, rgba(163, 23, 23, 0.1), transparent 160px),
     var(--bg-page);
 }
 
@@ -84,6 +84,14 @@ textarea {
 
 .section-card__bd {
   padding: 0 16px 16px;
+}
+
+.section-card__bd--flush {
+  padding: 0;
+}
+
+.section-card--compact .section-card__hd {
+  padding-bottom: 10px;
 }
 
 .metric-grid,
@@ -290,49 +298,24 @@ textarea {
   position: sticky;
   top: 0;
   z-index: 10;
-  padding: 10px 12px 12px;
+  padding: calc(10px + env(safe-area-inset-top)) 16px 12px;
   background:
     linear-gradient(135deg, rgba(112, 14, 14, 0.98), rgba(161, 24, 22, 0.98)),
     #8e1816;
   color: var(--text-inverse);
   box-shadow: 0 8px 18px rgba(86, 9, 9, 0.22);
+  text-align: center;
 }
 
 .top-banner__title {
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 800;
   line-height: 1.25;
 }
 
-.top-banner__eyebrow {
-  margin-bottom: 4px;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  color: rgba(255, 249, 242, 0.76);
-}
-
-.top-banner__subtitle {
-  margin-top: 4px;
-  font-size: 12px;
-  opacity: 0.92;
-}
-
-.top-banner__meta {
-  margin-top: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.top-banner__chip {
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 243, 231, 0.4);
-  background: rgba(255, 247, 237, 0.14);
-  font-size: 12px;
-  color: var(--text-inverse);
-  appearance: none;
-  -webkit-appearance: none;
+.tab-icon {
+  width: 22px;
+  height: 22px;
 }
 
 .login-shell {
@@ -452,4 +435,134 @@ textarea {
   height: 1px;
   margin: 12px 0;
   background: linear-gradient(90deg, transparent, #d9c0ad, transparent);
+}
+
+.profile-hero {
+  margin-top: -2px;
+}
+
+.profile-hero__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(163, 23, 23, 0.1);
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.profile-hero__card {
+  margin-top: 12px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 18px 16px;
+  border-radius: 20px;
+  background: #fffdf9;
+  border: 1px solid #ecd9c8;
+  box-shadow: 0 10px 24px rgba(105, 34, 22, 0.08);
+}
+
+.profile-hero__avatar {
+  width: 68px;
+  height: 68px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #d53a2a, #b41616);
+  color: #fff8f0;
+  font-size: 30px;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 3px rgba(255, 244, 234, 0.16);
+}
+
+.profile-hero__content {
+  min-width: 0;
+  flex: 1;
+}
+
+.profile-hero__name {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.profile-hero__line {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-subtle);
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.profile-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.profile-summary-item {
+  padding: 12px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff7ee, #fff);
+  border: 1px solid #ecd7c6;
+}
+
+.profile-summary-item__label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-subtle);
+}
+
+.profile-summary-item__value {
+  display: block;
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  word-break: break-word;
+}
+
+.profile-link {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border: 0;
+  border-bottom: 1px solid #f0e5d9;
+  background: transparent;
+  text-align: left;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.profile-link:last-child {
+  border-bottom: 0;
+}
+
+.profile-link__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.profile-link__desc {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-subtle);
+  line-height: 1.5;
+}
+
+.profile-link__arrow {
+  color: #b89b87;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.profile-link.is-danger .profile-link__title {
+  color: var(--accent-strong);
 }

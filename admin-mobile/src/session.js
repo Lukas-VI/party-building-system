@@ -45,7 +45,7 @@ export function hasPermission(user, permissionId) {
 
 export function roleTabs(user) {
   const baseTabs = [
-    { name: 'workbench', label: '工作台', icon: 'wap-home-o' },
+    { name: 'workbench', label: '首页', icon: 'wap-home-o' },
     { name: 'messages', label: '消息', icon: 'bell' },
     { name: 'profile', label: '我的', icon: 'contact-o' },
   ];
@@ -64,7 +64,7 @@ export function workbenchActions(user) {
     return [
       { title: '我的流程', desc: '查看当前步骤、已完成步骤和后续要求', route: '/workflow/me' },
       { title: '我的材料', desc: '按步骤维护入党申请书、政审材料和补交附件', route: '/materials' },
-      { title: '我的资料', desc: '维护基础信息、本人经历和关键联系方式', route: '/profile' },
+      { title: '我的资料', desc: '维护基础信息、本人经历和关键联系方式', route: '/profile/edit' },
     ];
   }
   const actions = [

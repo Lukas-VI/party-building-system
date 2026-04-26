@@ -1,10 +1,8 @@
 <script setup>
 import { computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { showConfirmDialog } from 'vant';
-import { DESKTOP_ADMIN_URL } from '../config';
 import { isDesktopDevice, mobileToDesktopUrl, shouldSkipAutoRoute } from '../deviceRoute';
-import { clearSession, primaryRoleLabel, roleTabs, sessionState } from '../session';
+import { roleTabs, sessionState } from '../session';
 
 const route = useRoute();
 const router = useRouter();
@@ -25,18 +23,24 @@ const active = computed({
 
 const headerTitle = computed(() => route.meta.title || '党员发展工作台');
 
-async function handleLogout() {
-  await showConfirmDialog({
-    title: '退出登录',
-    message: '确认退出当前账号？',
-  });
-  clearSession();
-  router.replace('/login');
-}
-
-function openDesktop() {
-  window.location.href = DESKTOP_ADMIN_URL;
-}
+const tabIcons = {
+  workbench: {
+    outline: 'M4 10.6 12 4l8 6.6V20a1 1 0 0 1-1 1h-4.5v-5.2h-5V21H5a1 1 0 0 1-1-1v-9.4Z',
+    solid: 'M12 3.3 21 10.8V20a2 2 0 0 1-2 2h-5.4v-5.7H10.4V22H5a2 2 0 0 1-2-2v-9.2L12 3.3Z',
+  },
+  materials: {
+    outline: 'M4 6.5A1.5 1.5 0 0 1 5.5 5h4L11 6.8h7.5A1.5 1.5 0 0 1 20 8.3v9.2a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5v-11Z',
+    solid: 'M4 6.2A2.2 2.2 0 0 1 6.2 4h3.4a2 2 0 0 1 1.5.7l1.1 1.3h5.6A2.2 2.2 0 0 1 20 8.2v9.6A2.2 2.2 0 0 1 17.8 20H6.2A2.2 2.2 0 0 1 4 17.8V6.2Z',
+  },
+  messages: {
+    outline: 'M12 20.3c-.4 0-.8-.2-1.1-.5l-2.2-2.3H6.4A2.4 2.4 0 0 1 4 15.1V7.4A2.4 2.4 0 0 1 6.4 5h11.2A2.4 2.4 0 0 1 20 7.4v7.7a2.4 2.4 0 0 1-2.4 2.4h-2.3l-2.2 2.3c-.3.3-.7.5-1.1.5Z',
+    solid: 'M6 4h12a2 2 0 0 1 2 2v8.6a2 2 0 0 1-2 2h-3.1l-2.2 2.2a1 1 0 0 1-1.4 0l-2.2-2.2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z',
+  },
+  profile: {
+    outline: 'M12 12a3.7 3.7 0 1 0 0-7.4A3.7 3.7 0 0 0 12 12Zm0 1.8c-4 0-7.2 2.4-7.2 5.3 0 .5.4.9.9.9h12.6c.5 0 .9-.4.9-.9 0-2.9-3.2-5.3-7.2-5.3Z',
+    solid: 'M12 3.8a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 0 1 0-8.4Zm0 9.9c4.6 0 8.3 2.7 8.3 6 0 .7-.5 1.3-1.2 1.3H4.9c-.7 0-1.2-.6-1.2-1.3 0-3.3 3.7-6 8.3-6Z',
+  },
+};
 
 onMounted(() => {
   if (shouldSkipAutoRoute()) return;
@@ -48,16 +52,7 @@ onMounted(() => {
 <template>
   <div class="page-shell">
     <header class="top-banner">
-      <div class="top-banner__eyebrow">微信服务号内优先使用</div>
       <div class="top-banner__title">{{ headerTitle }}</div>
-      <div class="top-banner__subtitle">申请人、支部审核者与组织管理人员共用的轻量工作台</div>
-      <div class="top-banner__meta" v-if="sessionState.user">
-        <span class="top-banner__chip">{{ primaryRoleLabel(sessionState.user) }}</span>
-        <span class="top-banner__chip">{{ sessionState.user.orgName || '全校范围' }}</span>
-        <span class="top-banner__chip" v-if="sessionState.user.branchName">{{ sessionState.user.branchName }}</span>
-        <button type="button" class="top-banner__chip" @click="openDesktop">PC 后台</button>
-        <button type="button" class="top-banner__chip" @click="handleLogout">退出</button>
-      </div>
     </header>
 
     <main class="page-body">
@@ -65,7 +60,19 @@ onMounted(() => {
     </main>
 
     <van-tabbar v-model="active" route fixed placeholder active-color="#8f1515" inactive-color="#6e5547" :safe-area-inset-bottom="true">
-      <van-tabbar-item v-for="tab in tabs" :key="tab.name" :name="tab.name" :icon="tab.icon" :to="{ name: tab.name }">
+      <van-tabbar-item v-for="tab in tabs" :key="tab.name" :name="tab.name" :to="{ name: tab.name }">
+        <template #icon="{ active }">
+          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              :d="active ? tabIcons[tab.name]?.solid : tabIcons[tab.name]?.outline"
+              :fill="active ? 'currentColor' : 'none'"
+              stroke="currentColor"
+              :stroke-width="active ? 0 : 1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </template>
         {{ tab.label }}
       </van-tabbar-item>
     </van-tabbar>

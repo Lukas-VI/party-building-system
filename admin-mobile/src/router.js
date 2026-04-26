@@ -36,7 +36,8 @@ const routes = [
       { path: 'reviews', name: 'reviews', component: () => import('./views/ReviewsView.vue'), meta: { title: '审核处理' } },
       { path: 'messages', name: 'messages', component: () => import('./views/MessagesView.vue'), meta: { title: '消息中心' } },
       { path: 'materials', name: 'materials', component: () => import('./views/MaterialsView.vue'), meta: { title: '材料维护' } },
-      { path: 'profile', name: 'profile', component: () => import('./views/ProfileView.vue'), meta: { title: '我的资料' } },
+      { path: 'profile', name: 'profile', component: () => import('./views/ProfileView.vue'), meta: { title: '我的' } },
+      { path: 'profile/edit', name: 'profile-edit', component: () => import('./views/ProfileEditView.vue'), meta: { title: '个人资料' } },
     ],
   },
 ];
