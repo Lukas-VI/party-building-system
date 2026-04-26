@@ -39,6 +39,10 @@ export function isApplicant(user) {
   return user?.primaryRole === 'applicant';
 }
 
+export function hasPermission(user, permissionId) {
+  return Boolean(user?.permissions?.some((item) => item.id === permissionId));
+}
+
 export function roleTabs(user) {
   const baseTabs = [
     { name: 'workbench', label: '工作台', icon: 'wap-home-o' },
@@ -63,9 +67,11 @@ export function workbenchActions(user) {
       { title: '我的资料', desc: '维护基础信息、本人经历和关键联系方式', route: '/profile' },
     ];
   }
-  return [
+  const actions = [
     { title: '待办工作', desc: '集中处理待审核、待确认和待通知任务', route: '/workbench' },
+    { title: '审核处理', desc: '查看流程审核任务，并在有权限时处理注册审核', route: '/reviews' },
     { title: '消息提醒', desc: '查看节点提醒、审核结果和改期通知', route: '/messages' },
-    { title: '桌面后台', desc: '进入 PC 端处理台账、统计和复杂配置', external: DESKTOP_ADMIN_URL },
   ];
+  actions.push({ title: '桌面后台', desc: '进入 PC 端处理台账、统计和复杂配置', external: DESKTOP_ADMIN_URL });
+  return actions;
 }

@@ -1,15 +1,22 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import { showConfirmDialog, showSuccessToast } from 'vant';
-import { http } from '../api';
+import { approveRegistrationRequest, fetchRegistrationRequests, http } from '../api';
+import { hasPermission, sessionState } from '../session';
 
 const loading = ref(false);
 const reviews = ref([]);
+const registrationRequests = ref([]);
 
 async function loadReviews() {
   loading.value = true;
   try {
-    reviews.value = await http.get('/reviews/pending');
+    const workflowRes = await http.get('/reviews/pending');
+    const registrationRes = hasPermission(sessionState.user, 'approve_registration')
+      ? await fetchRegistrationRequests('pending')
+      : [];
+    reviews.value = workflowRes;
+    registrationRequests.value = registrationRes;
   } finally {
     loading.value = false;
   }
@@ -25,6 +32,19 @@ async function reviewItem(item, status) {
     comment: status === 'approved' ? '移动端审核通过' : '移动端审核退回',
   });
   showSuccessToast(status === 'approved' ? '已通过' : '已退回');
+  await loadReviews();
+}
+
+async function reviewRegistration(item, status) {
+  await showConfirmDialog({
+    title: status === 'approved' ? '确认通过注册' : '确认驳回注册',
+    message: `${item.name} · ${item.employeeNo}`,
+  });
+  await approveRegistrationRequest({
+    requestNo: item.requestNo,
+    status,
+  });
+  showSuccessToast(status === 'approved' ? '注册已通过' : '注册已驳回');
   await loadReviews();
 }
 
@@ -49,7 +69,47 @@ onMounted(loadReviews);
       </div>
     </section>
 
+    <section class="section-card" v-else-if="hasPermission(sessionState.user, 'approve_registration')">
+      <div class="section-card__hd">
+        <div class="section-card__title">待审核注册</div>
+        <div class="section-card__desc">先完成首次注册审核，再进入后续流程办理。</div>
+      </div>
+      <div class="section-card__bd" v-if="registrationRequests.length">
+        <div class="table-like">
+          <div class="table-row" v-for="item in registrationRequests" :key="item.requestNo">
+            <div class="table-row__head">
+              <div>
+                <div class="table-row__title">{{ item.name }}</div>
+                <div class="table-row__sub">{{ item.employeeNo }} · {{ item.orgName || '未配置单位' }}</div>
+              </div>
+              <span class="status-chip is-reviewing">待审核</span>
+            </div>
+            <div class="kv-grid">
+              <div class="kv-item">
+                <div class="kv-item__label">支部</div>
+                <div class="kv-item__value">{{ item.branchName || '未限定支部' }}</div>
+              </div>
+              <div class="kv-item">
+                <div class="kv-item__label">申请时间</div>
+                <div class="kv-item__value">{{ item.createdAt }}</div>
+              </div>
+            </div>
+            <div class="section-actions">
+              <van-button size="small" type="danger" @click="reviewRegistration(item, 'approved')">通过注册</van-button>
+              <van-button size="small" plain type="danger" @click="reviewRegistration(item, 'rejected')">驳回注册</van-button>
+            </div>
+          </div>
+        </div>
+        <div class="formal-divider"></div>
+      </div>
+      <div class="empty-state" v-else>当前没有待审核注册申请。</div>
+    </section>
+
     <section class="section-card" v-else>
+      <div class="section-card__hd">
+        <div class="section-card__title">待审核流程</div>
+        <div class="section-card__desc">当前角色权限范围内需要处理的流程节点。</div>
+      </div>
       <div class="section-card__bd" v-if="reviews.length">
         <div class="table-like">
           <div class="table-row" v-for="item in reviews" :key="`${item.applicantId}-${item.stepCode}`">
@@ -77,7 +137,7 @@ onMounted(loadReviews);
           </div>
         </div>
       </div>
-      <div class="empty-state" v-else>当前没有待审核节点。</div>
+      <div class="empty-state" v-else>当前没有待审核流程节点。</div>
     </section>
   </div>
 </template>

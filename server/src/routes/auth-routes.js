@@ -20,6 +20,8 @@ function registerAuthRoutes(app, ctx) {
     requireAuth,
     requirePermission,
     canAccessScopedRecord,
+    listRegistrationRequests,
+    ensureApplicantEnrollment,
     ALLOWED_REVIEW_STATUSES,
   } = ctx;
 
@@ -150,9 +152,19 @@ function registerAuthRoutes(app, ctx) {
             roleId: 'applicant',
           });
         }
+        await ensureApplicantEnrollment(request.userId);
       }
       await logAudit('registration_requests', requestNo, 'approve_registration', req.user.id, { status });
       ok(res, true);
+    } catch (error) {
+      fail(res, 500, error.message);
+    }
+  });
+
+  app.get('/api/auth/registration-requests', requireAuth(), requirePermission('approve_registration'), async (req, res) => {
+    try {
+      const status = String(req.query?.status || 'pending').trim();
+      ok(res, await listRegistrationRequests(req.user, { status }));
     } catch (error) {
       fail(res, 500, error.message);
     }

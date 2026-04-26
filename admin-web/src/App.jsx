@@ -1,15 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Input, MessagePlugin, Select, Space, Tag } from 'tdesign-react';
-import { PROCESS_GUIDANCE } from './processGuidance';
 import { desktopToMobileUrl, isMobileDevice, shouldSkipAutoRoute } from './deviceRoute';
 
 const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? 'https://havensky.cn/DJ_api' : '/DJ_api');
-const SAMPLE_ACCOUNTS = [
-  { username: 'zz001', role: '组织员' },
-  { username: 'zb001', role: '党支部书记' },
-  { username: 'org001', role: '组织部人员' },
-  { username: 'admin', role: '超级管理员' },
-];
 const MENU_LABELS = {
   dashboard: '工作台',
   applicants: '申请人台账',
@@ -34,6 +27,7 @@ function App() {
   const [token, setToken] = useState(() => localStorage.getItem('dj_admin_token') || '');
   const [themeMode, setThemeMode] = useState(() => localStorage.getItem('dj_admin_theme') || 'classic');
   const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 860 : false));
+  const [bootstrap, setBootstrap] = useState({ loginHints: [], notices: [], guidance: null, defaultPasswordHint: '' });
   const [user, setUser] = useState(() => {
     const raw = localStorage.getItem('dj_admin_user');
     return raw ? JSON.parse(raw) : null;
@@ -46,7 +40,8 @@ function App() {
   const [applicants, setApplicants] = useState([]);
   const [applicantDetail, setApplicantDetail] = useState(null);
   const [workflow, setWorkflow] = useState(null);
-  const [reviews, setReviews] = useState([]);
+  const [workflowReviews, setWorkflowReviews] = useState([]);
+  const [registrationRequests, setRegistrationRequests] = useState([]);
   const [orgs, setOrgs] = useState([]);
   const [branches, setBranches] = useState([]);
   const [users, setUsers] = useState([]);
@@ -106,6 +101,14 @@ function App() {
   }
 
   useEffect(() => {
+    api('/public/bootstrap')
+      .then((result) => setBootstrap(result))
+      .catch((error) => {
+        MessagePlugin.error(error.message);
+      });
+  }, []);
+
+  useEffect(() => {
     if (!token) return;
     api('/auth/me')
       .then((result) => {
@@ -159,8 +162,12 @@ function App() {
         setWorkflow(workflowRes);
       }
       if (view === 'reviews') {
-        const result = await api('/reviews/pending');
-        setReviews(result);
+        const workflowResult = await api('/reviews/pending');
+        const registrationResult = user.permissions?.some((item) => item.id === 'approve_registration')
+          ? await api('/auth/registration-requests')
+          : [];
+        setWorkflowReviews(workflowResult);
+        setRegistrationRequests(registrationResult);
       }
       if (view === 'organizations') {
         const [orgRes, branchRes, userRes] = await Promise.all([api('/orgs'), api('/branches'), api('/users')]);
@@ -230,10 +237,23 @@ function App() {
         method: 'POST',
         body: JSON.stringify({
           status,
-          comment: status === 'approved' ? '后台审核通过' : '后台演示退回',
+          comment: status === 'approved' ? '后台审核通过' : '后台审核退回',
         }),
       });
       MessagePlugin.success(status === 'approved' ? '已通过' : '已退回');
+      refreshForView('reviews');
+    } catch (error) {
+      MessagePlugin.error(error.message);
+    }
+  }
+
+  async function approveRegistration(requestNo, status) {
+    try {
+      await api('/auth/approve-registration', {
+        method: 'POST',
+        body: JSON.stringify({ requestNo, status }),
+      });
+      MessagePlugin.success(status === 'approved' ? '注册已通过' : '注册已驳回');
       refreshForView('reviews');
     } catch (error) {
       MessagePlugin.error(error.message);
@@ -280,7 +300,7 @@ function App() {
   }
 
   if (!user) {
-    return <LoginScreen onLogin={handleLogin} themeClass={themeClass} onToggleTheme={toggleThemeMode} isMobile={isMobile} />;
+    return <LoginScreen onLogin={handleLogin} themeClass={themeClass} onToggleTheme={toggleThemeMode} isMobile={isMobile} bootstrap={bootstrap} />;
   }
 
   return (
@@ -326,7 +346,7 @@ function App() {
 
         {activeView === 'dashboard' && overview && (
           <div className="content-stack">
-            <GuidancePanel />
+            {bootstrap?.guidance && <GuidancePanel guidance={bootstrap.guidance} />}
             <div className="stats-grid">
               <MetricCard title="申请人数" value={overview.totalApplicants} desc="当前权限范围内的申请人数量" />
               <MetricCard title="待注册审核" value={overview.pendingRegistrations} desc="首次注册待审核" />
@@ -446,39 +466,84 @@ function App() {
         )}
 
         {activeView === 'reviews' && (
-          <Card title="待审核事项">
-            <div className="table-scroll">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>申请人</th>
-                  <th>单位</th>
-                  <th>支部</th>
-                  <th>步骤</th>
-                  <th>截止时间</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reviews.map((item) => (
-                  <tr key={`${item.applicantId}-${item.stepCode}`}>
-                    <td>{item.applicantName}</td>
-                    <td>{item.orgName}</td>
-                    <td>{item.branchName}</td>
-                    <td>{item.stepName}</td>
-                    <td>{item.deadline}</td>
-                    <td>
-                      <Space>
-                        <Button size="small" theme="success" onClick={() => doReview(item.applicantId, item.stepCode, 'approved')}>通过</Button>
-                        <Button size="small" theme="danger" variant="outline" onClick={() => doReview(item.applicantId, item.stepCode, 'rejected')}>退回</Button>
-                      </Space>
-                    </td>
+          <div className="content-stack">
+            {user.permissions?.some((item) => item.id === 'approve_registration') && (
+              <Card title="待审核注册申请">
+                <div className="table-scroll">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>姓名</th>
+                      <th>学号/工号</th>
+                      <th>单位</th>
+                      <th>支部</th>
+                      <th>申请时间</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {registrationRequests.length ? registrationRequests.map((item) => (
+                      <tr key={item.requestNo}>
+                        <td>{item.name}</td>
+                        <td>{item.employeeNo}</td>
+                        <td>{item.orgName}</td>
+                        <td>{item.branchName}</td>
+                        <td>{item.createdAt}</td>
+                        <td>
+                          <Space>
+                            <Button size="small" theme="success" onClick={() => approveRegistration(item.requestNo, 'approved')}>通过注册</Button>
+                            <Button size="small" theme="danger" variant="outline" onClick={() => approveRegistration(item.requestNo, 'rejected')}>驳回注册</Button>
+                          </Space>
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan="6">当前没有待审核注册申请。</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+                </div>
+              </Card>
+            )}
+            <Card title="待审核流程事项">
+              <div className="table-scroll">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>申请人</th>
+                    <th>单位</th>
+                    <th>支部</th>
+                    <th>步骤</th>
+                    <th>截止时间</th>
+                    <th>操作</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
-          </Card>
+                </thead>
+                <tbody>
+                  {workflowReviews.length ? workflowReviews.map((item) => (
+                    <tr key={`${item.applicantId}-${item.stepCode}`}>
+                      <td>{item.applicantName}</td>
+                      <td>{item.orgName}</td>
+                      <td>{item.branchName}</td>
+                      <td>{item.stepName}</td>
+                      <td>{item.deadline}</td>
+                      <td>
+                        <Space>
+                          <Button size="small" theme="success" onClick={() => doReview(item.applicantId, item.stepCode, 'approved')}>通过</Button>
+                          <Button size="small" theme="danger" variant="outline" onClick={() => doReview(item.applicantId, item.stepCode, 'rejected')}>退回</Button>
+                        </Space>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan="6">当前没有待审核流程节点。</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+              </div>
+            </Card>
+          </div>
         )}
 
         {activeView === 'organizations' && (
@@ -547,9 +612,9 @@ function App() {
   );
 }
 
-function LoginScreen({ onLogin, themeClass, onToggleTheme, isMobile }) {
-  const [username, setUsername] = useState('zz001');
-  const [password, setPassword] = useState('123456');
+function LoginScreen({ onLogin, themeClass, onToggleTheme, isMobile, bootstrap }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   return (
     <div className={`login-screen ${themeClass} ${isMobile ? 'is-mobile' : ''}`}>
@@ -564,18 +629,29 @@ function LoginScreen({ onLogin, themeClass, onToggleTheme, isMobile }) {
         <Button theme="danger" size="large" block onClick={() => onLogin({ username, password })}>
           登录后台
         </Button>
-        <Card title="演示账号" size="small">
-          <ul className="sample-list">
-            {SAMPLE_ACCOUNTS.map((item) => (
-              <li key={item.username}>
-                <button type="button" onClick={() => setUsername(item.username)}>
-                  {item.role}：{item.username}
-                </button>
-              </li>
-            ))}
-          </ul>
-          <div className="sample-note">统一密码：123456</div>
-        </Card>
+        {!!bootstrap?.loginHints?.length && (
+          <Card title="快速填充账号" size="small">
+            <ul className="sample-list">
+              {bootstrap.loginHints.map((item) => (
+                <li key={item.username}>
+                  <button type="button" onClick={() => setUsername(item.username)}>
+                    {item.roleLabel}：{item.username}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {bootstrap.defaultPasswordHint && <div className="sample-note">{bootstrap.defaultPasswordHint}</div>}
+          </Card>
+        )}
+        {!!bootstrap?.notices?.length && (
+          <Card title="办理提示" size="small">
+            <ul className="sample-list">
+              {bootstrap.notices.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </Card>
+        )}
         <Card title="更多选项" size="small">
           <div className="login-settings">
             <span>当前：{themeClass.includes('theme-propaganda') ? '样式2' : '样式1'}</span>
@@ -597,13 +673,13 @@ function MetricCard({ title, value, desc }) {
   );
 }
 
-function GuidancePanel() {
+function GuidancePanel({ guidance }) {
   return (
     <div className="guidance-layout">
-      <Card title={PROCESS_GUIDANCE.title}>
-        <div className="guidance-intro">{PROCESS_GUIDANCE.intro}</div>
+      <Card title={guidance.title}>
+        <div className="guidance-intro">{guidance.intro}</div>
         <div className="guidance-list">
-          {PROCESS_GUIDANCE.rules.map((item, index) => (
+          {guidance.rules.map((item, index) => (
             <div className="guidance-item" key={item}>
               <div className="guidance-index">{index + 1}</div>
               <div className="guidance-text">{item}</div>
@@ -613,7 +689,7 @@ function GuidancePanel() {
       </Card>
       <Card title="流程示意">
         <div className="flow-stage-list">
-          {PROCESS_GUIDANCE.stages.map((item) => (
+          {guidance.stages.map((item) => (
             <div className="flow-stage-card" key={item.code}>
               <div className="flow-stage-top">
                 <div className="flow-stage-title">{item.title} · {item.subtitle}</div>
@@ -621,11 +697,6 @@ function GuidancePanel() {
               </div>
               <div className="flow-stage-text">{item.summary}</div>
             </div>
-          ))}
-        </div>
-        <div className="flow-legend-list">
-          {PROCESS_GUIDANCE.legends.map((item) => (
-            <div className="flow-legend-item" key={item}>{item}</div>
           ))}
         </div>
       </Card>

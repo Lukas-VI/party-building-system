@@ -71,6 +71,22 @@ export function registerAccount(form) {
   });
 }
 
+export function fetchPublicBootstrap() {
+  return http.get('/public/bootstrap');
+}
+
+export function fetchRegistrationRequests(status = 'pending') {
+  return http.get('/auth/registration-requests', {
+    params: { status },
+  });
+}
+
+export function approveRegistrationRequest(payload) {
+  return http.post('/auth/approve-registration', payload, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
 // 工作台、待办、消息三类首页数据
 export function fetchWorkbench() {
   return http.get('/mobile/workbench');

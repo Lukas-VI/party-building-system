@@ -3,6 +3,7 @@ const XLSX = require('xlsx');
 const jwt = require('jsonwebtoken');
 const { env } = require('./env');
 const { query, first, getPool } = require('./db');
+const { WORKFLOW_GUIDANCE } = require('./bootstrap-content');
 const { getStepDetail } = require('./workflow-config');
 const { hashPassword, verifyPassword, needsPasswordRehash } = require('./password');
 
@@ -96,6 +97,62 @@ function roleScopeLabel(user) {
   if (user.primaryRole === 'branchSecretary') return '本支部数据';
   if (['secretary', 'deputySecretary', 'organizer'].includes(user.primaryRole)) return '本单位数据';
   return '全校数据';
+}
+
+/**
+ * Load a small, dynamic set of test accounts for fast fill-in during acceptance.
+ *
+ * Frontends may display these usernames as convenience hints, but must not hardcode
+ * them locally. The backend remains the single source of truth for which accounts
+ * are safe to expose in the current environment.
+ */
+async function listLoginHints() {
+  const rows = await query(
+    `SELECT
+        u.username,
+        u.name,
+        r.id AS roleId,
+        r.label AS roleLabel
+     FROM users u
+     INNER JOIN user_roles ur ON ur.user_id = u.id
+     INNER JOIN roles r ON r.id = ur.role_id
+     WHERE u.status = 'active'
+       AND r.id IN ('applicant', 'branchSecretary', 'organizer', 'orgDept', 'superAdmin')
+     ORDER BY
+       CASE r.id
+         WHEN 'applicant' THEN 1
+         WHEN 'branchSecretary' THEN 2
+         WHEN 'organizer' THEN 3
+         WHEN 'orgDept' THEN 4
+         WHEN 'superAdmin' THEN 5
+         ELSE 99
+       END,
+       u.username ASC`,
+  );
+
+  const byRole = new Map();
+  rows.forEach((item) => {
+    if (!byRole.has(item.roleId)) {
+      byRole.set(item.roleId, {
+        username: item.username,
+        name: item.name,
+        roleLabel: item.roleLabel,
+      });
+    }
+  });
+  return Array.from(byRole.values());
+}
+
+/**
+ * Build the small bootstrap payload shared by both login screens and workbenches.
+ */
+async function buildPublicBootstrap() {
+  return {
+    loginHints: await listLoginHints(),
+    defaultPasswordHint: env.TEST_DEFAULT_PASSWORD_HINT,
+    notices: WORKFLOW_GUIDANCE.rules,
+    guidance: WORKFLOW_GUIDANCE,
+  };
 }
 
 // 当前仍按申请人、基层管理、管理员三类资料视图区分，不要回退成一套混合表单。
@@ -315,6 +372,41 @@ async function getApplicants(user, filters = {}) {
 }
 
 /**
+ * List registration requests within the caller data scope.
+ */
+async function listRegistrationRequests(user, filters = {}) {
+  const scope = scopeClause(user, 'u');
+  return query(
+    `SELECT
+        rr.request_no AS requestNo,
+        rr.user_id AS userId,
+        rr.name,
+        rr.employee_no AS employeeNo,
+        rr.status,
+        rr.created_at AS createdAt,
+        rr.reviewed_at AS reviewedAt,
+        u.org_id AS orgId,
+        u.branch_id AS branchId,
+        o.name AS orgName,
+        b.name AS branchName
+     FROM registration_requests rr
+     INNER JOIN users u ON u.id = rr.user_id
+     LEFT JOIN org_units o ON o.id = u.org_id
+     LEFT JOIN branches b ON b.id = u.branch_id
+     WHERE 1 = 1
+       ${scope.sql}
+       ${filters.status ? ' AND rr.status = :status' : ''}
+     ORDER BY
+       CASE WHEN rr.status = 'pending' THEN 0 ELSE 1 END,
+       rr.created_at DESC`,
+    {
+      ...scope.params,
+      status: filters.status || undefined,
+    },
+  );
+}
+
+/**
  * Check whether the caller data scope covers one applicant user id.
  */
 async function canAccessApplicant(user, applicantId) {
@@ -471,6 +563,102 @@ async function upsertUserProfile(user, payload) {
       updatedAt: now(),
     },
   );
+}
+
+/**
+ * Create the minimum applicant profile, workflow instance and step records
+ * needed after a registration request is approved.
+ */
+async function ensureApplicantEnrollment(userId) {
+  const user = await getUserWithAuth(userId);
+  if (!user) return;
+
+  const existingProfile = await first(
+    `SELECT user_id AS userId
+     FROM applicant_profiles
+     WHERE user_id = :userId`,
+    { userId },
+  );
+  if (!existingProfile) {
+    const profilePayload = buildDefaultProfilePayload({
+      ...user,
+      primaryRole: 'applicant',
+    });
+    await query(
+      `INSERT INTO applicant_profiles
+        (user_id, current_stage, phone, education, degree, unit_name, occupation, profile_json, updated_at)
+       VALUES (:userId, '入党申请人', '', '', '', :unitName, '', :profileJson, :updatedAt)`,
+      {
+        userId,
+        unitName: user.orgName || '',
+        profileJson: JSON.stringify(profilePayload),
+        updatedAt: now(),
+      },
+    );
+  }
+
+  const workflowInstanceId = `wf-${userId}`;
+  const existingWorkflow = await first(
+    `SELECT id
+     FROM workflow_instances
+     WHERE applicant_id = :applicantId`,
+    { applicantId: userId },
+  );
+  if (!existingWorkflow) {
+    await query(
+      `INSERT INTO workflow_instances (id, applicant_id, current_stage, updated_at)
+       VALUES (:id, :applicantId, '入党申请人', :updatedAt)`,
+      {
+        id: workflowInstanceId,
+        applicantId: userId,
+        updatedAt: now(),
+      },
+    );
+  }
+
+  const existingStep = await first(
+    `SELECT id
+     FROM workflow_step_records
+     WHERE instance_id = :instanceId
+     LIMIT 1`,
+    { instanceId: workflowInstanceId },
+  );
+  if (!existingStep) {
+    const definitions = await query(
+      `SELECT
+          step_code AS stepCode,
+          sort_order AS sortOrder,
+          end_at AS endAt
+       FROM workflow_step_definitions
+       ORDER BY sort_order ASC`,
+    );
+    for (const item of definitions) {
+      const isFirstStep = Number(item.sortOrder || 0) === 1;
+      await query(
+        `INSERT INTO workflow_step_records
+          (instance_id, step_code, status, form_data_json, review_comment, last_operator_id, operated_at, deadline, task_status, confirmed_at, reschedule_count, reschedule_history_json)
+         VALUES
+          (:instanceId, :stepCode, :status, :formDataJson, '', NULL, NULL, :deadline, :taskStatus, NULL, 0, :rescheduleHistoryJson)`,
+        {
+          instanceId: workflowInstanceId,
+          stepCode: item.stepCode,
+          status: isFirstStep ? 'pending' : 'locked',
+          formDataJson: JSON.stringify({}),
+          deadline: item.endAt,
+          taskStatus: isFirstStep ? 'open' : 'waiting',
+          rescheduleHistoryJson: JSON.stringify([]),
+        },
+      );
+    }
+  }
+
+  const profileRecord = await getUserProfileRecord(userId);
+  if (!profileRecord) {
+    await upsertUserProfile(
+      { ...user, primaryRole: 'applicant' },
+      buildDefaultProfilePayload({ ...user, primaryRole: 'applicant' }),
+    );
+  }
 }
 
 /**
@@ -963,6 +1151,7 @@ async function buildMobileWorkbench(user) {
     todos: todos.slice(0, 6),
     messages,
     recentLogs: logs,
+    guidance: WORKFLOW_GUIDANCE,
   };
 }
 
@@ -1129,6 +1318,8 @@ module.exports = {
   signToken,
   buildMenus,
   roleScopeLabel,
+  listLoginHints,
+  buildPublicBootstrap,
   profileTypeForRole,
   buildDefaultProfilePayload,
   logAudit,
@@ -1138,6 +1329,7 @@ module.exports = {
   requirePermission,
   scopeClause,
   getApplicants,
+  listRegistrationRequests,
   canAccessApplicant,
   errorWithStatus,
   stepOrder,
@@ -1148,6 +1340,7 @@ module.exports = {
   getUserProfileRecord,
   getProfileViewByUser,
   upsertUserProfile,
+  ensureApplicantEnrollment,
   getWechatBindingByUserId,
   statusText,
   statusClass,

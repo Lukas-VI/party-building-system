@@ -5,6 +5,7 @@ const multer = require('multer');
 const { env } = require('./env');
 const context = require('./app-context');
 const { registerHealthRoutes } = require('./routes/health-routes');
+const { registerPublicRoutes } = require('./routes/public-routes');
 const { registerAuthRoutes } = require('./routes/auth-routes');
 const { registerWechatRoutes } = require('./routes/wechat-routes');
 const { registerMobileRoutes } = require('./routes/mobile-routes');
@@ -44,6 +45,7 @@ function createApp() {
 
   const ctx = { ...context, upload };
   registerHealthRoutes(app, ctx);
+  registerPublicRoutes(app, ctx);
   registerAuthRoutes(app, ctx);
   registerWechatRoutes(app, ctx);
   registerMobileRoutes(app, ctx);

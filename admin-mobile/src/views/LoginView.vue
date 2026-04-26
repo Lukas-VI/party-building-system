@@ -2,25 +2,18 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { showSuccessToast } from 'vant';
-import { loginByPassword, startWechatOauth } from '../api';
+import { fetchPublicBootstrap, loginByPassword, startWechatOauth } from '../api';
 import { isDesktopDevice, mobileToDesktopUrl, shouldSkipAutoRoute } from '../deviceRoute';
 import { setSession } from '../session';
 
 const router = useRouter();
 const loading = ref(false);
 const oauthLoading = ref(false);
+const bootstrap = ref({ loginHints: [], notices: [], defaultPasswordHint: '' });
 const form = reactive({
-  username: 'admin',
-  password: '123456',
+  username: '',
+  password: '',
 });
-
-const accounts = [
-  { username: '2023001', role: '申请人' },
-  { username: 'zb001', role: '支部书记' },
-  { username: 'zz001', role: '组织员' },
-  { username: 'org001', role: '学院/组织部' },
-  { username: 'admin', role: '管理员' },
-];
 
 const inWechat = computed(() => /micromessenger/i.test(window.navigator.userAgent || ''));
 
@@ -48,10 +41,14 @@ async function startWechatLogin() {
 
 function fillAccount(username) {
   form.username = username;
-  form.password = '123456';
+}
+
+async function loadBootstrap() {
+  bootstrap.value = await fetchPublicBootstrap();
 }
 
 onMounted(() => {
+  loadBootstrap();
   if (shouldSkipAutoRoute()) return;
   if (!isDesktopDevice()) return;
   window.location.replace(mobileToDesktopUrl());
@@ -70,7 +67,7 @@ onMounted(() => {
     <section class="section-card" style="margin-top: 14px;">
       <div class="section-card__hd">
         <div class="section-card__title">账号登录</div>
-        <div class="section-card__desc">默认演示管理员账号为 admin / 123456，首次正式使用建议先完成微信绑定。</div>
+        <div class="section-card__desc">请输入账号和密码。测试环境账号提示由服务端动态提供，正式使用前建议先完成微信绑定。</div>
       </div>
       <div class="section-card__bd">
         <div class="field-block">
@@ -89,20 +86,37 @@ onMounted(() => {
           <span>首次使用服务号工作台？</span>
           <router-link to="/register">立即注册</router-link>
         </div>
+        <div class="section-card__desc" v-if="bootstrap.defaultPasswordHint" style="padding-top: 8px;">
+          {{ bootstrap.defaultPasswordHint }}
+        </div>
       </div>
     </section>
 
-    <section class="section-card">
+    <section class="section-card" v-if="bootstrap.loginHints?.length">
       <div class="section-card__hd">
-        <div class="section-card__title">演示账号</div>
-        <div class="section-card__desc">点击填充账号。不同角色登录后，待办、消息、资料和流程任务会按权限自动切换。</div>
+        <div class="section-card__title">快速填充账号</div>
+        <div class="section-card__desc">点击可快速填充账号。账号清单来自当前测试库，不在页面内硬编码维护。</div>
       </div>
       <div class="section-card__bd">
         <div class="login-demo-grid">
-          <button v-for="item in accounts" :key="item.username" class="login-demo-item" type="button" @click="fillAccount(item.username)">
+          <button v-for="item in bootstrap.loginHints" :key="item.username" class="login-demo-item" type="button" @click="fillAccount(item.username)">
             <strong>{{ item.username }}</strong>
-            <span>{{ item.role }}</span>
+            <span>{{ item.roleLabel }}</span>
           </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card" v-if="bootstrap.notices?.length">
+      <div class="section-card__hd">
+        <div class="section-card__title">办理提示</div>
+        <div class="section-card__desc">以下提示由服务端统一下发，用于验收和联调期间保持口径一致。</div>
+      </div>
+      <div class="section-card__bd">
+        <div class="list-stack">
+          <div class="panel-note" v-for="item in bootstrap.notices" :key="item">
+            <div class="panel-note__text">{{ item }}</div>
+          </div>
         </div>
       </div>
     </section>

@@ -14,7 +14,7 @@ function profileTypeForRole(roleId) {
 }
 
 /**
- * Build representative seed profile JSON for a demo user and role.
+ * Build representative seed profile JSON for a seeded user and role.
  */
 function profileJsonForUser(user, roleId) {
   if (roleId === 'applicant') {
@@ -38,7 +38,7 @@ function profileJsonForUser(user, roleId) {
       phone: '13800004567',
       roleLabel: roleId === 'organizer' ? '组织员' : '党支部书记',
       dutySummary: roleId === 'organizer' ? '负责本单位注册审核、流程推进与联系人分配。' : '负责支部级流程审核、支部大会材料核对与导出。',
-      workFocus: roleId === 'organizer' ? '重点跟进积极分子、发展对象培养与政审节点。' : '重点跟进支部大会、材料完整性和转正讨论。',
+      workFocus: roleId === 'organizer' ? '重点跟进入党积极分子、发展对象培养与政审节点。' : '重点跟进支部大会、材料完整性和转正讨论。',
     };
   }
   return {
@@ -47,7 +47,7 @@ function profileJsonForUser(user, roleId) {
     phone: '13800007890',
     roleLabel: roleId === 'superAdmin' ? '超级管理员' : roleId === 'orgDept' ? '校党委组织部人员' : roleId === 'secretary' ? '二级单位党委/总支书记' : '二级单位党委/总支副书记',
     managementScope: roleId === 'superAdmin' ? '维护全局组织结构、角色权限与流程配置。' : '负责统计汇总、审核监管和组织范围内流程协调。',
-    systemNote: roleId === 'superAdmin' ? '用于演示系统级配置和权限控制。' : '用于演示单位级或全校级数据监管。',
+    systemNote: roleId === 'superAdmin' ? '系统级配置与权限控制由该角色统一维护。' : '该角色负责单位级或全校级数据监管。',
   };
 }
 
@@ -197,7 +197,7 @@ async function ensureWorkflowRecordTaskDefaults() {
 }
 
 /**
- * Insert demo notifications only when the notification table is empty.
+ * Insert initial workflow notifications only when the notification table is empty.
  */
 async function ensureNotificationSeeds() {
   if (!(await tableExists('notifications'))) return;
@@ -220,7 +220,30 @@ async function ensureNotificationSeeds() {
 }
 
 /**
- * Initialize schema, demo data and additive backfills needed for local operation.
+ * Ensure one inactive preloaded person exists so registration approval can be tested
+ * end to end without resetting the database.
+ */
+async function ensureRegistrationCandidateSeed() {
+  const existing = await first('SELECT id FROM users WHERE username = :username', { username: '2023999' });
+  if (existing) return;
+  await query(
+    `INSERT INTO users (id, username, password_hash, name, status, org_id, branch_id, created_at)
+     VALUES (:id, :username, :passwordHash, :name, :status, :orgId, :branchId, :createdAt)`,
+    {
+      id: 'u-registration-001',
+      username: '2023999',
+      passwordHash: hashPassword('123456'),
+      name: 'Name',
+      status: 'inactive',
+      orgId: 'org-literature',
+      branchId: 'branch-literature-2',
+      createdAt: '2026-04-26 08:00:00',
+    },
+  );
+}
+
+/**
+ * Initialize schema, seed data and additive backfills needed for local operation.
  */
 async function ensureSeedData() {
   await ensureAdditiveMigrations();
@@ -233,6 +256,7 @@ async function ensureSeedData() {
     await ensureWorkflowDefinitionDetails();
     await ensureWorkflowRecordTaskDefaults();
     await ensureNotificationSeeds();
+    await ensureRegistrationCandidateSeed();
     return;
   }
 
@@ -493,6 +517,7 @@ async function ensureSeedData() {
   }
 
   await ensureNotificationSeeds();
+  await ensureRegistrationCandidateSeed();
 }
 
 /**
