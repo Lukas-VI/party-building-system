@@ -81,11 +81,11 @@ ensure_deps() {
 }
 
 ensure_deps "${ROOT_DIR}/server"
-ensure_deps "${ROOT_DIR}/admin-web"
+ensure_deps "${ROOT_DIR}/admin-desktop"
 ensure_deps "${ROOT_DIR}/admin-mobile"
 
-echo "[info] building admin-web"
-(cd "${ROOT_DIR}/admin-web" && npm run build)
+echo "[info] building admin-desktop"
+(cd "${ROOT_DIR}/admin-desktop" && npm run build)
 
 echo "[info] building admin-mobile"
 (cd "${ROOT_DIR}/admin-mobile" && npm run build)

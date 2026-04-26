@@ -18,7 +18,7 @@ const host = process.env.HOST || '0.0.0.0';
 const port = Number(process.env.PREVIEW_PORT || 1919);
 
 const mounts = [
-  { basePath: '/web-admin/desktop', distDir: resolve(process.cwd(), 'admin-web', 'dist') },
+  { basePath: '/web-admin/desktop', distDir: resolve(process.cwd(), 'admin-desktop', 'dist') },
   { basePath: '/wx-app', distDir: resolve(process.cwd(), 'admin-mobile', 'dist') },
 ];
 

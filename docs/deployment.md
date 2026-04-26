@@ -64,7 +64,7 @@ npm install -g pm2
 
 ## 5. 桌面后台构建
 ```bash
-cd /var/www/party-building/admin-web
+cd /var/www/party-building/admin-desktop
 npm install
 npm run build
 ```

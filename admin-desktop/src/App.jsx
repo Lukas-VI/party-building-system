@@ -27,7 +27,7 @@ function App() {
   const [token, setToken] = useState(() => localStorage.getItem('dj_admin_token') || '');
   const [themeMode, setThemeMode] = useState(() => localStorage.getItem('dj_admin_theme') || 'classic');
   const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 860 : false));
-  const [bootstrap, setBootstrap] = useState({ loginHints: [], notices: [], guidance: null, defaultPasswordHint: '' });
+  const [bootstrap, setBootstrap] = useState({ loginHints: [], defaultPasswordHint: '' });
   const [user, setUser] = useState(() => {
     const raw = localStorage.getItem('dj_admin_user');
     return raw ? JSON.parse(raw) : null;
@@ -346,7 +346,6 @@ function App() {
 
         {activeView === 'dashboard' && overview && (
           <div className="content-stack">
-            {bootstrap?.guidance && <GuidancePanel guidance={bootstrap.guidance} />}
             <div className="stats-grid">
               <MetricCard title="申请人数" value={overview.totalApplicants} desc="当前权限范围内的申请人数量" />
               <MetricCard title="待注册审核" value={overview.pendingRegistrations} desc="首次注册待审核" />
@@ -643,15 +642,6 @@ function LoginScreen({ onLogin, themeClass, onToggleTheme, isMobile, bootstrap }
             {bootstrap.defaultPasswordHint && <div className="sample-note">{bootstrap.defaultPasswordHint}</div>}
           </Card>
         )}
-        {!!bootstrap?.notices?.length && (
-          <Card title="办理提示" size="small">
-            <ul className="sample-list">
-              {bootstrap.notices.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </Card>
-        )}
         <Card title="更多选项" size="small">
           <div className="login-settings">
             <span>当前：{themeClass.includes('theme-propaganda') ? '样式2' : '样式1'}</span>
@@ -670,37 +660,6 @@ function MetricCard({ title, value, desc }) {
       <div className="metric-number">{value}</div>
       <div className="metric-desc">{desc}</div>
     </Card>
-  );
-}
-
-function GuidancePanel({ guidance }) {
-  return (
-    <div className="guidance-layout">
-      <Card title={guidance.title}>
-        <div className="guidance-intro">{guidance.intro}</div>
-        <div className="guidance-list">
-          {guidance.rules.map((item, index) => (
-            <div className="guidance-item" key={item}>
-              <div className="guidance-index">{index + 1}</div>
-              <div className="guidance-text">{item}</div>
-            </div>
-          ))}
-        </div>
-      </Card>
-      <Card title="流程示意">
-        <div className="flow-stage-list">
-          {guidance.stages.map((item) => (
-            <div className="flow-stage-card" key={item.code}>
-              <div className="flow-stage-top">
-                <div className="flow-stage-title">{item.title} · {item.subtitle}</div>
-                <Tag theme="danger" variant="light">{item.stepRange}</Tag>
-              </div>
-              <div className="flow-stage-text">{item.summary}</div>
-            </div>
-          ))}
-        </div>
-      </Card>
-    </div>
   );
 }
 

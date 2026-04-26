@@ -6,14 +6,14 @@
 - `server/src/index.js`
 - `server/src/env.js`
 - `server/src/db.js`
-- `admin-web/src/App.jsx`
+- `admin-desktop/src/App.jsx`
 - `admin-mobile/src/api.js`
 - `admin-mobile/src/router.js`
 - `admin-mobile/src/session.js`
 
 验证结果：
 - `server`: `npm run check` 通过
-- `admin-web`: `npm run build` 通过
+- `admin-desktop`: `npm run build` 通过
 - `admin-mobile`: `npm run build` 通过
 
 说明：构建通过只代表语法与打包链路可用，不代表权限、数据范围和业务安全边界正确。
@@ -269,8 +269,8 @@ PC 端接口：
 ### 4.7 PC 管理端
 
 重点文件：
-- `admin-web/src/App.jsx`
-- `admin-web/src/deviceRoute.js`
+- `admin-desktop/src/App.jsx`
+- `admin-desktop/src/deviceRoute.js`
 
 审查重点：
 - 菜单权限与后端权限是否一致
@@ -316,5 +316,5 @@ PC 端接口：
 - 前端按钮隐藏只是体验优化，不作为唯一保护
 - 重新执行：
   - `server`: `npm run check`
-  - `admin-web`: `npm run build`
+- `admin-desktop`: `npm run build`
   - `admin-mobile`: `npm run build`

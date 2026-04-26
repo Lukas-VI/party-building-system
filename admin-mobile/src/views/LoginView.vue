@@ -9,7 +9,7 @@ import { setSession } from '../session';
 const router = useRouter();
 const loading = ref(false);
 const oauthLoading = ref(false);
-const bootstrap = ref({ loginHints: [], notices: [], defaultPasswordHint: '' });
+const bootstrap = ref({ loginHints: [], defaultPasswordHint: '' });
 const form = reactive({
   username: '',
   password: '',
@@ -103,20 +103,6 @@ onMounted(() => {
             <strong>{{ item.username }}</strong>
             <span>{{ item.roleLabel }}</span>
           </button>
-        </div>
-      </div>
-    </section>
-
-    <section class="section-card" v-if="bootstrap.notices?.length">
-      <div class="section-card__hd">
-        <div class="section-card__title">办理提示</div>
-        <div class="section-card__desc">以下提示由服务端统一下发，用于验收和联调期间保持口径一致。</div>
-      </div>
-      <div class="section-card__bd">
-        <div class="list-stack">
-          <div class="panel-note" v-for="item in bootstrap.notices" :key="item">
-            <div class="panel-note__text">{{ item }}</div>
-          </div>
         </div>
       </div>
     </section>

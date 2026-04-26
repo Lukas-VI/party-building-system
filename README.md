@@ -27,7 +27,7 @@ GitHub 仓库地址：
 ## 项目结构
 ```text
 .
-├─ admin-web/        PC 后台前端
+├─ admin-desktop/    PC 后台前端
 ├─ admin-mobile/     服务号网页 App（Vue3 + Vant）
 ├─ docs/             项目说明、部署文档、图表与进展记录
 └─ server/           Node.js + MySQL 服务端
@@ -50,12 +50,12 @@ npm run start
 
 ### 2. 启动后台
 ```bash
-cd admin-web
+cd admin-desktop
 npm install
 npm run dev
 ```
 
-可通过 `admin-web/.env.example` 配置 `VITE_API_BASE`。
+可通过 `admin-desktop/.env.example` 配置 `VITE_API_BASE`。
 如需按开发服务器联调口径启动桌面后台开发服务：
 ```bash
 npm run dev:1919
@@ -82,7 +82,7 @@ npm run dev:1919
 - 微信内打开时优先作为服务号工作台使用，桌面设备访问会自动跳转到 PC 后台
 - 登录页提供首次注册入口，注册表单提交至 `/api/auth/register`
 - 登录支持账号密码，后续可补充微信网页授权绑定
-- 工作台按角色显示待办、下一步节点、流程概览、消息提醒和最近操作
+- 工作台按角色显示待办、下一步节点、消息提醒和最近操作
 - 申请人重点使用：我的流程、我的资料、材料维护
 - 审核者重点使用：待办处理、消息提醒、流程查询和关键节点确认
 - 第一阶段验收边界为前 12 步 MVP；13 步以后作为后续阶段保留在流程定义中，不进入当前待办办理
@@ -100,7 +100,6 @@ npm run dev:1919
 - 数据导出页下载台账和统计报表
 - 流程配置页维护每步起止时间
 - 登录页与侧边栏靠后位置提供“更多选项”，可切换“样式1/样式2”
-- 工作台首页内置“注意事项”和流程示意，用于强调正式流程要求
 
 ## 服务部署说明与要求
 - 建议环境：Linux 云主机
@@ -140,7 +139,6 @@ npm run dev:1919
 - 已新增 `user_profiles`，用于承接非申请人角色资料存储
 - 已提供 `npm run reset-admin` 修复开发环境管理员口令漂移
 - 已移除移动端暗黑模式分支，统一收口为高对比度正式亮色样式
-- 已补充基于原始设计文档提炼的流程提示与流程示意
 - 已将服务号网页 App 固定到 `/wx-app/`
 - 已将桌面后台保留在 `/web-admin/desktop/`，并按设备自动分流
 - 已将对外前端入口收口为 `/web-admin/`，旧 `/admin/`、`/m-admin/`、`/web-admin/mobile/` 不再保留

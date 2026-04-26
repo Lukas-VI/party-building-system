@@ -12,8 +12,6 @@ const actions = computed(() => workbenchActions(sessionState.user));
 const previewMessages = computed(() => workbench.value?.messages || []);
 const todoItems = computed(() => workbench.value?.todos || []);
 const nextTask = computed(() => workbench.value?.nextTask || null);
-const guidance = computed(() => workbench.value?.guidance || null);
-
 async function loadData() {
   loading.value = true;
   try {
@@ -93,21 +91,6 @@ onMounted(loadData);
         </div>
       </div>
     </section>
-
-    <section class="section-card" v-if="guidance">
-      <div class="section-card__hd">
-        <div class="section-card__title">{{ guidance.title }}</div>
-        <div class="section-card__desc">{{ guidance.intro }}</div>
-      </div>
-      <div class="section-card__bd">
-        <div class="list-stack">
-          <div class="panel-note" v-for="item in guidance.rules" :key="item">
-            <div class="panel-note__text">{{ item }}</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <section class="section-card">
       <div class="section-card__hd">
         <div class="section-card__title">待办事项</div>

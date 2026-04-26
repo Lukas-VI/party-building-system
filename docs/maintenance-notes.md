@@ -25,7 +25,7 @@
 - `electronic-dossier.md` 当前仅用于整理《发展党员全程记实表》的阶段结构和研发参考口径
 - 该文档本轮不等同于已落地的数据模型或页面实现
 
-### 2.2 `admin-web/`
+### 2.2 `admin-desktop/`
 - 类型：PC 后台
 - 框架来源：基于现有 React + Vite + TDesign 项目继续演进
 - 保留原因：
@@ -61,7 +61,7 @@
   - 对应：`/DJ_api/`、`/web-admin/desktop/`、`/wx-app/` 的部署与反代
   - 关联代码：
     - `scripts/serve-admin-frontends.mjs`
-    - `admin-web`
+    - `admin-desktop`
     - `admin-mobile`
     - `server/.env*`
 

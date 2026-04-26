@@ -8,7 +8,7 @@
   - `server/src/app.js`：Express 应用组装与路由注册
   - `server/src/app-context.js`：跨路由共享的认证、权限、流程、上传和序列化规则
   - `server/src/routes/`：按业务域拆分的 HTTP 路由
-- `admin-web/`：PC 后台管理端
+- `admin-desktop/`：PC 后台管理端
 - `admin-mobile/`：服务号网页 App（Vue3 + Vant）
 - `docs/`：项目文档、图表、部署说明
 

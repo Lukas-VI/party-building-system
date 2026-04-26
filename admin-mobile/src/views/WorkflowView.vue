@@ -167,7 +167,7 @@ onMounted(loadWorkflow);
         </div>
         <div class="field-block" v-if="currentTask.canSubmit">
           <div class="field-label">补充备注</div>
-          <van-field v-model="form.note" rows="2" autosize type="textarea" placeholder="可填写补充说明、材料目录或注意事项" />
+          <van-field v-model="form.note" rows="2" autosize type="textarea" placeholder="可填写补充说明或材料目录" />
         </div>
 
         <template v-if="currentTask.canReschedule">

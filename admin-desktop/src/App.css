@@ -85,7 +85,7 @@ body {
   padding: 10px 14px;
   border: 1px solid rgba(255, 223, 167, 0.55);
   background: rgba(255, 248, 226, 0.14);
-  color: #fff5de;
+  color: #ff0000;
   font-size: 12px;
   font-weight: 700;
   line-height: 1.7;
@@ -169,14 +169,12 @@ body {
   gap: 18px;
 }
 
-.guidance-layout,
 .stats-grid,
 .split-grid {
   display: grid;
   gap: 18px;
 }
 
-.guidance-layout,
 .split-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -219,86 +217,6 @@ body {
   margin-top: 10px;
   font-size: 13px;
   line-height: 1.6;
-}
-
-.guidance-intro {
-  font-size: 14px;
-  line-height: 1.8;
-  color: var(--text-subtle);
-}
-
-.guidance-list {
-  margin-top: 14px;
-  display: grid;
-  gap: 12px;
-}
-
-.guidance-item {
-  display: grid;
-  grid-template-columns: 32px 1fr;
-  gap: 12px;
-  align-items: start;
-}
-
-.guidance-index {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.guidance-text,
-.flow-stage-text,
-.flow-legend-item {
-  font-size: 14px;
-  line-height: 1.8;
-  color: var(--text-main);
-}
-
-.flow-stage-list {
-  display: grid;
-  gap: 14px;
-}
-
-.flow-stage-card {
-  padding: 16px;
-  border-radius: 14px;
-  background: var(--bg-soft);
-  border: 1px solid var(--line);
-}
-
-.flow-stage-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.flow-stage-title {
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.7;
-  color: var(--text-main);
-}
-
-.flow-stage-text {
-  margin-top: 10px;
-}
-
-.flow-legend-list {
-  margin-top: 14px;
-  display: grid;
-  gap: 8px;
-}
-
-.flow-legend-item {
-  color: var(--text-subtle);
 }
 
 .filter-grid,
@@ -558,7 +476,6 @@ body {
     font-size: 24px;
   }
 
-  .guidance-layout,
   .split-grid,
   .stats-grid,
   .filter-grid,
@@ -619,32 +536,8 @@ body {
     font-size: 32px;
   }
 
-  .guidance-item {
-    grid-template-columns: 28px 1fr;
-    gap: 10px;
-  }
-
-  .guidance-index {
-    width: 28px;
-    height: 28px;
-    font-size: 13px;
-  }
-
-  .guidance-text,
-  .flow-stage-text,
-  .flow-legend-item,
-  .guidance-intro {
-    font-size: 13px;
-  }
-
-  .flow-stage-card,
   .simple-list-card {
     padding: 12px;
-  }
-
-  .flow-stage-top {
-    flex-direction: column;
-    align-items: stretch;
   }
 
   .simple-list-row {

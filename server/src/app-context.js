@@ -3,7 +3,6 @@ const XLSX = require('xlsx');
 const jwt = require('jsonwebtoken');
 const { env } = require('./env');
 const { query, first, getPool } = require('./db');
-const { WORKFLOW_GUIDANCE } = require('./bootstrap-content');
 const { getStepDetail } = require('./workflow-config');
 const { hashPassword, verifyPassword, needsPasswordRehash } = require('./password');
 
@@ -150,8 +149,6 @@ async function buildPublicBootstrap() {
   return {
     loginHints: await listLoginHints(),
     defaultPasswordHint: env.TEST_DEFAULT_PASSWORD_HINT,
-    notices: WORKFLOW_GUIDANCE.rules,
-    guidance: WORKFLOW_GUIDANCE,
   };
 }
 
@@ -1151,7 +1148,6 @@ async function buildMobileWorkbench(user) {
     todos: todos.slice(0, 6),
     messages,
     recentLogs: logs,
-    guidance: WORKFLOW_GUIDANCE,
   };
 }
 
