@@ -6,7 +6,7 @@ const previewPort = Number(process.env.PREVIEW_PORT || 4173);
 const allowedHosts = ['havensky.cn', 'www.havensky.cn', '192.168.31.135', 'localhost', '127.0.0.1'];
 
 export default defineConfig(({ command }) => ({
-  base: command === 'serve' ? '/' : '/web-admin/desktop/',
+  base: command === 'serve' ? '/' : '/admin-desktop/',
   plugins: [react()],
   server: {
     host: '0.0.0.0',

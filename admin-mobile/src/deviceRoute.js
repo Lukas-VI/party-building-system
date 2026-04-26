@@ -24,10 +24,10 @@ export function isDesktopDevice() {
 // 
 export function mobileToDesktopUrl() {
   if (typeof window === 'undefined') {
-    return '/web-admin/desktop/';
+    return '/admin-desktop/';
   }
   const url = new URL(window.location.href);
-  url.pathname = '/web-admin/desktop/';
+  url.pathname = '/admin-desktop/';
   url.hash = '';
   return url.toString();
 }

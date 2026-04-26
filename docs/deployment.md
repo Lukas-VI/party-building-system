@@ -14,12 +14,12 @@
 ## 2. 域名与 HTTPS
 - 微信服务号网页 App 和服务端必须使用已备案并配置 HTTPS 的域名
 - 对外保留两个正式入口：前端统一入口 `/web-admin/`，后端 API 入口 `/DJ_api/`
-- `/wx-app/` 和 `/web-admin/desktop/` 是统一前端网关内部真实挂载路径，用于设备分流和静态资源加载
+- `/wx-app/` 和 `/admin-desktop/` 是统一前端网关内部真实挂载路径，用于设备分流和静态资源加载
 
 示例：
 - API：`https://havensky.cn/DJ_api`
 - 前端统一入口：`https://havensky.cn/web-admin/`
-- 桌面后台真实挂载：`https://havensky.cn/web-admin/desktop/`
+- 桌面后台真实挂载：`https://havensky.cn/admin-desktop/`
 - 服务号网页 App 真实挂载：`https://havensky.cn/wx-app/`
 
 开发联调阶段可先使用：
@@ -70,7 +70,7 @@ npm run build
 ```
 
 桌面后台构建资源基址固定为：
-- `/web-admin/desktop/`
+- `/admin-desktop/`
 
 ## 6. 服务号网页 App 构建
 ```bash
@@ -90,7 +90,7 @@ node scripts/serve-admin-frontends.mjs
 ```
 
 该脚本会：
-- 在 `1919` 端口同时托管 `/web-admin/desktop/` 与 `/wx-app/`
+- 在 `1919` 端口同时托管 `/admin-desktop/` 与 `/wx-app/`
 - 自动将 `/web-admin/` 按设备类型分流
 - 不再保留 `/admin/`、`/m-admin/`、`/web-admin/mobile/` 等旧入口
 

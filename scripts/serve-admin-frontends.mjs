@@ -7,7 +7,7 @@ import { extname, join, normalize, resolve } from 'node:path';
  *
  * 设计目标：
  * - 对外主入口收口到 /web-admin/
- * - 桌面设备分流到 /web-admin/desktop/
+ * - 桌面设备分流到 /admin-desktop/
  * - 手机和微信内访问分流到 /wx-app/
  * - 统一由同一个 1919 端口承载前端静态资源，便于 frp 和反代维护
  *
@@ -18,7 +18,7 @@ const host = process.env.HOST || '0.0.0.0';
 const port = Number(process.env.PREVIEW_PORT || 1919);
 
 const mounts = [
-  { basePath: '/web-admin/desktop', distDir: resolve(process.cwd(), 'admin-desktop', 'dist') },
+  { basePath: '/admin-desktop', distDir: resolve(process.cwd(), 'admin-desktop', 'dist') },
   { basePath: '/wx-app', distDir: resolve(process.cwd(), 'admin-mobile', 'dist') },
 ];
 
@@ -72,7 +72,7 @@ createServer((req, res) => {
   const requestPath = requestUrl.pathname;
 
   if (requestPath === '/web-admin' || requestPath === '/web-admin/') {
-    const target = isMobileDevice(req.headers['user-agent'] || '') ? '/wx-app/' : '/web-admin/desktop/';
+    const target = isMobileDevice(req.headers['user-agent'] || '') ? '/wx-app/' : '/admin-desktop/';
     res.writeHead(302, { Location: target });
     res.end();
     return;
@@ -80,7 +80,13 @@ createServer((req, res) => {
 
   // 兼容旧入口，避免已下发的历史链接立刻失效。
   if (requestPath === '/admin' || requestPath === '/admin/') {
-    res.writeHead(302, { Location: '/web-admin/desktop/' });
+    res.writeHead(302, { Location: '/admin-desktop/' });
+    res.end();
+    return;
+  }
+
+  if (requestPath === '/web-admin/desktop' || requestPath === '/web-admin/desktop/') {
+    res.writeHead(302, { Location: '/admin-desktop/' });
     res.end();
     return;
   }

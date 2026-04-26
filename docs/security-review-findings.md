@@ -304,7 +304,7 @@ PC 端接口：
 审查重点：
 - 生产环境是否强制配置密钥、数据库密码和 HTTPS 域名
 - CORS 是否只允许可信来源
-- Nginx 是否正确代理 `/DJ_api/`、`/web-admin/desktop/`、`/wx-app/`
+- Nginx 是否正确代理 `/DJ_api/`、`/admin-desktop/`、`/wx-app/`
 - 上传目录是否有备份、清理和访问控制策略
 
 ## 5. 建议整改完成标准

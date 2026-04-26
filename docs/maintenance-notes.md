@@ -58,7 +58,7 @@
   - 关联代码：整体目录、部署边界、模块职责
 
 - [deployment.md](deployment.md)
-  - 对应：`/DJ_api/`、`/web-admin/desktop/`、`/wx-app/` 的部署与反代
+- 对应：`/DJ_api/`、`/admin-desktop/`、`/wx-app/` 的部署与反代
   - 关联代码：
     - `scripts/serve-admin-frontends.mjs`
     - `admin-desktop`

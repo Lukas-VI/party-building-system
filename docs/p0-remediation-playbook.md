@@ -13,7 +13,7 @@
 ## 2. 当前验收边界
 
 - 移动端：`admin-mobile/` 服务号网页 App，挂载路径 `/wx-app/`。
-- PC 端：`admin-desktop/` 桌面后台，挂载路径 `/web-admin/desktop/`。
+- PC 端：`admin-desktop/` 桌面后台，挂载路径 `/admin-desktop/`。
 - 后端：`server/` Node API。
 - 流程：第一阶段只验收前 12 步 MVP 办理闭环。
 - 不再维护小程序入口、页面或依赖。
