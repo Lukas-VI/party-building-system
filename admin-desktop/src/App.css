@@ -319,6 +319,12 @@ body {
   color: var(--text-main);
 }
 
+.section-note {
+  color: var(--text-subtle);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
 .empty-state {
   padding: 42px 0;
   text-align: center;

@@ -49,6 +49,8 @@ function App() {
   const [branchStats, setBranchStats] = useState([]);
   const [configs, setConfigs] = useState([]);
   const [assignForm, setAssignForm] = useState({ userId: '', roleId: 'branchSecretary' });
+  const [staffImportFile, setStaffImportFile] = useState(null);
+  const [staffImportResult, setStaffImportResult] = useState(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -77,9 +79,10 @@ function App() {
    * @throws {Error} 当请求失败或响应码不为0时抛出错误
    */
   async function api(path, options = {}) {
+    const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
     const response = await fetch(`${API_BASE}${path}`, {
       headers: {
-        'Content-Type': 'application/json',
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(options.headers || {}),
       },
@@ -267,6 +270,26 @@ function App() {
         body: JSON.stringify(assignForm),
       });
       MessagePlugin.success('角色已分配');
+    } catch (error) {
+      MessagePlugin.error(error.message);
+    }
+  }
+
+  async function importStaff() {
+    if (!staffImportFile) {
+      MessagePlugin.warning('请先选择人员表格');
+      return;
+    }
+    try {
+      const formData = new FormData();
+      formData.append('file', staffImportFile);
+      const result = await api('/orgs/import-staff', {
+        method: 'POST',
+        body: formData,
+      });
+      setStaffImportResult(result);
+      MessagePlugin.success(`导入完成：新增 ${result.imported}，更新 ${result.updated}，失败 ${result.failed}`);
+      refreshForView('organizations');
     } catch (error) {
       MessagePlugin.error(error.message);
     }
@@ -551,6 +574,32 @@ function App() {
               <SimpleTableCard title="单位清单" columns={['单位名称']} rows={orgs.map((item) => [item.name])} compact={isMobile} />
               <SimpleTableCard title="支部清单" columns={['支部名称', '所属单位']} rows={branches.map((item) => [item.name, orgs.find((org) => org.id === item.orgId)?.name || ''])} compact={isMobile} />
             </div>
+            <Card title="预置人员导入">
+              <div className="section-note">
+                支持 Excel/CSV。至少包含“学号/工号、姓名”，可选“单位ID/单位、支部ID/支部、角色、状态”。默认导入为 inactive 预置人员，供服务号首次注册核验。
+              </div>
+              <div className="filter-grid">
+                <input
+                  className="inline-input"
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={(event) => setStaffImportFile(event.target.files?.[0] || null)}
+                />
+              </div>
+              <Button theme="danger" style={{ marginTop: 16 }} onClick={importStaff}>导入人员表格</Button>
+              {staffImportResult && (
+                <div className="section-note" style={{ marginTop: 12 }}>
+                  新增 {staffImportResult.imported} 人，更新 {staffImportResult.updated} 人，失败 {staffImportResult.failed} 行。
+                  {!!staffImportResult.errors?.length && (
+                    <ul className="sample-list">
+                      {staffImportResult.errors.map((item) => (
+                        <li key={`${item.row}-${item.message}`}>第 {item.row} 行：{item.message}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </Card>
             <Card title="角色分配">
               <div className="filter-grid">
                 <Select value={assignForm.userId} onChange={(value) => setAssignForm((prev) => ({ ...prev, userId: value }))} options={users.map((item) => ({ label: `${item.name} (${item.username})`, value: item.id }))} placeholder="选择用户" />
