@@ -24,6 +24,8 @@ function registerMobileRoutes(app, ctx) {
     advanceAfterReview,
     listMobileTodos,
     listNotifications,
+    getNotificationForUser,
+    markNotificationRead,
     createNotification,
     buildMobileWorkflow,
     buildMobileWorkbench,
@@ -56,6 +58,22 @@ function registerMobileRoutes(app, ctx) {
   app.get('/api/mobile/messages', requireAuth(), async (req, res) => {
     try {
       ok(res, await listNotifications(req.user, 50));
+    } catch (error) {
+      fail(res, error.status || 500, error.message);
+    }
+  });
+
+  app.get('/api/mobile/messages/:messageId', requireAuth(), async (req, res) => {
+    try {
+      ok(res, await getNotificationForUser(req.user, req.params.messageId));
+    } catch (error) {
+      fail(res, error.status || 500, error.message);
+    }
+  });
+
+  app.post('/api/mobile/messages/:messageId/read', requireAuth(), async (req, res) => {
+    try {
+      ok(res, await markNotificationRead(req.user, req.params.messageId), '消息已标记为已读');
     } catch (error) {
       fail(res, error.status || 500, error.message);
     }

@@ -104,6 +104,14 @@ export function fetchMessages() {
   return http.get('/mobile/messages');
 }
 
+export function fetchMessageDetail(messageId) {
+  return http.get(`/mobile/messages/${messageId}`);
+}
+
+export function markMessageRead(messageId) {
+  return http.post(`/mobile/messages/${messageId}/read`);
+}
+
 // 资料与流程接口
 export function fetchMobileProfile() {
   return http.get('/mobile/profile');

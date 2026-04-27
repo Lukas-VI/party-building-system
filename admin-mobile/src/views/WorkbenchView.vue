@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { fetchWorkbench } from '../api';
+import { fetchWorkbench, markMessageRead } from '../api';
 import { sessionState, workbenchActions } from '../session';
 
 const router = useRouter();
@@ -30,7 +30,23 @@ function openAction(item) {
 }
 
 function openTask(task) {
-  router.push(`/workflow/${task.workflowId}`);
+  router.push(task.detailRoute || `/workflow/${task.workflowId}`);
+}
+
+function openMetric(item) {
+  if (!item.route) return;
+  router.push(item.route);
+}
+
+async function openMessage(item) {
+  if (item.status === 'unread') {
+    await markMessageRead(item.id);
+  }
+  if (item.targetRoute) {
+    router.push(item.targetRoute);
+  } else {
+    await loadData();
+  }
 }
 
 onMounted(loadData);
@@ -45,11 +61,11 @@ onMounted(loadData);
       </div>
       <div class="section-card__bd">
         <div class="metric-grid" v-if="workbench.metrics?.length">
-          <div class="metric-item" v-for="item in workbench.metrics" :key="item.label">
+          <button class="metric-item metric-item--button" v-for="item in workbench.metrics" :key="item.label" type="button" @click="openMetric(item)">
             <div class="metric-item__label">{{ item.label }}</div>
             <div class="metric-item__value">{{ item.value }}</div>
             <div class="metric-item__desc">{{ item.desc }}</div>
-          </div>
+          </button>
         </div>
       </div>
     </section>
@@ -136,14 +152,14 @@ onMounted(loadData);
       </div>
       <div class="section-card__bd">
         <div class="table-like" v-if="previewMessages.length">
-          <div class="panel-note" v-for="item in previewMessages" :key="item.id">
+          <button class="panel-note panel-note--button" v-for="item in previewMessages" :key="item.id" type="button" @click="openMessage(item)">
             <div class="table-row__head">
               <div class="table-row__title">{{ item.title }}</div>
               <span class="tag-pair">{{ item.status === 'unread' ? '未读' : '已读' }}</span>
             </div>
             <div class="panel-note__text">{{ item.content }}</div>
-            <div class="step-item__meta">{{ item.createdAt }}</div>
-          </div>
+            <div class="step-item__meta">{{ item.createdAt }} <span v-if="item.targetLabel">· {{ item.targetLabel }}</span></div>
+          </button>
         </div>
         <div class="empty-state" v-else-if="!loading">暂无消息提醒。</div>
         <van-skeleton v-else title :row="3" />

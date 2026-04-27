@@ -108,6 +108,14 @@ textarea {
   border: 1px solid #e8d5c4;
 }
 
+.metric-item--button,
+.panel-note--button {
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
 .metric-item__label {
   font-size: 12px;
   color: var(--text-subtle);
@@ -246,6 +254,7 @@ textarea {
 .panel-note,
 .table-row,
 .step-item {
+  width: 100%;
   padding: 12px;
   border-radius: 14px;
   border: 1px solid #ead8c8;
@@ -386,6 +395,10 @@ textarea {
   gap: 10px;
 }
 
+.section-actions--compact {
+  margin-top: 10px;
+}
+
 .dual-actions {
   display: grid;
   gap: 10px;
@@ -420,6 +433,13 @@ textarea {
   background: #fff;
 }
 
+.upload-list__item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
 .material-block + .material-block {
   margin-top: 10px;
 }
@@ -429,6 +449,18 @@ textarea {
   text-align: center;
   font-size: 13px;
   color: var(--text-subtle);
+}
+
+.empty-state--compact {
+  padding: 10px 0 0;
+  text-align: left;
+}
+
+.text-link {
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .formal-divider {

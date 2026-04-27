@@ -794,8 +794,17 @@ async function getWorkflowByApplicantId(applicantId) {
  * Build dashboard metrics constrained to the caller scope.
  */
 async function dashboardForUser(user) {
+  if (user.primaryRole === 'applicant') {
+    return {
+      welcome: `${user.roles[0]?.label || '用户'} · ${user.name}`,
+      scopeLabel: roleScopeLabel(user),
+      currentStage: user.roles[0]?.label || '系统用户',
+      metrics: [],
+      stageDistribution: [],
+    };
+  }
   const applicants = await getApplicants(user, {});
-  const pendingRegistrations = await first('SELECT COUNT(*) AS count FROM registration_requests WHERE status = :status', { status: 'pending' });
+  const pendingRegistrations = await listRegistrationRequests(user, { status: 'pending' });
   const scope = scopeClause(user, 'u');
   const pendingReviews = await first(
     `SELECT COUNT(*) AS count
@@ -814,10 +823,10 @@ async function dashboardForUser(user) {
     scopeLabel: roleScopeLabel(user),
     currentStage: user.roles[0]?.label || '系统用户',
     metrics: [
-      { label: '申请人数', value: applicants.length, desc: '当前权限范围内台账人数' },
-      { label: '待注册审核', value: pendingRegistrations?.count || 0, desc: '首次注册待审核' },
-      { label: '待流程审核', value: pendingReviews?.count || 0, desc: '待审批节点数量' },
-      { label: '查看范围', value: user.orgName || '全校', desc: user.branchName || '系统级数据范围' },
+      { label: '申请人数', value: applicants.length, desc: '当前权限范围内台账人数', route: '/applicants' },
+      { label: '待注册审核', value: pendingRegistrations.length, desc: '首次注册待审核', route: '/reviews?tab=registration' },
+      { label: '待流程审核', value: pendingReviews?.count || 0, desc: '待审批节点数量', route: '/reviews?tab=workflow' },
+      { label: '查看范围', value: user.orgName || '全校', desc: user.branchName || '系统级数据范围', route: '/profile' },
     ],
     stageDistribution: Object.entries(stageMap).map(([stage, count]) => ({ stage, count })),
   };
@@ -954,6 +963,11 @@ function mobileTaskStatus(step) {
  */
 function buildTodoItem(user, applicant, workflow, step) {
   const taskOwner = isApplicantActor(user, applicant.userId || applicant.id, step) ? '申请人' : '审核者';
+  const uploadRequired = (step.materialSchema || step.taskMeta?.materialSchema || []).length > 0;
+  const canSubmit = isApplicantActor(user, applicant.userId || applicant.id, step);
+  const canReview = isReviewerActor(user, step);
+  const actionKind = uploadRequired ? 'upload' : (canReview ? 'review' : (canSubmit ? 'submit' : 'notice'));
+  const isCompleted = step.status === 'approved';
   return {
     workflowId: applicant.userId || applicant.id,
     taskId: step.stepCode,
@@ -968,11 +982,18 @@ function buildTodoItem(user, applicant, workflow, step) {
     actorType: step.actorType || step.taskMeta?.actorType || 'reviewer',
     taskOwner,
     summary: step.taskMeta?.taskSummary || '请按要求完成当前节点办理。',
+    cardTitle: step.name,
+    cardSubtitle: `${step.phase} · ${taskOwner}`,
+    cardType: actionKind,
+    cardClass: isCompleted ? 'is-done' : `is-${actionKind}`,
+    detailRoute: `/workflow/${applicant.userId || applicant.id}?step=${step.stepCode}`,
+    blessingText: isCompleted ? `${step.name}已完成，请继续关注后续流程通知。` : '',
     requiresApplicantAction: Number(step.requiresApplicantAction || step.taskMeta?.requiresApplicantAction || 0) === 1,
     requiresReviewerAction: Number(step.requiresReviewerAction || step.taskMeta?.requiresReviewerAction || 0) === 1,
-    canSubmit: isApplicantActor(user, applicant.userId || applicant.id, step),
-    canReview: isReviewerActor(user, step),
+    canSubmit,
+    canReview,
     canReschedule: step.stepCode === 'STEP_02' && (isApplicantActor(user, applicant.userId || applicant.id, step) || isReviewerActor(user, step)),
+    uploadRequired,
     materialSchema: step.materialSchema || step.taskMeta?.materialSchema || [],
     attachments: step.attachments || [],
     formData: step.formData || {},
@@ -1032,7 +1053,68 @@ async function listNotifications(user, limit = 20) {
      LIMIT ${Number(limit)}`,
     { userId: user.id },
   );
-  return rows;
+  return rows.map((item) => normalizeNotification(item));
+}
+
+/**
+ * Convert notification rows to the H5 and service-account deep-link contract.
+ */
+function normalizeNotification(item) {
+  const targetWorkflowId = item.relatedTargetType === 'workflow' ? String(item.relatedTargetId || '').replace(/^wf-/, '') : '';
+  const targetRoute = targetWorkflowId
+    ? `/workflow/${targetWorkflowId}?step=${item.relatedStepCode || ''}&notificationId=${item.id}`
+    : '';
+  return {
+    ...item,
+    isUnread: item.status === 'unread',
+    targetWorkflowId,
+    targetRoute,
+    targetLabel: item.relatedStepCode ? `流程节点 ${item.relatedStepCode}` : '消息详情',
+  };
+}
+
+/**
+ * Load one notification owned by the current user.
+ */
+async function getNotificationForUser(user, notificationId) {
+  const row = await first(
+    `SELECT
+        id,
+        type,
+        title,
+        content,
+        related_step_code AS relatedStepCode,
+        related_target_type AS relatedTargetType,
+        related_target_id AS relatedTargetId,
+        status,
+        created_at AS createdAt
+     FROM notifications
+     WHERE id = :id AND user_id = :userId`,
+    { id: notificationId, userId: user.id },
+  );
+  if (!row) throw errorWithStatus('未找到消息', 404);
+  return normalizeNotification(row);
+}
+
+/**
+ * Mark one owned notification as read and preserve a click receipt when present.
+ */
+async function markNotificationRead(user, notificationId) {
+  const notification = await getNotificationForUser(user, notificationId);
+  await query(
+    `UPDATE notifications
+     SET status = 'read'
+     WHERE id = :id AND user_id = :userId`,
+    { id: notificationId, userId: user.id },
+  );
+  await query(
+    `UPDATE notification_receipts
+     SET status = 'clicked',
+         clicked_at = COALESCE(clicked_at, :clickedAt)
+     WHERE notification_id = :notificationId AND user_id = :userId`,
+    { notificationId, userId: user.id, clickedAt: now() },
+  );
+  return { ...notification, status: 'read', isUnread: false };
 }
 
 /**
@@ -1101,14 +1183,7 @@ async function buildMobileWorkflow(user, applicantId) {
     workflowId: applicantId,
     currentStage: workflow.instance?.currentStage || '',
     currentStep: currentStep ? buildTodoItem(user, { ...applicant, userId: applicantId }, workflow, currentStep) : null,
-    completedSteps: completedSteps.map((item) => ({
-      stepCode: item.stepCode,
-      name: item.name,
-      phase: item.phase,
-      operatedAt: item.operatedAt,
-      lastOperatorName: item.lastOperatorName,
-      statusText: item.statusText,
-    })),
+    completedSteps: completedSteps.map((item) => buildTodoItem(user, { ...applicant, userId: applicantId }, workflow, item)),
     steps: mvpSteps.map((item) => buildTodoItem(user, { ...applicant, userId: applicantId }, workflow, item)),
     todos: todoSteps,
   };
@@ -1356,6 +1431,9 @@ module.exports = {
   listMobileTodos,
   listNotifications,
   createNotification,
+  normalizeNotification,
+  getNotificationForUser,
+  markNotificationRead,
   recentAuditLogs,
   buildMobileWorkflow,
   buildMobileWorkbench,

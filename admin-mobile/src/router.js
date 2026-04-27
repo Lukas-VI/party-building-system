@@ -1,5 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
-import { isLoggedIn, roleTabs, sessionState } from './session';
+import { isLoggedIn } from './session';
 
 /**
  * 服务号网页 App 路由入口。
@@ -33,9 +33,10 @@ const routes = [
       { path: '', redirect: '/workbench' },
       { path: 'workbench', name: 'workbench', component: () => import('./views/WorkbenchView.vue'), meta: { title: '工作台' } },
       { path: 'workflow/:workflowId', name: 'workflow', component: () => import('./views/WorkflowView.vue'), meta: { title: '流程办理' } },
+      { path: 'applicants', name: 'applicants', component: () => import('./views/ApplicantsView.vue'), meta: { title: '申请人台账' } },
+      { path: 'applicants/:id', name: 'applicant-detail', component: () => import('./views/ApplicantDetailView.vue'), meta: { title: '申请人详情' } },
       { path: 'reviews', name: 'reviews', component: () => import('./views/ReviewsView.vue'), meta: { title: '审核处理' } },
       { path: 'messages', name: 'messages', component: () => import('./views/MessagesView.vue'), meta: { title: '消息中心' } },
-      { path: 'materials', name: 'materials', component: () => import('./views/MaterialsView.vue'), meta: { title: '材料维护' } },
       { path: 'profile', name: 'profile', component: () => import('./views/ProfileView.vue'), meta: { title: '我的' } },
       { path: 'profile/edit', name: 'profile-edit', component: () => import('./views/ProfileEditView.vue'), meta: { title: '个人资料' } },
     ],
@@ -55,12 +56,6 @@ router.beforeEach((to) => {
   const publicPages = ['/login', '/register'];
   if (!publicPages.includes(to.path) && !isLoggedIn.value) return '/login';
   if (publicPages.includes(to.path) && isLoggedIn.value) return '/workbench';
-  if (isLoggedIn.value) {
-    const tabs = roleTabs(sessionState.user);
-    if (to.name === 'materials' && !tabs.some((item) => item.name === 'materials')) {
-      return '/profile';
-    }
-  }
   return true;
 });
 

@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { showSuccessToast } from 'vant';
-import { fetchMobileWorkflow, rescheduleMobileTask, reviewMobileTask, submitMobileTask, uploadMobileFile } from '../api';
+import { fetchMobileWorkflow, markMessageRead, rescheduleMobileTask, reviewMobileTask, submitMobileTask, uploadMobileFile } from '../api';
 
 const route = useRoute();
 const router = useRouter();
@@ -21,7 +21,11 @@ const form = reactive({
 });
 
 const workflowId = computed(() => route.params.workflowId || 'me');
-const currentTask = computed(() => workflow.value?.currentStep || null);
+const currentTask = computed(() => {
+  const steps = workflow.value?.steps || [];
+  const queryStep = route.query.step;
+  return steps.find((item) => item.stepCode === queryStep) || workflow.value?.currentStep || null;
+});
 const completedSteps = computed(() => workflow.value?.completedSteps || []);
 const allSteps = computed(() => workflow.value?.steps || []);
 
@@ -41,6 +45,13 @@ async function loadWorkflow() {
   loading.value = true;
   try {
     workflow.value = await fetchMobileWorkflow(workflowId.value);
+    if (route.query.notificationId) {
+      try {
+        await markMessageRead(route.query.notificationId);
+      } catch (error) {
+        void error;
+      }
+    }
   } finally {
     loading.value = false;
   }
@@ -95,7 +106,7 @@ async function requestReschedule() {
   }
 }
 
-async function handleUpload(fileWrapper) {
+async function handleUpload(fileWrapper, material) {
   const uploadSource = Array.isArray(fileWrapper) ? fileWrapper[0] : fileWrapper;
   const file = uploadSource.file || uploadSource;
   if (!currentTask.value) return;
@@ -103,7 +114,7 @@ async function handleUpload(fileWrapper) {
   formData.append('file', file);
   formData.append('workflowId', workflow.value.workflowId);
   formData.append('stepCode', currentTask.value.stepCode);
-  formData.append('materialTag', currentTask.value.materialSchema?.[0]?.tag || 'general');
+  formData.append('materialTag', material?.tag || currentTask.value.materialSchema?.[0]?.tag || 'general');
   const result = await uploadMobileFile(formData);
   materialUploads.value.push(result);
   showSuccessToast('材料上传成功');
@@ -111,13 +122,14 @@ async function handleUpload(fileWrapper) {
 
 function openSpecificTask(task) {
   if (task.workflowId && task.workflowId !== workflowId.value) {
-    router.push(`/workflow/${task.workflowId}`);
+    router.push(`/workflow/${task.workflowId}?step=${task.stepCode}`);
     return;
   }
-  const panelName = `done-${task.stepCode}`;
-  if (!collapseNames.value.includes(panelName)) {
-    collapseNames.value = [...collapseNames.value, panelName];
-  }
+  router.replace({ name: 'workflow', params: { workflowId: workflowId.value }, query: { ...route.query, step: task.stepCode } });
+}
+
+function attachmentsByTag(tag) {
+  return materialUploads.value.filter((item) => item.materialTag === tag);
 }
 
 onMounted(loadWorkflow);
@@ -158,6 +170,7 @@ onMounted(loadWorkflow);
             </div>
             <span class="status-chip" :class="`is-${currentTask.status}`">{{ currentTask.statusText }}</span>
           </div>
+          <div class="task-hero__body" v-if="currentTask.blessingText">{{ currentTask.blessingText }}</div>
         </div>
 
         <div class="field-block" v-if="currentTask.canSubmit">
@@ -190,13 +203,23 @@ onMounted(loadWorkflow);
         </div>
 
         <div class="field-block" v-if="currentTask.materialSchema?.length">
-          <div class="field-label">材料上传</div>
-          <van-uploader :after-read="handleUpload" />
-          <div class="upload-list" v-if="materialUploads.length">
-            <div class="upload-list__item" v-for="item in materialUploads" :key="item.fileUrl">
-              <span>{{ item.fileName }}</span>
-              <span class="tag-pair">{{ item.materialTag || 'general' }}</span>
+          <div class="field-label">材料提交与查看</div>
+          <div class="material-block" v-for="material in currentTask.materialSchema" :key="material.key">
+            <div class="table-row__head">
+              <div>
+                <div class="table-row__title">{{ material.label }}</div>
+                <div class="step-item__meta">{{ material.required ? '必交材料' : '可选材料' }} · {{ (material.accept || []).join('、') }}</div>
+              </div>
+              <span class="tag-pair">{{ material.tag }}</span>
             </div>
+            <van-uploader v-if="currentTask.canSubmit" :after-read="(file) => handleUpload(file, material)" />
+            <div class="upload-list" v-if="attachmentsByTag(material.tag).length">
+              <div class="upload-list__item" v-for="item in attachmentsByTag(material.tag)" :key="item.fileUrl">
+                <span>{{ item.fileName }}</span>
+                <a class="text-link" :href="item.fileUrl" target="_blank" rel="noreferrer">预览/下载</a>
+              </div>
+            </div>
+            <div class="empty-state empty-state--compact" v-else>暂未提交该项材料。</div>
           </div>
         </div>
 
@@ -224,21 +247,22 @@ onMounted(loadWorkflow);
               <span class="status-chip" :class="`is-${item.status}`">{{ item.statusText }}</span>
             </div>
             <div class="step-item__meta">{{ item.summary }}</div>
+            <div class="step-item__meta" v-if="item.uploadRequired">需提交材料，可点开查看或上传。</div>
           </button>
         </div>
         <van-collapse v-model="collapseNames" v-if="completedSteps.length">
           <van-collapse-item title="已完成步骤" name="completed">
             <div class="step-list">
-              <div class="step-item" v-for="item in completedSteps" :key="item.stepCode">
+              <button class="step-item" v-for="item in completedSteps" :key="item.stepCode" type="button" @click="openSpecificTask(item)">
                 <div class="step-item__head">
                   <div>
-                    <div class="step-item__name">{{ item.name }}</div>
+                    <div class="step-item__name">{{ item.stepName }}</div>
                     <div class="step-item__meta">{{ item.phase }}</div>
                   </div>
                   <span class="status-chip is-approved">{{ item.statusText }}</span>
                 </div>
                 <div class="step-item__meta">{{ item.operatedAt || '暂无时间记录' }} · {{ item.lastOperatorName || '系统记录' }}</div>
-              </div>
+              </button>
             </div>
           </van-collapse-item>
         </van-collapse>

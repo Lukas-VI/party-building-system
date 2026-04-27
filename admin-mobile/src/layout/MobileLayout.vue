@@ -13,10 +13,6 @@ const active = computed({
     return tabs.value.some((item) => item.name === route.name) ? route.name : 'workbench';
   },
   set(value) {
-    if (value === 'materials' && sessionState.user?.primaryRole !== 'applicant') {
-      router.push({ name: 'profile' });
-      return;
-    }
     router.push({ name: value });
   },
 });
@@ -27,10 +23,6 @@ const tabIcons = {
   workbench: {
     outline: 'M4 10.6 12 4l8 6.6V20a1 1 0 0 1-1 1h-4.5v-5.2h-5V21H5a1 1 0 0 1-1-1v-9.4Z',
     solid: 'M12 3.3 21 10.8V20a2 2 0 0 1-2 2h-5.4v-5.7H10.4V22H5a2 2 0 0 1-2-2v-9.2L12 3.3Z',
-  },
-  materials: {
-    outline: 'M4 6.5A1.5 1.5 0 0 1 5.5 5h4L11 6.8h7.5A1.5 1.5 0 0 1 20 8.3v9.2a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5v-11Z',
-    solid: 'M4 6.2A2.2 2.2 0 0 1 6.2 4h3.4a2 2 0 0 1 1.5.7l1.1 1.3h5.6A2.2 2.2 0 0 1 20 8.2v9.6A2.2 2.2 0 0 1 17.8 20H6.2A2.2 2.2 0 0 1 4 17.8V6.2Z',
   },
   messages: {
     outline: 'M12 20.3c-.4 0-.8-.2-1.1-.5l-2.2-2.3H6.4A2.4 2.4 0 0 1 4 15.1V7.4A2.4 2.4 0 0 1 6.4 5h11.2A2.4 2.4 0 0 1 20 7.4v7.7a2.4 2.4 0 0 1-2.4 2.4h-2.3l-2.2 2.3c-.3.3-.7.5-1.1.5Z',
