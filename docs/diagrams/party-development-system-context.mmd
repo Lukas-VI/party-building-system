@@ -1,0 +1,49 @@
+flowchart LR
+  subgraph Roles["角色"]
+    Applicant["入党申请人"]
+    BranchSecretary["党支部书记"]
+    Organizer["组织员"]
+    UnitLeader["二级单位书记/副书记"]
+    OrgDept["校党委组织部"]
+    SuperAdmin["超级管理员"]
+  end
+
+  subgraph Clients["客户端"]
+    H5["服务号 H5 /wx-app/"]
+    PC["PC 后台"]
+  end
+
+  subgraph Backend["Node API"]
+    Auth["认证与权限守卫\nrequireAuth / requirePermission"]
+    Scope["数据范围守卫\nassertCanAccessApplicant"]
+    Actor["流程动作守卫\nassertWorkflowActor"]
+    Workflow["流程服务\n前 12 步 MVP"]
+    Notify["通知服务"]
+    Export["统计与导出"]
+  end
+
+  subgraph Storage["持久化"]
+    DB["MySQL"]
+    Files["uploads 文件目录"]
+  end
+
+  Applicant --> H5
+  BranchSecretary --> H5
+  Organizer --> H5
+  BranchSecretary --> PC
+  Organizer --> PC
+  UnitLeader --> PC
+  OrgDept --> PC
+  SuperAdmin --> PC
+
+  H5 --> Auth
+  PC --> Auth
+  Auth --> Scope
+  Scope --> Actor
+  Actor --> Workflow
+  Workflow --> DB
+  Workflow --> Files
+  Workflow --> Notify
+  Notify --> DB
+  Export --> DB
+  PC --> Export

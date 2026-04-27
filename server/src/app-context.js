@@ -850,11 +850,29 @@ function primaryRoleLabel(user) {
   return user.roles?.[0]?.label || '系统用户';
 }
 
+function configuredFlag(step, key) {
+  if (Object.prototype.hasOwnProperty.call(step.taskMeta || {}, key)) {
+    return Number(step.taskMeta[key] || 0) === 1;
+  }
+  return Number(step[key] || 0) === 1;
+}
+
+function configuredResponsibleRoles(step) {
+  if (step.taskMeta?.responsibleRoles?.length) return step.taskMeta.responsibleRoles;
+  if (step.responsibleRoles?.length) return step.responsibleRoles;
+  return step.allowedRoles || [];
+}
+
+function configuredMaterialSchema(step) {
+  if (step.taskMeta?.materialSchema?.length) return step.taskMeta.materialSchema;
+  return step.materialSchema || [];
+}
+
 /**
  * Check whether the caller may act as the applicant for a workflow step.
  */
 function isApplicantActor(user, applicantId, step) {
-  return user.primaryRole === 'applicant' && user.id === applicantId && Number(step.requiresApplicantAction || step.taskMeta?.requiresApplicantAction || 0) === 1;
+  return user.primaryRole === 'applicant' && user.id === applicantId && configuredFlag(step, 'requiresApplicantAction');
 }
 
 /**
@@ -862,8 +880,8 @@ function isApplicantActor(user, applicantId, step) {
  */
 function isReviewerActor(user, step) {
   if (user.primaryRole === 'applicant') return false;
-  const responsibleRoles = step.responsibleRoles?.length ? step.responsibleRoles : step.taskMeta?.responsibleRoles || step.allowedRoles || [];
-  return responsibleRoles.some((roleId) => currentRoleIds(user).includes(roleId)) && Number(step.requiresReviewerAction || step.taskMeta?.requiresReviewerAction || 0) === 1;
+  const responsibleRoles = configuredResponsibleRoles(step);
+  return responsibleRoles.some((roleId) => currentRoleIds(user).includes(roleId)) && configuredFlag(step, 'requiresReviewerAction');
 }
 
 /**
@@ -970,7 +988,7 @@ function mobileReviewState(step) {
     return { code: 'rejected', icon: '×', label: '未通过', className: 'is-rejected' };
   }
   if (step.status === 'locked') {
-    return { code: 'not-started', icon: '○', label: '未开始', className: 'is-not-started' };
+    return { code: 'not-started', icon: '⊘', label: '未开放', className: 'is-not-started' };
   }
   return { code: 'pending', icon: '○', label: step.statusText || '待处理', className: 'is-pending' };
 }
@@ -981,7 +999,8 @@ function mobileReviewState(step) {
  */
 function buildTodoItem(user, applicant, workflow, step) {
   const taskOwner = isApplicantActor(user, applicant.userId || applicant.id, step) ? '申请人' : '审核者';
-  const uploadRequired = (step.materialSchema || step.taskMeta?.materialSchema || []).length > 0;
+  const materialSchema = configuredMaterialSchema(step);
+  const uploadRequired = materialSchema.length > 0;
   const canSubmit = isApplicantActor(user, applicant.userId || applicant.id, step);
   const canReview = isReviewerActor(user, step);
   const actionKind = uploadRequired ? 'upload' : (canReview ? 'review' : (canSubmit ? 'submit' : 'notice'));
@@ -1011,13 +1030,15 @@ function buildTodoItem(user, applicant, workflow, step) {
     cardClass: isCompleted ? 'is-done' : `is-${actionKind}`,
     detailRoute: `/workflow/${applicant.userId || applicant.id}/steps/${step.stepCode}`,
     blessingText: isCompleted ? `${step.name}已完成，请继续关注后续流程通知。` : '',
-    requiresApplicantAction: Number(step.requiresApplicantAction || step.taskMeta?.requiresApplicantAction || 0) === 1,
-    requiresReviewerAction: Number(step.requiresReviewerAction || step.taskMeta?.requiresReviewerAction || 0) === 1,
+    requiresApplicantAction: configuredFlag(step, 'requiresApplicantAction'),
+    requiresReviewerAction: configuredFlag(step, 'requiresReviewerAction'),
     canSubmit,
     canReview,
     canReschedule: step.stepCode === 'STEP_02' && (isApplicantActor(user, applicant.userId || applicant.id, step) || isReviewerActor(user, step)),
     uploadRequired,
-    materialSchema: step.materialSchema || step.taskMeta?.materialSchema || [],
+    materialSchema,
+    businessFields: step.taskMeta?.businessFields || step.formSchema?.businessFields || [],
+    timeRule: step.taskMeta?.timeRule || step.timeRule || {},
     attachments: step.attachments || [],
     formData: step.formData || {},
     rescheduleHistory: step.rescheduleHistory || [],
@@ -1332,7 +1353,7 @@ function roleMatchesApplicantScope(candidate, applicant) {
  */
 async function notificationRecipientsForStep(step, applicantId, excludeUserIds = []) {
   const applicantScope = await getUserScopeById(applicantId);
-  const roleIds = step.responsibleRoles?.length ? step.responsibleRoles : step.taskMeta?.responsibleRoles || [];
+  const roleIds = configuredResponsibleRoles(step);
   if (!roleIds.length) return [];
   const rows = await query(
     `SELECT DISTINCT
@@ -1366,7 +1387,7 @@ function fileUrl(fileName) {
  * Resolve accepted upload types for one material tag on a workflow step.
  */
 function acceptedTypesForMaterial(step, materialTag) {
-  const material = (step.materialSchema || step.taskMeta?.materialSchema || []).find((item) => item.tag === materialTag);
+  const material = configuredMaterialSchema(step).find((item) => item.tag === materialTag);
   if (!material) throw errorWithStatus('材料类型不属于当前步骤', 400);
   return material.accept || [];
 }

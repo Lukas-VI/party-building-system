@@ -1,0 +1,36 @@
+sequenceDiagram
+  autonumber
+  actor Applicant as 入党申请人/管理角色
+  participant H5 as 服务号 H5
+  participant API as Node API
+  participant Auth as 认证/权限守卫
+  participant DB as MySQL
+  actor Organizer as 组织员/管理员
+
+  Applicant->>H5: 首次注册(name/idNo/employeeNo/password)
+  H5->>API: POST /api/auth/register
+  API->>DB: 查询预置 users.username = employeeNo
+  alt 预置人员不存在
+    API-->>H5: 400 后台未找到预置人员信息
+  else 预置人员存在
+    API->>DB: 写入 registration_requests(pending)
+    API->>DB: 记录审计日志
+    API-->>H5: 已提交，等待审核
+  end
+
+  Organizer->>API: POST /api/auth/approve-registration
+  API->>Auth: requireAuth + requirePermission(approve_registration)
+  Auth-->>API: 已登录且有审批权限
+  API->>DB: 读取注册申请和目标用户范围字段
+  API->>Auth: canAccessScopedRecord(审批人, 申请人)
+  alt 无权限或跨范围
+    API-->>Organizer: 403
+  else pending 且范围覆盖
+    API->>DB: 更新申请 status=approved/rejected
+    opt approved
+      API->>DB: 激活 users.status=active
+      API->>DB: 确保 applicant 角色
+    end
+    API->>DB: 记录 approve_registration 审计
+    API-->>Organizer: 审批完成
+  end

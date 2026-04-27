@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { showSuccessToast } from 'vant';
+import { showFailToast, showSuccessToast } from 'vant';
 import { fetchMobileWorkflow, markMessageRead, rescheduleMobileTask, reviewMobileTask, submitMobileTask, uploadMobileFile } from '../api';
 
 const route = useRoute();
@@ -18,11 +18,31 @@ const form = reactive({
   location: '',
   reason: '',
 });
+const businessForm = reactive({});
 
 const workflowId = computed(() => route.params.workflowId || 'me');
 const stepCode = computed(() => route.params.stepCode);
 const currentTask = computed(() => (workflow.value?.steps || []).find((item) => item.stepCode === stepCode.value));
 const canOperate = computed(() => Boolean(currentTask.value?.canSubmit || currentTask.value?.canReview || currentTask.value?.canReschedule));
+const activeBusinessFields = computed(() => {
+  const fields = currentTask.value?.businessFields || [];
+  if (currentTask.value?.canSubmit && currentTask.value?.canReview) {
+    return fields;
+  }
+  if (currentTask.value?.canSubmit) {
+    return fields.filter((item) => !item.owner || item.owner === 'applicant' || item.owner === 'both');
+  }
+  if (currentTask.value?.canReview) {
+    return fields.filter((item) => !item.owner || item.owner === 'reviewer' || item.owner === 'both');
+  }
+  return [];
+});
+const filledBusinessFields = computed(() => {
+  const saved = currentTask.value?.formData?.businessFields || {};
+  return (currentTask.value?.businessFields || [])
+    .map((field) => ({ ...field, value: saved[field.key] || currentTask.value?.formData?.[field.key] || '' }))
+    .filter((field) => field.value);
+});
 
 function displayTime(value) {
   return value || '未设置';
@@ -35,6 +55,11 @@ function syncFormFromTask(task) {
   form.scheduledAt = task?.formData?.meetingProposal?.scheduledAt || '';
   form.location = task?.formData?.meetingProposal?.location || '';
   form.reason = task?.formData?.meetingProposal?.reason || '';
+  Object.keys(businessForm).forEach((key) => delete businessForm[key]);
+  const savedFields = task?.formData?.businessFields || {};
+  (task?.businessFields || []).forEach((field) => {
+    businessForm[field.key] = savedFields[field.key] || task?.formData?.[field.key] || '';
+  });
   materialUploads.value = [...(task?.attachments || [])];
 }
 
@@ -58,12 +83,23 @@ async function loadWorkflow() {
 
 async function submitTask() {
   if (!currentTask.value) return;
+  const validationError = validateBusinessFields();
+  if (validationError) {
+    showFailToast(validationError);
+    return;
+  }
+  const materialError = validateRequiredMaterials();
+  if (materialError) {
+    showFailToast(materialError);
+    return;
+  }
   submitting.value = true;
   try {
     await submitMobileTask(workflow.value.workflowId, currentTask.value.taskId, {
       formData: {
         summary: form.summary,
         note: form.note,
+        businessFields: buildBusinessPayload(),
         attachments: materialUploads.value,
       },
     });
@@ -76,11 +112,24 @@ async function submitTask() {
 
 async function approveTask(status) {
   if (!currentTask.value) return;
+  const validationError = status === 'approved' ? validateBusinessFields() : '';
+  if (validationError) {
+    showFailToast(validationError);
+    return;
+  }
+  const materialError = status === 'approved' ? validateRequiredMaterials() : '';
+  if (materialError) {
+    showFailToast(materialError);
+    return;
+  }
   submitting.value = true;
   try {
     await reviewMobileTask(workflow.value.workflowId, currentTask.value.taskId, {
       status,
       comment: form.comment,
+      formData: {
+        businessFields: buildBusinessPayload(),
+      },
     });
     showSuccessToast(status === 'approved' ? '已审核通过' : '已退回补充');
     await loadWorkflow();
@@ -123,6 +172,23 @@ function attachmentsByTag(tag) {
   return materialUploads.value.filter((item) => item.materialTag === tag);
 }
 
+function buildBusinessPayload() {
+  return activeBusinessFields.value.reduce((payload, field) => {
+    payload[field.key] = businessForm[field.key] || '';
+    return payload;
+  }, {});
+}
+
+function validateBusinessFields() {
+  const missing = activeBusinessFields.value.find((field) => field.required && !String(businessForm[field.key] || '').trim());
+  return missing ? `请填写${missing.label}` : '';
+}
+
+function validateRequiredMaterials() {
+  const missing = (currentTask.value?.materialSchema || []).find((material) => material.required && !attachmentsByTag(material.tag).length);
+  return missing ? `请上传${missing.label}` : '';
+}
+
 onMounted(loadWorkflow);
 </script>
 
@@ -139,7 +205,8 @@ onMounted(loadWorkflow);
         </div>
       </div>
       <div class="section-card__bd" v-if="currentTask">
-        <div class="task-hero task-hero--static" :class="currentTask.reviewClassName">
+        <div class="task-hero task-hero--static status-card" :class="currentTask.reviewClassName">
+          <span class="status-card__mark">{{ currentTask.reviewIcon }}</span>
           <div class="task-hero__top">
             <div>
               <div class="task-hero__title">{{ currentTask.stepName }}</div>
@@ -166,11 +233,15 @@ onMounted(loadWorkflow);
         <div class="section-card__title">办理记录</div>
       </div>
       <div class="section-card__bd">
-        <div class="kv-grid">
-          <div class="kv-item"><div class="kv-item__label">办理时间</div><div class="kv-item__value">{{ currentTask.operatedAt || '暂无记录' }}</div></div>
-          <div class="kv-item"><div class="kv-item__label">确认时间</div><div class="kv-item__value">{{ currentTask.confirmedAt || '暂无记录' }}</div></div>
-          <div class="kv-item" style="grid-column: 1 / -1;"><div class="kv-item__label">审核意见</div><div class="kv-item__value">{{ currentTask.reviewComment || '暂无意见' }}</div></div>
-        </div>
+          <div class="kv-grid">
+            <div class="kv-item"><div class="kv-item__label">办理时间</div><div class="kv-item__value">{{ currentTask.operatedAt || '暂无记录' }}</div></div>
+            <div class="kv-item"><div class="kv-item__label">确认时间</div><div class="kv-item__value">{{ currentTask.confirmedAt || '暂无记录' }}</div></div>
+            <div class="kv-item" style="grid-column: 1 / -1;"><div class="kv-item__label">审核意见</div><div class="kv-item__value">{{ currentTask.reviewComment || '暂无意见' }}</div></div>
+            <div class="kv-item" v-for="field in filledBusinessFields" :key="field.key">
+              <div class="kv-item__label">{{ field.label }}</div>
+              <div class="kv-item__value">{{ field.value }}</div>
+            </div>
+          </div>
       </div>
     </section>
 
@@ -188,7 +259,7 @@ onMounted(loadWorkflow);
             </div>
             <span class="tag-pair">{{ material.tag }}</span>
           </div>
-          <van-uploader v-if="currentTask.canSubmit" :after-read="(file) => handleUpload(file, material)" />
+          <van-uploader v-if="currentTask.canSubmit || currentTask.canReview" :after-read="(file) => handleUpload(file, material)" />
           <div class="upload-list" v-if="attachmentsByTag(material.tag).length">
             <div class="upload-list__item" v-for="item in attachmentsByTag(material.tag)" :key="item.fileUrl">
               <span>{{ item.fileName }}</span>
@@ -213,6 +284,25 @@ onMounted(loadWorkflow);
         <div class="field-block" v-if="currentTask.canSubmit">
           <div class="field-label">补充备注</div>
           <van-field v-model="form.note" rows="2" autosize type="textarea" placeholder="可填写补充说明或材料目录" />
+        </div>
+
+        <div class="field-block" v-for="field in activeBusinessFields" :key="field.key">
+          <div class="field-label">{{ field.label }}<span v-if="field.required"> *</span></div>
+          <van-radio-group
+            v-if="field.type === 'select'"
+            v-model="businessForm[field.key]"
+            direction="vertical"
+          >
+            <van-radio v-for="option in field.options || []" :key="option" :name="option">{{ option }}</van-radio>
+          </van-radio-group>
+          <van-field
+            v-else
+            v-model="businessForm[field.key]"
+            :rows="field.type === 'textarea' ? 3 : 1"
+            :autosize="field.type === 'textarea'"
+            :type="field.type === 'textarea' ? 'textarea' : 'text'"
+            :placeholder="field.placeholder || (field.type === 'date' ? '例如 2026-05-01' : field.type === 'datetime' ? '例如 2026-05-01 14:30' : `请填写${field.label}`)"
+          />
         </div>
 
         <template v-if="currentTask.canReschedule">

@@ -1,0 +1,188 @@
+@startuml SystemContext
+title 党员发展系统 - 角色与服务边界
+left to right direction
+
+actor "入党申请人" as Applicant
+actor "党支部书记" as BranchSecretary
+actor "组织员" as Organizer
+actor "二级单位书记/副书记" as UnitLeader
+actor "校党委组织部" as OrgDept
+actor "超级管理员" as SuperAdmin
+
+rectangle "客户端" {
+  component "服务号 H5\n/wx-app/" as H5
+  component "PC 后台" as PC
+}
+
+rectangle "Node API" {
+  component "认证与权限守卫\nrequireAuth / requirePermission" as Auth
+  component "数据范围守卫\nassertCanAccessApplicant" as Scope
+  component "流程动作守卫\nassertWorkflowActor" as Actor
+  component "流程服务\n前 12 步 MVP" as Workflow
+  component "通知服务" as Notify
+  component "统计与导出" as Export
+}
+
+database "MySQL" as DB
+folder "uploads 文件目录" as Files
+
+Applicant --> H5
+BranchSecretary --> H5
+Organizer --> H5
+BranchSecretary --> PC
+Organizer --> PC
+UnitLeader --> PC
+OrgDept --> PC
+SuperAdmin --> PC
+
+H5 --> Auth
+PC --> Auth
+Auth --> Scope
+Scope --> Actor
+Actor --> Workflow
+Workflow --> DB
+Workflow --> Files
+Workflow --> Notify
+Notify --> DB
+PC --> Export
+Export --> DB
+@enduml
+
+@startuml RegistrationApprovalSequence
+title 注册审批时序
+autonumber
+actor "入党申请人/管理角色" as Applicant
+participant "服务号 H5" as H5
+participant "Node API" as API
+participant "认证/权限守卫" as Auth
+database "MySQL" as DB
+actor "组织员/管理员" as Organizer
+
+Applicant -> H5: 首次注册(name/idNo/employeeNo/password)
+H5 -> API: POST /api/auth/register
+API -> DB: 查询预置 users.username = employeeNo
+alt 预置人员不存在
+  API --> H5: 400 后台未找到预置人员信息
+else 预置人员存在
+  API -> DB: 写 registration_requests(pending)
+  API -> DB: 记录审计日志
+  API --> H5: 已提交，等待审核
+end
+
+Organizer -> API: POST /api/auth/approve-registration
+API -> Auth: requireAuth + requirePermission(approve_registration)
+Auth --> API: 已登录且有审批权限
+API -> DB: 读取注册申请和目标用户范围字段
+API -> Auth: canAccessScopedRecord(审批人, 申请人)
+alt 无权限或跨范围
+  API --> Organizer: 403
+else pending 且范围覆盖
+  API -> DB: 更新申请 status=approved/rejected
+  opt approved
+    API -> DB: 激活 users.status=active
+    API -> DB: 确保 applicant 角色
+  end
+  API -> DB: 记录 approve_registration 审计
+  API --> Organizer: 审批完成
+end
+@enduml
+
+@startuml WorkflowReviewSequence
+title 流程提交与审核时序
+autonumber
+actor "入党申请人" as Applicant
+participant "H5/PC" as Client
+participant "Node API" as API
+participant "数据范围守卫" as Scope
+participant "流程动作守卫" as Actor
+database "MySQL" as DB
+participant "通知服务" as Notify
+actor "组织员/支部书记/责任角色" as Reviewer
+
+Applicant -> Client: 填写步骤表单并提交
+Client -> API: POST /api/*/workflows/:id/tasks|steps/:step/submit
+API -> Scope: assertCanAccessApplicant(user, applicantId)
+Scope --> API: 本人或管理范围内
+API -> DB: getWorkflowByApplicantId(applicantId)
+API -> Actor: assertWorkflowActor(submit)
+Actor --> API: MVP节点 + 上一步已完成 + 申请人动作人
+opt STEP_01
+  API -> DB: 读取身份证号并校验年满18周岁
+end
+API -> DB: 更新 status=reviewing, task_status=in_review
+API -> DB: 写 audit_logs
+API -> Notify: notificationRecipientsForStep(step, applicantId)
+Notify -> DB: 按责任角色和 org/branch 范围筛选收件人
+Notify -> DB: 写 notifications
+API --> Client: 任务已提交
+
+Reviewer -> Client: 审核待办
+Client -> API: POST /api/*/workflows/:id/tasks|steps/:step/review
+API -> Scope: assertCanAccessApplicant(reviewer, applicantId)
+API -> DB: getWorkflowByApplicantId(applicantId)
+API -> Actor: assertWorkflowActor(review)
+Actor --> API: 责任角色 + 当前节点可审核
+alt approved
+  API -> DB: 当前节点 approved/done/confirmed_at
+  API -> DB: advanceAfterReview 打开下一 MVP 节点
+  API -> Notify: 通知申请人已通过
+else rejected
+  API -> DB: 当前节点 rejected/blocked
+  API -> DB: 锁定后续未完成 MVP 节点
+  API -> Notify: 通知申请人补充材料
+end
+API --> Client: 审核结果已保存
+@enduml
+
+@startuml UploadSequence
+title 材料上传时序
+autonumber
+actor "入党申请人" as Applicant
+participant "服务号 H5" as H5
+participant "Node API" as API
+participant "数据范围守卫" as Scope
+participant "流程动作守卫" as Actor
+folder "uploads" as Files
+database "MySQL" as DB
+
+Applicant -> H5: 选择材料文件并上传
+H5 -> API: POST /api/mobile/files/upload multipart(file, workflowId, stepCode, materialTag)
+API -> API: validateUploadedFile(file, ['pdf','image'])
+API -> Scope: resolve workflowId + assertCanAccessApplicant
+Scope --> API: 本人或管理范围内
+API -> DB: 读取 workflow + step
+API -> Actor: assertWorkflowActor(submit)
+API -> API: acceptedTypesForMaterial(step, materialTag)
+API -> API: validateUploadedFile(file, material.accept)
+alt 非法标签/空文件/类型不匹配/越权
+  API --> H5: 400/403
+else 校验通过
+  API -> Files: multer 已保存临时文件
+  API -> DB: 写 attachments
+  API --> H5: attachmentId + fileUrl
+end
+@enduml
+
+@startuml NotificationSequence
+title 消息通知收件人筛选时序
+autonumber
+participant "流程服务" as Workflow
+database "MySQL" as DB
+participant "角色范围匹配" as Scope
+actor "责任角色" as Reviewer
+actor "申请人" as Applicant
+
+Workflow -> DB: 读取 step.responsibleRoles
+Workflow -> DB: 查询拥有责任角色的用户
+loop 每个候选人
+  Workflow -> Scope: roleMatchesApplicantScope(candidate, applicant)
+  alt 范围覆盖且未被排除
+    Scope --> Workflow: 保留为收件人
+  else 范围不覆盖
+    Scope --> Workflow: 丢弃
+  end
+end
+Workflow -> DB: 写 notifications
+Reviewer -> DB: H5/PC 拉取消息或待办
+Applicant -> DB: H5 拉取审核结果通知
+@enduml

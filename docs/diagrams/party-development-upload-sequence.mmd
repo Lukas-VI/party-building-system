@@ -1,0 +1,26 @@
+sequenceDiagram
+  autonumber
+  actor Applicant as 入党申请人
+  participant H5 as 服务号 H5
+  participant API as Node API
+  participant Scope as 数据范围守卫
+  participant Actor as 流程动作守卫
+  participant Files as uploads
+  participant DB as MySQL
+
+  Applicant->>H5: 选择材料文件并上传
+  H5->>API: POST /api/mobile/files/upload multipart(file, workflowId, stepCode, materialTag)
+  API->>API: validateUploadedFile(file, ['pdf','image'])
+  API->>Scope: resolve workflowId + assertCanAccessApplicant
+  Scope-->>API: 本人或管理范围内
+  API->>DB: 读取 workflow + step
+  API->>Actor: assertWorkflowActor(submit)
+  API->>API: acceptedTypesForMaterial(step, materialTag)
+  API->>API: validateUploadedFile(file, material.accept)
+  alt 非法标签/空文件/类型不匹配/越权
+    API-->>H5: 400/403
+  else 校验通过
+    API->>Files: multer 已保存临时文件
+    API->>DB: 写 attachments(step_record_id, file_url, mime_type, material_tag)
+    API-->>H5: attachmentId + fileUrl
+  end

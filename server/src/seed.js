@@ -477,7 +477,11 @@ async function ensureSeedData() {
         name: stepNames[index],
         phase: index < 10 ? '培养考察' : index < 18 ? '接收预备党员' : '预备党员转正',
         allowedRolesJson: JSON.stringify(index < 10 ? ['applicant', 'organizer', 'branchSecretary'] : ['organizer', 'secretary', 'orgDept']),
-        formSchemaJson: JSON.stringify({ fields: ['summary', 'note'], attachment: index === 0 || index === 8 }),
+        formSchemaJson: JSON.stringify({
+          fields: ['summary', 'note'],
+          attachment: index === 0 || index === 8,
+          businessFields: getStepDetail(`STEP_${String(index + 1).padStart(2, '0')}`, index < 10 ? ['applicant', 'organizer', 'branchSecretary'] : ['organizer', 'secretary', 'orgDept']).businessFields || [],
+        }),
         startAt: '2026-04-01',
         endAt: index < 10 ? '2026-05-31' : '2026-07-31',
         ...(() => {

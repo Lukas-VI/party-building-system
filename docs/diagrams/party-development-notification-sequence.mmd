@@ -1,0 +1,21 @@
+sequenceDiagram
+  autonumber
+  participant Workflow as 流程服务
+  participant DB as MySQL
+  participant Scope as 角色范围匹配
+  actor Reviewer as 责任角色
+  actor Applicant as 申请人
+
+  Workflow->>DB: 读取 step.responsibleRoles
+  Workflow->>DB: 查询拥有责任角色的用户
+  loop 每个候选人
+    Workflow->>Scope: roleMatchesApplicantScope(candidate, applicant)
+    alt 范围覆盖且未被排除
+      Scope-->>Workflow: 保留为收件人
+    else 范围不覆盖
+      Scope-->>Workflow: 丢弃
+    end
+  end
+  Workflow->>DB: 写 notifications
+  Reviewer-->>DB: H5/PC 拉取 /api/mobile/messages 或待办
+  Applicant-->>DB: H5 拉取审核结果通知

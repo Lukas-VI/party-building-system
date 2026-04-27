@@ -1,0 +1,44 @@
+sequenceDiagram
+  autonumber
+  actor Applicant as 入党申请人
+  participant Client as H5/PC
+  participant API as Node API
+  participant Scope as 数据范围守卫
+  participant Actor as 流程动作守卫
+  participant DB as MySQL
+  participant Notify as 通知服务
+  actor Reviewer as 组织员/支部书记/责任角色
+
+  Applicant->>Client: 填写步骤表单并提交
+  Client->>API: POST /api/*/workflows/:id/tasks|steps/:step/submit
+  API->>Scope: assertCanAccessApplicant(user, applicantId)
+  Scope-->>API: 本人或管理范围内
+  API->>DB: getWorkflowByApplicantId(applicantId)
+  API->>Actor: assertWorkflowActor(submit)
+  Actor-->>API: MVP节点 + 上一步已完成 + 当前用户是申请人动作人
+  opt STEP_01
+    API->>DB: 读取注册身份证号并校验年满18周岁
+  end
+  API->>DB: 更新 step.status=reviewing, task_status=in_review
+  API->>DB: 写 audit_logs
+  API->>Notify: notificationRecipientsForStep(step, applicantId)
+  Notify->>DB: 按责任角色和 org/branch 范围筛选收件人
+  Notify->>DB: 写 notifications
+  API-->>Client: 任务已提交
+
+  Reviewer->>Client: 审核待办
+  Client->>API: POST /api/*/workflows/:id/tasks|steps/:step/review
+  API->>Scope: assertCanAccessApplicant(reviewer, applicantId)
+  API->>DB: getWorkflowByApplicantId(applicantId)
+  API->>Actor: assertWorkflowActor(review)
+  Actor-->>API: 责任角色 + 当前节点可审核
+  alt approved
+    API->>DB: 当前节点 approved/done/confirmed_at
+    API->>DB: advanceAfterReview 打开下一 MVP 节点
+    API->>Notify: 通知申请人已通过
+  else rejected
+    API->>DB: 当前节点 rejected/blocked
+    API->>DB: 锁定后续未完成 MVP 节点
+    API->>Notify: 通知申请人补充材料
+  end
+  API-->>Client: 审核结果已保存

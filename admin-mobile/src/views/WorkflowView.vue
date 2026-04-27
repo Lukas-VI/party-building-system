@@ -67,7 +67,8 @@ onMounted(loadWorkflow);
         <div class="section-card__desc">{{ currentTask.phase }} · {{ currentTask.summary }}</div>
       </div>
       <div class="section-card__bd">
-        <button class="task-hero" :class="currentTask.reviewClassName" type="button" @click="openStep(currentTask)">
+        <button class="task-hero status-card" :class="currentTask.reviewClassName" type="button" @click="openStep(currentTask)">
+          <span class="status-card__mark">{{ currentTask.reviewIcon }}</span>
           <div class="task-hero__top">
             <div>
               <div class="task-hero__title">{{ currentTask.stepName }}</div>
@@ -97,7 +98,8 @@ onMounted(loadWorkflow);
       </div>
       <div class="section-card__bd">
         <div class="step-list" v-if="unfinishedSteps.length">
-          <button v-for="item in unfinishedSteps" :key="item.taskId" type="button" class="step-item" :class="item.reviewClassName" @click="openStep(item)">
+          <button v-for="item in unfinishedSteps" :key="item.taskId" type="button" class="step-item status-card" :class="item.reviewClassName" @click="openStep(item)">
+            <span class="status-card__mark">{{ item.reviewIcon }}</span>
             <div class="step-item__head">
               <div>
                 <div class="step-item__name">{{ item.stepName }}</div>
@@ -118,7 +120,8 @@ onMounted(loadWorkflow);
         <div class="formal-divider" v-if="completedSteps.length"></div>
         <div class="section-card__title section-card__title--sub" v-if="completedSteps.length">已完成步骤</div>
         <div class="step-list" v-if="completedSteps.length">
-          <button class="step-item" :class="item.reviewClassName" v-for="item in completedSteps" :key="item.stepCode" type="button" @click="openStep(item)">
+          <button class="step-item status-card" :class="item.reviewClassName" v-for="item in completedSteps" :key="item.stepCode" type="button" @click="openStep(item)">
+            <span class="status-card__mark">{{ item.reviewIcon }}</span>
             <div class="step-item__head">
               <div>
                 <div class="step-item__name">{{ item.stepName }}</div>

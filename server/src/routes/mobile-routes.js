@@ -140,9 +140,14 @@ function registerMobileRoutes(app, ctx) {
       if (step.stepCode === 'STEP_01') {
         await ensureAdultApplicant(applicantId);
       }
+      const incomingFormData = req.body.formData || req.body || {};
       const mergedFormData = {
         ...step.formData,
-        ...(req.body.formData || req.body || {}),
+        ...incomingFormData,
+        businessFields: {
+          ...(step.formData?.businessFields || {}),
+          ...(incomingFormData.businessFields || {}),
+        },
       };
       await query(
         `UPDATE workflow_step_records
@@ -189,10 +194,20 @@ function registerMobileRoutes(app, ctx) {
       assertWorkflowActor(req.user, applicantId, workflow, step, 'review');
       const nextStatus = req.body.status || 'approved';
       if (!ALLOWED_REVIEW_STATUSES.has(nextStatus)) return fail(res, 400, '审核状态不合法');
+      const incomingFormData = req.body.formData || {};
+      const mergedFormData = {
+        ...step.formData,
+        ...incomingFormData,
+        businessFields: {
+          ...(step.formData?.businessFields || {}),
+          ...(incomingFormData.businessFields || {}),
+        },
+      };
       await query(
         `UPDATE workflow_step_records
          SET status = :status,
              task_status = :taskStatus,
+             form_data_json = :formDataJson,
              review_comment = :reviewComment,
              last_operator_id = :operatorId,
              operated_at = :operatedAt,
@@ -201,6 +216,7 @@ function registerMobileRoutes(app, ctx) {
         {
           status: nextStatus,
           taskStatus: nextTaskStatus(nextStatus),
+          formDataJson: JSON.stringify(mergedFormData),
           reviewComment: req.body.comment || '',
           operatorId: req.user.id,
           operatedAt: now(),
@@ -301,7 +317,7 @@ function registerMobileRoutes(app, ctx) {
         await assertCanAccessApplicant(req.user, applicantId);
         const workflow = await getWorkflowByApplicantId(applicantId);
         const step = workflow.steps.find((item) => item.stepCode === stepCode);
-        assertWorkflowActor(req.user, applicantId, workflow, step, 'submit');
+        assertWorkflowActor(req.user, applicantId, workflow, step, isReviewerActor(req.user, step) ? 'review' : 'submit');
         validateUploadedFile(req.file, acceptedTypesForMaterial(step, materialTag));
         const instance = await first('SELECT id FROM workflow_instances WHERE applicant_id = :applicantId', { applicantId });
         const stepRecord = await first(
