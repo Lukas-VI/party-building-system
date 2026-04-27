@@ -986,7 +986,7 @@ function buildTodoItem(user, applicant, workflow, step) {
     cardSubtitle: `${step.phase} · ${taskOwner}`,
     cardType: actionKind,
     cardClass: isCompleted ? 'is-done' : `is-${actionKind}`,
-    detailRoute: `/workflow/${applicant.userId || applicant.id}?step=${step.stepCode}`,
+    detailRoute: `/workflow/${applicant.userId || applicant.id}/steps/${step.stepCode}`,
     blessingText: isCompleted ? `${step.name}已完成，请继续关注后续流程通知。` : '',
     requiresApplicantAction: Number(step.requiresApplicantAction || step.taskMeta?.requiresApplicantAction || 0) === 1,
     requiresReviewerAction: Number(step.requiresReviewerAction || step.taskMeta?.requiresReviewerAction || 0) === 1,
@@ -1062,7 +1062,7 @@ async function listNotifications(user, limit = 20) {
 function normalizeNotification(item) {
   const targetWorkflowId = item.relatedTargetType === 'workflow' ? String(item.relatedTargetId || '').replace(/^wf-/, '') : '';
   const targetRoute = targetWorkflowId
-    ? `/workflow/${targetWorkflowId}?step=${item.relatedStepCode || ''}&notificationId=${item.id}`
+    ? `/workflow/${targetWorkflowId}/steps/${item.relatedStepCode || ''}?notificationId=${item.id}`
     : '';
   return {
     ...item,

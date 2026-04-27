@@ -22,6 +22,20 @@ const ROLE_OPTIONS = [
   { label: '校党委组织部人员', value: 'orgDept' },
   { label: '超级管理员', value: 'superAdmin' },
 ];
+const STAFF_STATUS_OPTIONS = [
+  { label: '预置未激活', value: 'inactive' },
+  { label: '待审核', value: 'pending' },
+  { label: '已激活', value: 'active' },
+];
+const EMPTY_STAFF_FORM = {
+  id: '',
+  username: '',
+  name: '',
+  orgId: '',
+  branchId: '',
+  status: 'inactive',
+  roleId: 'applicant',
+};
 
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem('dj_admin_token') || '');
@@ -51,6 +65,9 @@ function App() {
   const [assignForm, setAssignForm] = useState({ userId: '', roleId: 'branchSecretary' });
   const [staffImportFile, setStaffImportFile] = useState(null);
   const [staffImportResult, setStaffImportResult] = useState(null);
+  const [staffRows, setStaffRows] = useState([]);
+  const [staffFilters, setStaffFilters] = useState({ keyword: '', orgId: '', branchId: '', status: '' });
+  const [staffForm, setStaffForm] = useState(EMPTY_STAFF_FORM);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -173,10 +190,17 @@ function App() {
         setRegistrationRequests(registrationResult);
       }
       if (view === 'organizations') {
-        const [orgRes, branchRes, userRes] = await Promise.all([api('/orgs'), api('/branches'), api('/users')]);
+        const staffQuery = new URLSearchParams(staffFilters).toString();
+        const [orgRes, branchRes, userRes, staffRes] = await Promise.all([
+          api('/orgs'),
+          api('/branches'),
+          api('/users'),
+          api(`/orgs/staff${staffQuery ? `?${staffQuery}` : ''}`),
+        ]);
         setOrgs(orgRes);
         setBranches(branchRes);
         setUsers(userRes);
+        setStaffRows(staffRes);
       }
       if (view === 'analytics') {
         const [orgRes, branchRes, overviewRes] = await Promise.all([api('/stats/by-org'), api('/stats/by-branch'), api('/stats/overview')]);
@@ -289,6 +313,61 @@ function App() {
       });
       setStaffImportResult(result);
       MessagePlugin.success(`导入完成：新增 ${result.imported}，更新 ${result.updated}，失败 ${result.failed}`);
+      refreshForView('organizations');
+    } catch (error) {
+      MessagePlugin.error(error.message);
+    }
+  }
+
+  async function refreshStaffRows(nextFilters = staffFilters) {
+    try {
+      const query = new URLSearchParams(nextFilters).toString();
+      setStaffRows(await api(`/orgs/staff${query ? `?${query}` : ''}`));
+    } catch (error) {
+      MessagePlugin.error(error.message);
+    }
+  }
+
+  function resetStaffForm() {
+    setStaffForm(EMPTY_STAFF_FORM);
+  }
+
+  function editStaff(row) {
+    setStaffForm({
+      id: row.id,
+      username: row.username || '',
+      name: row.name || '',
+      orgId: row.orgId || '',
+      branchId: row.branchId || '',
+      status: row.status || 'inactive',
+      roleId: 'applicant',
+    });
+  }
+
+  async function saveStaffRow() {
+    try {
+      const payload = {
+        username: staffForm.username.trim(),
+        name: staffForm.name.trim(),
+        orgId: staffForm.orgId || '',
+        branchId: staffForm.branchId || '',
+        status: staffForm.status,
+        roleId: staffForm.roleId || '',
+      };
+      if (staffForm.id) {
+        await api(`/orgs/staff/${staffForm.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload),
+        });
+        MessagePlugin.success('人员已保存');
+      } else {
+        await api('/orgs/staff', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+        MessagePlugin.success('人员已新增');
+      }
+      resetStaffForm();
       refreshForView('organizations');
     } catch (error) {
       MessagePlugin.error(error.message);
@@ -571,7 +650,25 @@ function App() {
               <SimpleTableCard title="单位清单" columns={['单位名称']} rows={orgs.map((item) => [item.name])} compact={isMobile} />
               <SimpleTableCard title="支部清单" columns={['支部名称', '所属单位']} rows={branches.map((item) => [item.name, orgs.find((org) => org.id === item.orgId)?.name || ''])} compact={isMobile} />
             </div>
-            <Card title="预置人员导入">
+            <Card title="预置人员管理">
+              <div className="filter-grid">
+                <Input value={staffForm.username} disabled={!!staffForm.id} placeholder="学号/工号，如 2428624001" onChange={(value) => setStaffForm((prev) => ({ ...prev, username: value }))} />
+                <Input value={staffForm.name} placeholder="姓名" onChange={(value) => setStaffForm((prev) => ({ ...prev, name: value }))} />
+                <Select value={staffForm.orgId} onChange={(value) => setStaffForm((prev) => ({ ...prev, orgId: value || '', branchId: '' }))} options={orgs.map((item) => ({ label: item.name, value: item.id }))} clearable placeholder="所属单位" />
+                <Select value={staffForm.branchId} onChange={(value) => setStaffForm((prev) => ({ ...prev, branchId: value || '' }))} options={branches.filter((item) => !staffForm.orgId || item.orgId === staffForm.orgId).map((item) => ({ label: item.name, value: item.id }))} clearable placeholder="所属支部" />
+                <Select value={staffForm.status} onChange={(value) => setStaffForm((prev) => ({ ...prev, status: value || 'inactive' }))} options={STAFF_STATUS_OPTIONS} placeholder="状态" />
+                <Select value={staffForm.roleId} onChange={(value) => setStaffForm((prev) => ({ ...prev, roleId: value || '' }))} options={ROLE_OPTIONS} clearable placeholder="初始角色" />
+              </div>
+              <Space style={{ marginTop: 16 }}>
+                <Button theme="danger" onClick={saveStaffRow}>{staffForm.id ? '保存人员' : '新增预置人员'}</Button>
+                <Button variant="outline" onClick={resetStaffForm}>清空表单</Button>
+              </Space>
+              <div className="section-note" style={{ marginTop: 12 }}>
+                手工新增会写入后台预置人员库；默认状态为 inactive，学生首次注册时按学号/工号和姓名核验，审核通过后再激活。
+              </div>
+            </Card>
+
+            <Card title="批量导入">
               <div className="section-note">
                 支持 Excel/CSV。至少包含“学号/工号、姓名”，可选“单位ID/单位、支部ID/支部、角色、状态”。默认导入为 inactive 预置人员，供服务号首次注册核验。
               </div>
@@ -597,6 +694,56 @@ function App() {
                 </div>
               )}
             </Card>
+
+            <Card title="预置人员总表">
+              <div className="filter-grid">
+                <Input value={staffFilters.keyword} placeholder="姓名/学号/单位/支部" onChange={(value) => setStaffFilters((prev) => ({ ...prev, keyword: value }))} />
+                <Select value={staffFilters.orgId} onChange={(value) => setStaffFilters((prev) => ({ ...prev, orgId: value || '', branchId: '' }))} options={orgs.map((item) => ({ label: item.name, value: item.id }))} clearable placeholder="单位" />
+                <Select value={staffFilters.branchId} onChange={(value) => setStaffFilters((prev) => ({ ...prev, branchId: value || '' }))} options={branches.filter((item) => !staffFilters.orgId || item.orgId === staffFilters.orgId).map((item) => ({ label: item.name, value: item.id }))} clearable placeholder="支部" />
+                <Select value={staffFilters.status} onChange={(value) => setStaffFilters((prev) => ({ ...prev, status: value || '' }))} options={STAFF_STATUS_OPTIONS} clearable placeholder="状态" />
+              </div>
+              <Space style={{ marginTop: 16 }}>
+                <Button theme="danger" onClick={() => refreshForView('organizations')}>筛选</Button>
+                <Button variant="outline" onClick={() => {
+                  const nextFilters = { keyword: '', orgId: '', branchId: '', status: '' };
+                  setStaffFilters(nextFilters);
+                  refreshStaffRows(nextFilters);
+                }}>重置</Button>
+              </Space>
+              <div className="table-scroll" style={{ marginTop: 16 }}>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>学号/工号</th>
+                      <th>姓名</th>
+                      <th>单位</th>
+                      <th>支部</th>
+                      <th>状态</th>
+                      <th>角色</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {staffRows.length ? staffRows.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.username}</td>
+                        <td>{item.name}</td>
+                        <td>{item.orgName || '-'}</td>
+                        <td>{item.branchName || '-'}</td>
+                        <td><Tag theme={item.status === 'active' ? 'success' : item.status === 'pending' ? 'warning' : 'default'}>{item.status}</Tag></td>
+                        <td>{item.roleLabels || '-'}</td>
+                        <td><Button size="small" theme="danger" variant="outline" onClick={() => editStaff(item)}>编辑</Button></td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan="7">暂无人员数据。</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
             <Card title="角色分配">
               <div className="filter-grid">
                 <Select value={assignForm.userId} onChange={(value) => setAssignForm((prev) => ({ ...prev, userId: value }))} options={users.map((item) => ({ label: `${item.name} (${item.username})`, value: item.id }))} placeholder="选择用户" />

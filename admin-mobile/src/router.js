@@ -33,6 +33,7 @@ const routes = [
       { path: '', redirect: '/workbench' },
       { path: 'workbench', name: 'workbench', component: () => import('./views/WorkbenchView.vue'), meta: { title: '工作台' } },
       { path: 'workflow/:workflowId', name: 'workflow', component: () => import('./views/WorkflowView.vue'), meta: { title: '流程办理' } },
+      { path: 'workflow/:workflowId/steps/:stepCode', name: 'workflow-step-detail', component: () => import('./views/WorkflowStepDetailView.vue'), meta: { title: '节点详情' } },
       { path: 'applicants', name: 'applicants', component: () => import('./views/ApplicantsView.vue'), meta: { title: '申请人台账' } },
       { path: 'applicants/:id', name: 'applicant-detail', component: () => import('./views/ApplicantDetailView.vue'), meta: { title: '申请人详情' } },
       { path: 'reviews', name: 'reviews', component: () => import('./views/ReviewsView.vue'), meta: { title: '审核处理' } },

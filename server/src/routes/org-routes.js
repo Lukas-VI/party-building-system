@@ -42,6 +42,15 @@ function roleIdFromValue(value) {
   return roleMap[value] || '';
 }
 
+async function resolveOrgBranch(query, { orgId = '', branchId = '' }) {
+  const org = orgId ? await query('SELECT id, name FROM org_units WHERE id = :orgId OR name = :orgId LIMIT 1', { orgId }) : null;
+  const branch = branchId ? await query('SELECT id, name, org_id AS orgId FROM branches WHERE id = :branchId OR name = :branchId LIMIT 1', { branchId }) : null;
+  return {
+    org: org?.[0] || null,
+    branch: branch?.[0] || null,
+  };
+}
+
 function registerOrgRoutes(app, ctx) {
   const {
     query,
@@ -69,6 +78,137 @@ function registerOrgRoutes(app, ctx) {
   app.get('/api/branches', requireAuth(), async (req, res) => {
     try {
       ok(res, await query('SELECT id, name, org_id AS orgId FROM branches ORDER BY name ASC'));
+    } catch (error) {
+      fail(res, 500, error.message);
+    }
+  });
+
+  app.get('/api/orgs/staff', requireAuth(), requirePermission('manage_orgs'), async (req, res) => {
+    try {
+      const { keyword = '', orgId = '', branchId = '', status = '' } = req.query || {};
+      const where = [];
+      const params = {};
+      if (keyword) {
+        where.push('(u.username LIKE :keyword OR u.name LIKE :keyword OR o.name LIKE :keyword OR b.name LIKE :keyword)');
+        params.keyword = `%${keyword}%`;
+      }
+      if (orgId) {
+        where.push('u.org_id = :orgId');
+        params.orgId = orgId;
+      }
+      if (branchId) {
+        where.push('u.branch_id = :branchId');
+        params.branchId = branchId;
+      }
+      if (status) {
+        where.push('u.status = :status');
+        params.status = status;
+      }
+      const rows = await query(
+        `SELECT
+            u.id,
+            u.username,
+            u.name,
+            u.status,
+            u.org_id AS orgId,
+            u.branch_id AS branchId,
+            o.name AS orgName,
+            b.name AS branchName,
+            GROUP_CONCAT(r.label ORDER BY r.label SEPARATOR ' / ') AS roleLabels
+         FROM users u
+         LEFT JOIN org_units o ON o.id = u.org_id
+         LEFT JOIN branches b ON b.id = u.branch_id
+         LEFT JOIN user_roles ur ON ur.user_id = u.id
+         LEFT JOIN roles r ON r.id = ur.role_id
+         ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+         GROUP BY u.id, u.username, u.name, u.status, u.org_id, u.branch_id, o.name, b.name
+         ORDER BY u.username ASC`,
+        params,
+      );
+      ok(res, rows);
+    } catch (error) {
+      fail(res, 500, error.message);
+    }
+  });
+
+  app.post('/api/orgs/staff', requireAuth(), requirePermission('manage_orgs'), async (req, res) => {
+    try {
+      const username = String(req.body?.username || '').trim();
+      const name = String(req.body?.name || '').trim();
+      const status = normalizeStatus(String(req.body?.status || '').trim());
+      const roleId = roleIdFromValue(String(req.body?.roleId || '').trim());
+      const { org, branch } = await resolveOrgBranch(query, {
+        orgId: String(req.body?.orgId || '').trim(),
+        branchId: String(req.body?.branchId || '').trim(),
+      });
+      if (!username) return fail(res, 400, '请输入学号或工号');
+      if (!name) return fail(res, 400, '请输入姓名');
+      if (req.body?.orgId && !org) return fail(res, 400, '未找到所选单位');
+      if (req.body?.branchId && !branch) return fail(res, 400, '未找到所选支部');
+      if (branch && org && branch.orgId !== org.id) return fail(res, 400, '支部不属于所选单位');
+      if (roleId && HIGH_PRIVILEGE_ROLES.has(roleId) && req.user.primaryRole !== 'superAdmin') return fail(res, 403, '无权分配高权限角色');
+      const existing = await first('SELECT id FROM users WHERE username = :username', { username });
+      if (existing) return fail(res, 400, '该学号/工号已存在');
+      const userId = `u-${crypto.randomUUID()}`;
+      await query(
+        `INSERT INTO users (id, username, password_hash, name, status, org_id, branch_id, created_at)
+         VALUES (:id, :username, :passwordHash, :name, :status, :orgId, :branchId, :createdAt)`,
+        {
+          id: userId,
+          username,
+          passwordHash: hashPassword('ChangeMe123!'),
+          name,
+          status,
+          orgId: org?.id || branch?.orgId || null,
+          branchId: branch?.id || null,
+          createdAt: now(),
+        },
+      );
+      if (roleId) await query('INSERT INTO user_roles (user_id, role_id) VALUES (:userId, :roleId)', { userId, roleId });
+      await logAudit('users', userId, 'create_staff', req.user.id, { username, name, status, roleId });
+      ok(res, { id: userId }, '人员已新增');
+    } catch (error) {
+      fail(res, 500, error.message);
+    }
+  });
+
+  app.put('/api/orgs/staff/:id', requireAuth(), requirePermission('manage_orgs'), async (req, res) => {
+    try {
+      const target = await first('SELECT id FROM users WHERE id = :id', { id: req.params.id });
+      if (!target) return fail(res, 404, '未找到人员');
+      const name = String(req.body?.name || '').trim();
+      const status = normalizeStatus(String(req.body?.status || '').trim());
+      const roleId = roleIdFromValue(String(req.body?.roleId || '').trim());
+      const { org, branch } = await resolveOrgBranch(query, {
+        orgId: String(req.body?.orgId || '').trim(),
+        branchId: String(req.body?.branchId || '').trim(),
+      });
+      if (!name) return fail(res, 400, '请输入姓名');
+      if (req.body?.orgId && !org) return fail(res, 400, '未找到所选单位');
+      if (req.body?.branchId && !branch) return fail(res, 400, '未找到所选支部');
+      if (branch && org && branch.orgId !== org.id) return fail(res, 400, '支部不属于所选单位');
+      if (roleId && HIGH_PRIVILEGE_ROLES.has(roleId) && req.user.primaryRole !== 'superAdmin') return fail(res, 403, '无权分配高权限角色');
+      await query(
+        `UPDATE users
+         SET name = :name,
+             status = :status,
+             org_id = :orgId,
+             branch_id = :branchId
+         WHERE id = :id`,
+        {
+          id: req.params.id,
+          name,
+          status,
+          orgId: org?.id || branch?.orgId || null,
+          branchId: branch?.id || null,
+        },
+      );
+      if (roleId) {
+        const currentRole = await first('SELECT id FROM user_roles WHERE user_id = :userId AND role_id = :roleId', { userId: req.params.id, roleId });
+        if (!currentRole) await query('INSERT INTO user_roles (user_id, role_id) VALUES (:userId, :roleId)', { userId: req.params.id, roleId });
+      }
+      await logAudit('users', req.params.id, 'update_staff', req.user.id, { name, status, roleId });
+      ok(res, true, '人员已保存');
     } catch (error) {
       fail(res, 500, error.message);
     }

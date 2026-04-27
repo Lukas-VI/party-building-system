@@ -1,135 +1,30 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { showSuccessToast } from 'vant';
-import { fetchMobileWorkflow, markMessageRead, rescheduleMobileTask, reviewMobileTask, submitMobileTask, uploadMobileFile } from '../api';
+import { fetchMobileWorkflow } from '../api';
 
 const route = useRoute();
 const router = useRouter();
 const loading = ref(false);
-const submitting = ref(false);
 const workflow = ref(null);
 const collapseNames = ref([]);
-const materialUploads = ref([]);
-const form = reactive({
-  summary: '',
-  note: '',
-  comment: '',
-  scheduledAt: '',
-  location: '',
-  reason: '',
-});
 
 const workflowId = computed(() => route.params.workflowId || 'me');
-const currentTask = computed(() => {
-  const steps = workflow.value?.steps || [];
-  const queryStep = route.query.step;
-  return steps.find((item) => item.stepCode === queryStep) || workflow.value?.currentStep || null;
-});
+const currentTask = computed(() => workflow.value?.currentStep || null);
 const completedSteps = computed(() => workflow.value?.completedSteps || []);
 const allSteps = computed(() => workflow.value?.steps || []);
-
-function syncFormFromTask(task) {
-  form.summary = task?.formData?.summary || '';
-  form.note = task?.formData?.note || '';
-  form.comment = task?.reviewComment || '';
-  form.scheduledAt = task?.formData?.meetingProposal?.scheduledAt || '';
-  form.location = task?.formData?.meetingProposal?.location || '';
-  form.reason = task?.formData?.meetingProposal?.reason || '';
-  materialUploads.value = [...(task?.attachments || [])];
-}
-
-watch(currentTask, (value) => syncFormFromTask(value), { immediate: true });
 
 async function loadWorkflow() {
   loading.value = true;
   try {
     workflow.value = await fetchMobileWorkflow(workflowId.value);
-    if (route.query.notificationId) {
-      try {
-        await markMessageRead(route.query.notificationId);
-      } catch (error) {
-        void error;
-      }
-    }
   } finally {
     loading.value = false;
   }
 }
 
-async function submitTask() {
-  if (!currentTask.value) return;
-  submitting.value = true;
-  try {
-    await submitMobileTask(workflow.value.workflowId, currentTask.value.taskId, {
-      formData: {
-        summary: form.summary,
-        note: form.note,
-        attachments: materialUploads.value,
-      },
-    });
-    showSuccessToast('提交成功');
-    await loadWorkflow();
-  } finally {
-    submitting.value = false;
-  }
-}
-
-async function approveTask(status) {
-  if (!currentTask.value) return;
-  submitting.value = true;
-  try {
-    await reviewMobileTask(workflow.value.workflowId, currentTask.value.taskId, {
-      status,
-      comment: form.comment,
-    });
-    showSuccessToast(status === 'approved' ? '已审核通过' : '已退回补充');
-    await loadWorkflow();
-  } finally {
-    submitting.value = false;
-  }
-}
-
-async function requestReschedule() {
-  if (!currentTask.value) return;
-  submitting.value = true;
-  try {
-    await rescheduleMobileTask(workflow.value.workflowId, currentTask.value.taskId, {
-      scheduledAt: form.scheduledAt,
-      location: form.location,
-      reason: form.reason,
-    });
-    showSuccessToast('改期申请已提交');
-    await loadWorkflow();
-  } finally {
-    submitting.value = false;
-  }
-}
-
-async function handleUpload(fileWrapper, material) {
-  const uploadSource = Array.isArray(fileWrapper) ? fileWrapper[0] : fileWrapper;
-  const file = uploadSource.file || uploadSource;
-  if (!currentTask.value) return;
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('workflowId', workflow.value.workflowId);
-  formData.append('stepCode', currentTask.value.stepCode);
-  formData.append('materialTag', material?.tag || currentTask.value.materialSchema?.[0]?.tag || 'general');
-  const result = await uploadMobileFile(formData);
-  materialUploads.value.push(result);
-  showSuccessToast('材料上传成功');
-}
-
-function openSpecificTask(task) {
-  if (task.workflowId && task.workflowId !== workflowId.value) {
-    router.push(`/workflow/${task.workflowId}?step=${task.stepCode}`);
-    return;
-  }
-  router.replace({ name: 'workflow', params: { workflowId: workflowId.value }, query: { ...route.query, step: task.stepCode } });
-}
-
-function attachmentsByTag(tag) {
-  return materialUploads.value.filter((item) => item.materialTag === tag);
+function openStep(task) {
+  router.push(task.detailRoute || `/workflow/${task.workflowId || workflowId.value}/steps/${task.stepCode}`);
 }
 
 onMounted(loadWorkflow);
@@ -162,7 +57,7 @@ onMounted(loadWorkflow);
         <div class="section-card__desc">{{ currentTask.phase }} · {{ currentTask.summary }}</div>
       </div>
       <div class="section-card__bd">
-        <div class="task-hero task-hero--static">
+        <button class="task-hero" type="button" @click="openStep(currentTask)">
           <div class="task-hero__top">
             <div>
               <div class="task-hero__title">{{ currentTask.stepName }}</div>
@@ -171,74 +66,22 @@ onMounted(loadWorkflow);
             <span class="status-chip" :class="`is-${currentTask.status}`">{{ currentTask.statusText }}</span>
           </div>
           <div class="task-hero__body" v-if="currentTask.blessingText">{{ currentTask.blessingText }}</div>
-        </div>
-
-        <div class="field-block" v-if="currentTask.canSubmit">
-          <div class="field-label">办理说明</div>
-          <van-field v-model="form.summary" rows="3" autosize type="textarea" placeholder="请填写本步骤的提交说明或补充内容" />
-        </div>
-        <div class="field-block" v-if="currentTask.canSubmit">
-          <div class="field-label">补充备注</div>
-          <van-field v-model="form.note" rows="2" autosize type="textarea" placeholder="可填写补充说明或材料目录" />
-        </div>
-
-        <template v-if="currentTask.canReschedule">
-          <div class="field-block">
-            <div class="field-label">申请改期时间</div>
-            <van-field v-model="form.scheduledAt" placeholder="例如 2026-05-01 14:30" />
+          <div class="task-hero__foot">
+            <span>点击查看详情</span>
+            <span v-if="currentTask.uploadRequired">含材料事项</span>
           </div>
-          <div class="field-block">
-            <div class="field-label">地点</div>
-            <van-field v-model="form.location" placeholder="请输入谈话地点" />
-          </div>
-          <div class="field-block">
-            <div class="field-label">改期原因</div>
-            <van-field v-model="form.reason" rows="2" autosize type="textarea" placeholder="请说明时间冲突或改期原因" />
-          </div>
-        </template>
-
-        <div class="field-block" v-if="currentTask.canReview">
-          <div class="field-label">审核意见</div>
-          <van-field v-model="form.comment" rows="2" autosize type="textarea" placeholder="请填写审核意见或退回原因" />
-        </div>
-
-        <div class="field-block" v-if="currentTask.materialSchema?.length">
-          <div class="field-label">材料提交与查看</div>
-          <div class="material-block" v-for="material in currentTask.materialSchema" :key="material.key">
-            <div class="table-row__head">
-              <div>
-                <div class="table-row__title">{{ material.label }}</div>
-                <div class="step-item__meta">{{ material.required ? '必交材料' : '可选材料' }} · {{ (material.accept || []).join('、') }}</div>
-              </div>
-              <span class="tag-pair">{{ material.tag }}</span>
-            </div>
-            <van-uploader v-if="currentTask.canSubmit" :after-read="(file) => handleUpload(file, material)" />
-            <div class="upload-list" v-if="attachmentsByTag(material.tag).length">
-              <div class="upload-list__item" v-for="item in attachmentsByTag(material.tag)" :key="item.fileUrl">
-                <span>{{ item.fileName }}</span>
-                <a class="text-link" :href="item.fileUrl" target="_blank" rel="noreferrer">预览/下载</a>
-              </div>
-            </div>
-            <div class="empty-state empty-state--compact" v-else>暂未提交该项材料。</div>
-          </div>
-        </div>
-
-        <div class="section-actions">
-          <van-button v-if="currentTask.canSubmit" type="danger" :loading="submitting" @click="submitTask">提交当前节点</van-button>
-          <van-button v-if="currentTask.canReview" type="danger" plain :loading="submitting" @click="approveTask('approved')">审核通过</van-button>
-          <van-button v-if="currentTask.canReview" plain :loading="submitting" @click="approveTask('rejected')">退回补充</van-button>
-          <van-button v-if="currentTask.canReschedule" plain type="warning" :loading="submitting" @click="requestReschedule">申请改期</van-button>
-        </div>
+        </button>
       </div>
     </section>
 
     <section class="section-card">
       <div class="section-card__hd">
         <div class="section-card__title">步骤总览</div>
+        <div class="section-card__desc">点击任一步骤进入详情页查看记录或办理事项。</div>
       </div>
       <div class="section-card__bd">
         <div class="step-list" v-if="allSteps.length">
-          <button v-for="item in allSteps.filter((step) => step.status !== 'approved')" :key="item.taskId" type="button" class="step-item" @click="openSpecificTask(item)">
+          <button v-for="item in allSteps.filter((step) => step.status !== 'approved')" :key="item.taskId" type="button" class="step-item" @click="openStep(item)">
             <div class="step-item__head">
               <div>
                 <div class="step-item__name">{{ item.stepName }}</div>
@@ -253,7 +96,7 @@ onMounted(loadWorkflow);
         <van-collapse v-model="collapseNames" v-if="completedSteps.length">
           <van-collapse-item title="已完成步骤" name="completed">
             <div class="step-list">
-              <button class="step-item" v-for="item in completedSteps" :key="item.stepCode" type="button" @click="openSpecificTask(item)">
+              <button class="step-item" v-for="item in completedSteps" :key="item.stepCode" type="button" @click="openStep(item)">
                 <div class="step-item__head">
                   <div>
                     <div class="step-item__name">{{ item.stepName }}</div>
