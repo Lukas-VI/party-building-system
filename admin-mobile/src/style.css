@@ -247,7 +247,7 @@ textarea:focus-visible {
 
 .status-card {
   position: relative;
-  overflow: visible;
+  overflow: hidden;
   isolation: isolate;
 }
 
