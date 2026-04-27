@@ -10,14 +10,18 @@ function registerStatsRoutes(app, ctx) {
     ok,
     fail,
     requireAuth,
+    hasPermission,
     scopeClause,
     getApplicants,
+    listRegistrationRequests,
   } = ctx;
 
   app.get('/api/stats/overview', requireAuth(), async (req, res) => {
     try {
       const applicants = await getApplicants(req.user, {});
-      const pendingRegistrations = await first('SELECT COUNT(*) AS count FROM registration_requests WHERE status = :status', { status: 'pending' });
+      const pendingRegistrations = hasPermission(req.user, 'approve_registration')
+        ? await listRegistrationRequests(req.user, { status: 'pending' })
+        : [];
       const scope = scopeClause(req.user, 'u');
       const pendingReviews = await first(
         `SELECT COUNT(*) AS count
@@ -33,7 +37,7 @@ function registerStatsRoutes(app, ctx) {
       });
       ok(res, {
         totalApplicants: applicants.length,
-        pendingRegistrations: pendingRegistrations?.count || 0,
+        pendingRegistrations: pendingRegistrations.length,
         pendingReviews: pendingReviews?.count || 0,
         overdueItems: 0,
         stageDistribution: Object.entries(stageMap).map(([stage, count]) => ({ stage, count })),

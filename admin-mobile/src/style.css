@@ -184,6 +184,30 @@ textarea {
   margin-bottom: 12px;
 }
 
+.task-hero.is-approved,
+.step-item.is-approved {
+  border-color: #84bf96;
+  background: linear-gradient(180deg, #f1fbf4, #ffffff);
+}
+
+.task-hero.is-rejected,
+.step-item.is-rejected {
+  border-color: #e19b9b;
+  background: linear-gradient(180deg, #fff1f1, #ffffff);
+}
+
+.task-hero.is-not-started,
+.step-item.is-not-started {
+  border-color: #d5cec6;
+  background: linear-gradient(180deg, #f6f1ea, #ffffff);
+}
+
+.task-hero.is-pending,
+.step-item.is-pending {
+  border-color: #e1b468;
+  background: linear-gradient(180deg, #fff6e5, #ffffff);
+}
+
 .task-hero__top,
 .task-hero__foot {
   display: flex;
@@ -212,6 +236,18 @@ textarea {
   line-height: 1.6;
 }
 
+.step-time-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--text-subtle);
+  font-size: 12px;
+}
+
 .list-stack > * + * {
   margin-top: 10px;
 }
@@ -234,7 +270,8 @@ textarea {
   color: var(--accent-strong);
 }
 
-.status-chip.is-reviewing {
+.status-chip.is-reviewing,
+.status-chip.is-pending {
   color: #7a3f00;
   background: #ffe7bf;
 }
@@ -250,7 +287,7 @@ textarea {
   background: #ffdede;
 }
 
-.status-chip.is-pending,
+.status-chip.is-not-started,
 .status-chip.is-locked {
   color: #7b4b2f;
   background: #f3e5d3;
@@ -487,6 +524,11 @@ textarea {
   color: var(--accent-strong);
   font-size: 12px;
   font-weight: 700;
+}
+
+.status-chip__icon {
+  margin-right: 4px;
+  font-weight: 900;
 }
 
 .profile-hero__card {

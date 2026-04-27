@@ -446,9 +446,9 @@ function App() {
         {activeView === 'dashboard' && overview && (
           <div className="content-stack">
             <div className="stats-grid">
-              <MetricCard title="申请人数" value={overview.totalApplicants} desc="当前权限范围内的申请人数量" />
-              <MetricCard title="待注册审核" value={overview.pendingRegistrations} desc="首次注册待审核" />
-              <MetricCard title="待流程审核" value={overview.pendingReviews} desc="流程节点待审批数量" />
+              <MetricCard title="申请人数" value={overview.totalApplicants} desc="当前权限范围内的申请人数量" onClick={() => setActiveView('applicants')} />
+              <MetricCard title="待注册审核" value={overview.pendingRegistrations} desc="首次注册待审核" onClick={() => setActiveView('reviews')} />
+              <MetricCard title="待流程审核" value={overview.pendingReviews} desc="流程节点待审批数量" onClick={() => setActiveView('reviews')} />
               <MetricCard title="超期事项" value={overview.overdueItems} desc="超出配置截止时间的节点" />
             </div>
             <div className="split-grid">
@@ -486,7 +486,7 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {applicants.map((item) => (
+                  {applicants.length ? applicants.map((item) => (
                     <tr key={item.id}>
                       <td>{item.name}</td>
                       <td>{item.username}</td>
@@ -507,7 +507,13 @@ function App() {
                         </Button>
                       </td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan="6" className="table-empty">
+                        当前没有申请人台账。首次注册待审核请到“审核审批”查看，预置人员总表请到“组织与角色”查看；注册审核通过后才会进入申请人台账。
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
               </div>
@@ -844,13 +850,21 @@ function LoginScreen({ onLogin, themeClass, onToggleTheme, isMobile, bootstrap }
   );
 }
 
-function MetricCard({ title, value, desc }) {
-  return (
-    <Card className="metric-panel">
+function MetricCard({ title, value, desc, onClick }) {
+  const content = (
+    <Card className={`metric-panel${onClick ? ' metric-panel--clickable' : ''}`}>
       <div className="metric-title">{title}</div>
       <div className="metric-number">{value}</div>
       <div className="metric-desc">{desc}</div>
     </Card>
+  );
+  if (!onClick) {
+    return content;
+  }
+  return (
+    <button type="button" className="metric-action" onClick={onClick}>
+      {content}
+    </button>
   );
 }
 

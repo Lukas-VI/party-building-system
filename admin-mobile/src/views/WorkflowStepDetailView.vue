@@ -24,6 +24,10 @@ const stepCode = computed(() => route.params.stepCode);
 const currentTask = computed(() => (workflow.value?.steps || []).find((item) => item.stepCode === stepCode.value));
 const canOperate = computed(() => Boolean(currentTask.value?.canSubmit || currentTask.value?.canReview || currentTask.value?.canReschedule));
 
+function displayTime(value) {
+  return value || '未设置';
+}
+
 function syncFormFromTask(task) {
   form.summary = task?.formData?.summary || '';
   form.note = task?.formData?.note || '';
@@ -135,13 +139,19 @@ onMounted(loadWorkflow);
         </div>
       </div>
       <div class="section-card__bd" v-if="currentTask">
-        <div class="task-hero task-hero--static">
+        <div class="task-hero task-hero--static" :class="currentTask.reviewClassName">
           <div class="task-hero__top">
             <div>
               <div class="task-hero__title">{{ currentTask.stepName }}</div>
               <div class="task-hero__meta">{{ currentTask.phase }} · {{ currentTask.taskOwner }}</div>
             </div>
-            <span class="status-chip" :class="`is-${currentTask.status}`">{{ currentTask.statusText }}</span>
+            <span class="status-chip" :class="currentTask.reviewClassName">
+              <span class="status-chip__icon">{{ currentTask.reviewIcon }}</span>{{ currentTask.reviewLabel }}
+            </span>
+          </div>
+          <div class="step-time-row">
+            <span>开始：{{ displayTime(currentTask.startAt) }}</span>
+            <span>结束：{{ displayTime(currentTask.endAt || currentTask.deadline) }}</span>
           </div>
           <div class="task-hero__body">{{ currentTask.summary }}</div>
           <div class="task-hero__body" v-if="currentTask.blessingText">{{ currentTask.blessingText }}</div>

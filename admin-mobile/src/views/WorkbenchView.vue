@@ -26,6 +26,18 @@ function openAction(item) {
     window.location.href = item.external;
     return;
   }
+  if (item.action === 'open-first-todo') {
+    if (todoItems.value.length) {
+      openTask(todoItems.value[0]);
+      return;
+    }
+    router.push({ name: 'reviews' });
+    return;
+  }
+  if (item.routeName) {
+    router.push({ name: item.routeName, params: item.routeParams || {}, query: item.routeQuery || {} });
+    return;
+  }
   router.push(item.route);
 }
 

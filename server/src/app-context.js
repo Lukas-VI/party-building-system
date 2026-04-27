@@ -804,7 +804,9 @@ async function dashboardForUser(user) {
     };
   }
   const applicants = await getApplicants(user, {});
-  const pendingRegistrations = await listRegistrationRequests(user, { status: 'pending' });
+  const pendingRegistrations = hasPermission(user, 'approve_registration')
+    ? await listRegistrationRequests(user, { status: 'pending' })
+    : [];
   const scope = scopeClause(user, 'u');
   const pendingReviews = await first(
     `SELECT COUNT(*) AS count
@@ -957,6 +959,22 @@ function mobileTaskStatus(step) {
   return 'open';
 }
 
+/**
+ * Normalize workflow statuses into the three-state visual vocabulary used by H5 cards.
+ */
+function mobileReviewState(step) {
+  if (step.status === 'approved') {
+    return { code: 'approved', icon: '√', label: '已通过', className: 'is-approved' };
+  }
+  if (step.status === 'rejected' || step.status === 'terminated') {
+    return { code: 'rejected', icon: '×', label: '未通过', className: 'is-rejected' };
+  }
+  if (step.status === 'locked') {
+    return { code: 'not-started', icon: '○', label: '未开始', className: 'is-not-started' };
+  }
+  return { code: 'pending', icon: '○', label: step.statusText || '待处理', className: 'is-pending' };
+}
+
 // 移动端待办对象在这里统一组装，页面层只消费结果，不再自行拼装流程规则。
 /**
  * Build the mobile task card shape from workflow, applicant and actor state.
@@ -968,6 +986,7 @@ function buildTodoItem(user, applicant, workflow, step) {
   const canReview = isReviewerActor(user, step);
   const actionKind = uploadRequired ? 'upload' : (canReview ? 'review' : (canSubmit ? 'submit' : 'notice'));
   const isCompleted = step.status === 'approved';
+  const reviewState = mobileReviewState(step);
   return {
     workflowId: applicant.userId || applicant.id,
     taskId: step.stepCode,
@@ -978,6 +997,10 @@ function buildTodoItem(user, applicant, workflow, step) {
     phase: step.phase,
     status: step.status,
     statusText: step.statusText,
+    reviewState,
+    reviewIcon: reviewState.icon,
+    reviewLabel: reviewState.label,
+    reviewClassName: reviewState.className,
     taskStatus: mobileTaskStatus(step),
     actorType: step.actorType || step.taskMeta?.actorType || 'reviewer',
     taskOwner,
@@ -998,6 +1021,9 @@ function buildTodoItem(user, applicant, workflow, step) {
     attachments: step.attachments || [],
     formData: step.formData || {},
     rescheduleHistory: step.rescheduleHistory || [],
+    startAt: step.startAt,
+    endAt: step.endAt,
+    deadline: step.deadline,
     operatedAt: step.operatedAt,
     confirmedAt: step.confirmedAt,
     reviewComment: step.reviewComment,
@@ -1427,6 +1453,7 @@ module.exports = {
   nextTaskStatus,
   advanceAfterReview,
   mobileTaskStatus,
+  mobileReviewState,
   buildTodoItem,
   listMobileTodos,
   listNotifications,

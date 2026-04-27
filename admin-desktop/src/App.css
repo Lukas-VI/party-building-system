@@ -194,6 +194,31 @@ body {
   min-height: 160px;
 }
 
+.metric-action {
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.metric-action .metric-panel {
+  height: 100%;
+}
+
+.metric-panel--clickable {
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.metric-action:hover .metric-panel--clickable,
+.metric-action:focus-visible .metric-panel--clickable {
+  border-color: var(--line-strong);
+  box-shadow: 0 18px 38px rgba(65, 23, 23, 0.12);
+  transform: translateY(-2px);
+}
+
 .metric-title,
 .detail-label,
 .metric-desc,
@@ -301,6 +326,12 @@ body {
   background: var(--bg-soft);
   color: var(--text-subtle);
   font-weight: 700;
+}
+
+.data-table .table-empty {
+  padding: 24px 14px;
+  color: var(--text-subtle);
+  text-align: center;
 }
 
 .export-actions {

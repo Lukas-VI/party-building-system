@@ -12,6 +12,11 @@ const workflowId = computed(() => route.params.workflowId || 'me');
 const currentTask = computed(() => workflow.value?.currentStep || null);
 const completedSteps = computed(() => workflow.value?.completedSteps || []);
 const allSteps = computed(() => workflow.value?.steps || []);
+const unfinishedSteps = computed(() => allSteps.value.filter((step) => step.status !== 'approved'));
+
+function displayTime(value) {
+  return value || '未设置';
+}
 
 async function loadWorkflow() {
   loading.value = true;
@@ -62,13 +67,19 @@ onMounted(loadWorkflow);
         <div class="section-card__desc">{{ currentTask.phase }} · {{ currentTask.summary }}</div>
       </div>
       <div class="section-card__bd">
-        <button class="task-hero" type="button" @click="openStep(currentTask)">
+        <button class="task-hero" :class="currentTask.reviewClassName" type="button" @click="openStep(currentTask)">
           <div class="task-hero__top">
             <div>
               <div class="task-hero__title">{{ currentTask.stepName }}</div>
               <div class="task-hero__meta">{{ currentTask.taskOwner }} · {{ currentTask.currentStage }}</div>
             </div>
-            <span class="status-chip" :class="`is-${currentTask.status}`">{{ currentTask.statusText }}</span>
+            <span class="status-chip" :class="currentTask.reviewClassName">
+              <span class="status-chip__icon">{{ currentTask.reviewIcon }}</span>{{ currentTask.reviewLabel }}
+            </span>
+          </div>
+          <div class="step-time-row">
+            <span>开始：{{ displayTime(currentTask.startAt) }}</span>
+            <span>结束：{{ displayTime(currentTask.endAt || currentTask.deadline) }}</span>
           </div>
           <div class="task-hero__body" v-if="currentTask.blessingText">{{ currentTask.blessingText }}</div>
           <div class="task-hero__foot">
@@ -85,14 +96,20 @@ onMounted(loadWorkflow);
         <div class="section-card__desc">点击任一步骤进入详情页查看记录或办理事项。</div>
       </div>
       <div class="section-card__bd">
-        <div class="step-list" v-if="allSteps.length">
-          <button v-for="item in allSteps.filter((step) => step.status !== 'approved')" :key="item.taskId" type="button" class="step-item" @click="openStep(item)">
+        <div class="step-list" v-if="unfinishedSteps.length">
+          <button v-for="item in unfinishedSteps" :key="item.taskId" type="button" class="step-item" :class="item.reviewClassName" @click="openStep(item)">
             <div class="step-item__head">
               <div>
                 <div class="step-item__name">{{ item.stepName }}</div>
                 <div class="step-item__meta">{{ item.phase }}</div>
               </div>
-              <span class="status-chip" :class="`is-${item.status}`">{{ item.statusText }}</span>
+              <span class="status-chip" :class="item.reviewClassName">
+                <span class="status-chip__icon">{{ item.reviewIcon }}</span>{{ item.reviewLabel }}
+              </span>
+            </div>
+            <div class="step-time-row">
+              <span>开始：{{ displayTime(item.startAt) }}</span>
+              <span>结束：{{ displayTime(item.endAt || item.deadline) }}</span>
             </div>
             <div class="step-item__meta">{{ item.summary }}</div>
             <div class="step-item__meta" v-if="item.uploadRequired">需提交材料，可点开查看或上传。</div>
@@ -101,13 +118,19 @@ onMounted(loadWorkflow);
         <div class="formal-divider" v-if="completedSteps.length"></div>
         <div class="section-card__title section-card__title--sub" v-if="completedSteps.length">已完成步骤</div>
         <div class="step-list" v-if="completedSteps.length">
-          <button class="step-item" v-for="item in completedSteps" :key="item.stepCode" type="button" @click="openStep(item)">
+          <button class="step-item" :class="item.reviewClassName" v-for="item in completedSteps" :key="item.stepCode" type="button" @click="openStep(item)">
             <div class="step-item__head">
               <div>
                 <div class="step-item__name">{{ item.stepName }}</div>
                 <div class="step-item__meta">{{ item.phase }}</div>
               </div>
-              <span class="status-chip is-approved">{{ item.statusText }}</span>
+              <span class="status-chip" :class="item.reviewClassName">
+                <span class="status-chip__icon">{{ item.reviewIcon }}</span>{{ item.reviewLabel }}
+              </span>
+            </div>
+            <div class="step-time-row">
+              <span>开始：{{ displayTime(item.startAt) }}</span>
+              <span>结束：{{ displayTime(item.endAt || item.deadline) }}</span>
             </div>
             <div class="step-item__meta">{{ item.operatedAt || '暂无时间记录' }} · {{ item.lastOperatorName || '系统记录' }}</div>
             <div class="step-item__meta">点击查看节点详情</div>
