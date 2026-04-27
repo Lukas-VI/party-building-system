@@ -7,7 +7,6 @@ const route = useRoute();
 const router = useRouter();
 const loading = ref(false);
 const workflow = ref(null);
-const collapseNames = ref([]);
 
 const workflowId = computed(() => route.params.workflowId || 'me');
 const currentTask = computed(() => workflow.value?.currentStep || null);
@@ -24,7 +23,13 @@ async function loadWorkflow() {
 }
 
 function openStep(task) {
-  router.push(task.detailRoute || `/workflow/${task.workflowId || workflowId.value}/steps/${task.stepCode}`);
+  router.push({
+    name: 'workflow-step-detail',
+    params: {
+      workflowId: task.workflowId || workflowId.value,
+      stepCode: task.stepCode,
+    },
+  });
 }
 
 onMounted(loadWorkflow);
@@ -93,22 +98,21 @@ onMounted(loadWorkflow);
             <div class="step-item__meta" v-if="item.uploadRequired">需提交材料，可点开查看或上传。</div>
           </button>
         </div>
-        <van-collapse v-model="collapseNames" v-if="completedSteps.length">
-          <van-collapse-item title="已完成步骤" name="completed">
-            <div class="step-list">
-              <button class="step-item" v-for="item in completedSteps" :key="item.stepCode" type="button" @click="openStep(item)">
-                <div class="step-item__head">
-                  <div>
-                    <div class="step-item__name">{{ item.stepName }}</div>
-                    <div class="step-item__meta">{{ item.phase }}</div>
-                  </div>
-                  <span class="status-chip is-approved">{{ item.statusText }}</span>
-                </div>
-                <div class="step-item__meta">{{ item.operatedAt || '暂无时间记录' }} · {{ item.lastOperatorName || '系统记录' }}</div>
-              </button>
+        <div class="formal-divider" v-if="completedSteps.length"></div>
+        <div class="section-card__title section-card__title--sub" v-if="completedSteps.length">已完成步骤</div>
+        <div class="step-list" v-if="completedSteps.length">
+          <button class="step-item" v-for="item in completedSteps" :key="item.stepCode" type="button" @click="openStep(item)">
+            <div class="step-item__head">
+              <div>
+                <div class="step-item__name">{{ item.stepName }}</div>
+                <div class="step-item__meta">{{ item.phase }}</div>
+              </div>
+              <span class="status-chip is-approved">{{ item.statusText }}</span>
             </div>
-          </van-collapse-item>
-        </van-collapse>
+            <div class="step-item__meta">{{ item.operatedAt || '暂无时间记录' }} · {{ item.lastOperatorName || '系统记录' }}</div>
+            <div class="step-item__meta">点击查看节点详情</div>
+          </button>
+        </div>
         <van-skeleton v-if="loading" title :row="6" />
       </div>
     </section>

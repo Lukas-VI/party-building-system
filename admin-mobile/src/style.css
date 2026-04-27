@@ -76,6 +76,11 @@ textarea {
   color: var(--accent-strong);
 }
 
+.section-card__title--sub {
+  margin: 12px 0 10px;
+  font-size: 15px;
+}
+
 .section-card__desc {
   margin-top: 4px;
   font-size: 12px;

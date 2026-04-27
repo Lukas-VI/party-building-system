@@ -30,7 +30,17 @@ function openAction(item) {
 }
 
 function openTask(task) {
-  router.push(task.detailRoute || `/workflow/${task.workflowId}`);
+  if (task.stepCode) {
+    router.push({
+      name: 'workflow-step-detail',
+      params: {
+        workflowId: task.workflowId,
+        stepCode: task.stepCode,
+      },
+    });
+    return;
+  }
+  router.push(`/workflow/${task.workflowId}`);
 }
 
 function openMetric(item) {
