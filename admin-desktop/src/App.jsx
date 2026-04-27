@@ -36,6 +36,8 @@ const EMPTY_STAFF_FORM = {
   status: 'inactive',
   roleId: 'applicant',
 };
+const EMPTY_ORG_FORM = { id: '', name: '' };
+const EMPTY_BRANCH_FORM = { id: '', name: '', orgId: '' };
 
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem('dj_admin_token') || '');
@@ -68,6 +70,8 @@ function App() {
   const [staffRows, setStaffRows] = useState([]);
   const [staffFilters, setStaffFilters] = useState({ keyword: '', orgId: '', branchId: '', status: '' });
   const [staffForm, setStaffForm] = useState(EMPTY_STAFF_FORM);
+  const [orgForm, setOrgForm] = useState(EMPTY_ORG_FORM);
+  const [branchForm, setBranchForm] = useState(EMPTY_BRANCH_FORM);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -374,6 +378,50 @@ function App() {
     }
   }
 
+  async function saveOrgRow() {
+    try {
+      const payload = { name: orgForm.name.trim() };
+      if (!payload.name) {
+        MessagePlugin.warning('请输入单位名称');
+        return;
+      }
+      if (orgForm.id) {
+        await api(`/orgs/${orgForm.id}`, { method: 'PUT', body: JSON.stringify(payload) });
+      } else {
+        await api('/orgs', { method: 'POST', body: JSON.stringify(payload) });
+      }
+      MessagePlugin.success('单位已保存');
+      setOrgForm(EMPTY_ORG_FORM);
+      refreshForView('organizations');
+    } catch (error) {
+      MessagePlugin.error(error.message);
+    }
+  }
+
+  async function saveBranchRow() {
+    try {
+      const payload = { name: branchForm.name.trim(), orgId: branchForm.orgId };
+      if (!payload.name) {
+        MessagePlugin.warning('请输入支部名称');
+        return;
+      }
+      if (!payload.orgId) {
+        MessagePlugin.warning('请选择所属单位');
+        return;
+      }
+      if (branchForm.id) {
+        await api(`/branches/${branchForm.id}`, { method: 'PUT', body: JSON.stringify(payload) });
+      } else {
+        await api('/branches', { method: 'POST', body: JSON.stringify(payload) });
+      }
+      MessagePlugin.success('支部已保存');
+      setBranchForm(EMPTY_BRANCH_FORM);
+      refreshForView('organizations');
+    } catch (error) {
+      MessagePlugin.error(error.message);
+    }
+  }
+
   async function saveConfig(stepCode, startAt, endAt) {
     try {
       await api(`/workflow-steps/config/${stepCode}`, {
@@ -547,6 +595,7 @@ function App() {
                         <th>状态</th>
                         <th>截止时间</th>
                         <th>办理时间</th>
+                        <th>业务记录</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -558,6 +607,7 @@ function App() {
                           <td><Tag theme={item.status === 'approved' ? 'success' : item.status === 'reviewing' ? 'warning' : 'default'}>{item.status}</Tag></td>
                           <td>{item.deadline}</td>
                           <td>{item.operatedAt || '-'}</td>
+                          <td>{formatBusinessFields(item)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -629,12 +679,16 @@ function App() {
                       <td>{item.applicantName}</td>
                       <td>{item.orgName}</td>
                       <td>{item.branchName}</td>
-                      <td>{item.stepName}</td>
-                      <td>{item.deadline}</td>
-                      <td>
-                        <Space>
-                          <Button size="small" theme="success" onClick={() => doReview(item.applicantId, item.stepCode, 'approved')}>通过</Button>
-                          <Button size="small" theme="danger" variant="outline" onClick={() => doReview(item.applicantId, item.stepCode, 'rejected')}>退回</Button>
+                        <td>{item.stepName}</td>
+                        <td>{item.deadline}</td>
+                        <td>
+                          <Space>
+                            <Button size="small" variant="outline" onClick={() => {
+                              setSelectedApplicantId(item.applicantId);
+                              setActiveView('workflowDetail');
+                            }}>查看流程</Button>
+                            <Button size="small" theme="success" onClick={() => doReview(item.applicantId, item.stepCode, 'approved')}>通过</Button>
+                            <Button size="small" theme="danger" variant="outline" onClick={() => doReview(item.applicantId, item.stepCode, 'rejected')}>退回</Button>
                         </Space>
                       </td>
                     </tr>
@@ -653,8 +707,52 @@ function App() {
         {activeView === 'organizations' && (
           <div className="content-stack">
             <div className="split-grid">
-              <SimpleTableCard title="单位清单" columns={['单位名称']} rows={orgs.map((item) => [item.name])} compact={isMobile} />
-              <SimpleTableCard title="支部清单" columns={['支部名称', '所属单位']} rows={branches.map((item) => [item.name, orgs.find((org) => org.id === item.orgId)?.name || ''])} compact={isMobile} />
+              <Card title="单位维护">
+                <div className="filter-grid compact-grid">
+                  <Input value={orgForm.name} placeholder="单位名称" onChange={(value) => setOrgForm((prev) => ({ ...prev, name: value }))} />
+                </div>
+                <Space style={{ marginTop: 16 }}>
+                  <Button theme="danger" onClick={saveOrgRow}>{orgForm.id ? '保存单位' : '新增单位'}</Button>
+                  <Button variant="outline" onClick={() => setOrgForm(EMPTY_ORG_FORM)}>清空</Button>
+                </Space>
+                <div className="table-scroll" style={{ marginTop: 16 }}>
+                  <table className="data-table">
+                    <thead><tr><th>单位名称</th><th>操作</th></tr></thead>
+                    <tbody>
+                      {orgs.map((item) => (
+                        <tr key={item.id}>
+                          <td>{item.name}</td>
+                          <td><Button size="small" theme="danger" variant="outline" onClick={() => setOrgForm({ id: item.id, name: item.name })}>编辑</Button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+              <Card title="支部维护">
+                <div className="filter-grid compact-grid">
+                  <Input value={branchForm.name} placeholder="支部名称" onChange={(value) => setBranchForm((prev) => ({ ...prev, name: value }))} />
+                  <Select value={branchForm.orgId} onChange={(value) => setBranchForm((prev) => ({ ...prev, orgId: value || '' }))} options={orgs.map((item) => ({ label: item.name, value: item.id }))} clearable placeholder="所属单位" />
+                </div>
+                <Space style={{ marginTop: 16 }}>
+                  <Button theme="danger" onClick={saveBranchRow}>{branchForm.id ? '保存支部' : '新增支部'}</Button>
+                  <Button variant="outline" onClick={() => setBranchForm(EMPTY_BRANCH_FORM)}>清空</Button>
+                </Space>
+                <div className="table-scroll" style={{ marginTop: 16 }}>
+                  <table className="data-table">
+                    <thead><tr><th>支部名称</th><th>所属单位</th><th>操作</th></tr></thead>
+                    <tbody>
+                      {branches.map((item) => (
+                        <tr key={item.id}>
+                          <td>{item.name}</td>
+                          <td>{orgs.find((org) => org.id === item.orgId)?.name || ''}</td>
+                          <td><Button size="small" theme="danger" variant="outline" onClick={() => setBranchForm({ id: item.id, name: item.name, orgId: item.orgId })}>编辑</Button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
             </div>
             <Card title="预置人员管理">
               <div className="filter-grid">
@@ -866,6 +964,19 @@ function MetricCard({ title, value, desc, onClick }) {
       {content}
     </button>
   );
+}
+
+function formatBusinessFields(step) {
+  const fields = step.taskMeta?.businessFields || step.formSchema?.businessFields || [];
+  const values = step.formData?.businessFields || {};
+  const text = fields
+    .map((field) => {
+      const value = values[field.key] || step.formData?.[field.key] || '';
+      return value ? `${field.label}: ${value}` : '';
+    })
+    .filter(Boolean)
+    .join('；');
+  return text || '-';
 }
 
 function SimpleTableCard({ title, columns, rows, compact = false }) {

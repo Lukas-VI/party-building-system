@@ -19,6 +19,7 @@ function registerWorkflowRoutes(app, ctx) {
     assertWorkflowActor,
     nextTaskStatus,
     advanceAfterReview,
+    resolveReviewOutcome,
     ensureAdultApplicant,
     fileUrl,
     ALLOWED_REVIEW_STATUSES,
@@ -51,6 +52,15 @@ function registerWorkflowRoutes(app, ctx) {
       if (step.stepCode === 'STEP_01') {
         await ensureAdultApplicant(req.params.applicantId);
       }
+      const incomingFormData = req.body.formData || req.body || {};
+      const mergedFormData = {
+        ...step.formData,
+        ...incomingFormData,
+        businessFields: {
+          ...(step.formData?.businessFields || {}),
+          ...(incomingFormData.businessFields || {}),
+        },
+      };
       await query(
         `UPDATE workflow_step_records
          SET status = 'reviewing',
@@ -61,7 +71,7 @@ function registerWorkflowRoutes(app, ctx) {
              operated_at = :operatedAt
          WHERE id = :id`,
         {
-          formDataJson: JSON.stringify(req.body.formData || req.body || {}),
+          formDataJson: JSON.stringify(mergedFormData),
           reviewComment: req.body.reviewComment || '',
           operatorId: req.user.id,
           operatedAt: now(),
@@ -81,12 +91,23 @@ function registerWorkflowRoutes(app, ctx) {
       const workflow = await getWorkflowByApplicantId(req.params.applicantId);
       const step = workflow.steps.find((item) => item.stepCode === req.params.stepCode);
       assertWorkflowActor(req.user, req.params.applicantId, workflow, step, 'review');
-      const nextStatus = req.body.status || 'approved';
-      if (!ALLOWED_REVIEW_STATUSES.has(nextStatus)) return fail(res, 400, '审核状态不合法');
+      const requestedStatus = req.body.status || 'approved';
+      if (!ALLOWED_REVIEW_STATUSES.has(requestedStatus)) return fail(res, 400, '审核状态不合法');
+      const incomingFormData = req.body.formData || {};
+      const mergedFormData = {
+        ...step.formData,
+        ...incomingFormData,
+        businessFields: {
+          ...(step.formData?.businessFields || {}),
+          ...(incomingFormData.businessFields || {}),
+        },
+      };
+      const nextStatus = resolveReviewOutcome(step, requestedStatus, mergedFormData);
       await query(
         `UPDATE workflow_step_records
          SET status = :status,
              task_status = :taskStatus,
+             form_data_json = :formDataJson,
              review_comment = :reviewComment,
              last_operator_id = :operatorId,
              operated_at = :operatedAt,
@@ -95,6 +116,7 @@ function registerWorkflowRoutes(app, ctx) {
         {
           status: nextStatus,
           taskStatus: nextTaskStatus(nextStatus),
+          formDataJson: JSON.stringify(mergedFormData),
           reviewComment: req.body.comment || '',
           operatorId: req.user.id,
           operatedAt: now(),
@@ -102,7 +124,7 @@ function registerWorkflowRoutes(app, ctx) {
           id: step.id,
         },
       );
-      await advanceAfterReview(workflow, step, nextStatus);
+      await advanceAfterReview(workflow, step, nextStatus, mergedFormData);
       await logAudit('workflow_step_records', step.id, 'review_step', req.user.id, req.body);
       ok(res, true, '审核结果已保存');
     } catch (error) {

@@ -22,6 +22,7 @@ function registerMobileRoutes(app, ctx) {
     assertWorkflowActor,
     nextTaskStatus,
     advanceAfterReview,
+    resolveReviewOutcome,
     listMobileTodos,
     listNotifications,
     getNotificationForUser,
@@ -192,8 +193,8 @@ function registerMobileRoutes(app, ctx) {
       const workflow = await getWorkflowByApplicantId(applicantId);
       const step = workflow.steps.find((item) => item.stepCode === req.params.taskId);
       assertWorkflowActor(req.user, applicantId, workflow, step, 'review');
-      const nextStatus = req.body.status || 'approved';
-      if (!ALLOWED_REVIEW_STATUSES.has(nextStatus)) return fail(res, 400, '审核状态不合法');
+      const requestedStatus = req.body.status || 'approved';
+      if (!ALLOWED_REVIEW_STATUSES.has(requestedStatus)) return fail(res, 400, '审核状态不合法');
       const incomingFormData = req.body.formData || {};
       const mergedFormData = {
         ...step.formData,
@@ -203,6 +204,7 @@ function registerMobileRoutes(app, ctx) {
           ...(incomingFormData.businessFields || {}),
         },
       };
+      const nextStatus = resolveReviewOutcome(step, requestedStatus, mergedFormData);
       await query(
         `UPDATE workflow_step_records
          SET status = :status,
@@ -224,7 +226,7 @@ function registerMobileRoutes(app, ctx) {
           id: step.id,
         },
       );
-      await advanceAfterReview(workflow, step, nextStatus);
+      await advanceAfterReview(workflow, step, nextStatus, mergedFormData);
       await logAudit('workflow_step_records', step.id, 'mobile_review_task', req.user.id, req.body || {});
       await createNotification(
         applicantId,

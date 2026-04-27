@@ -253,6 +253,18 @@ textarea {
   color: var(--accent-strong);
 }
 
+.step-order {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .task-hero__meta,
 .task-hero__foot {
   margin-top: 6px;

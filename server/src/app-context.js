@@ -930,15 +930,36 @@ function assertWorkflowActor(user, applicantId, workflow, step, action) {
  */
 function nextTaskStatus(status) {
   if (status === 'approved') return 'done';
+  if (status === 'pending') return 'open';
   if (status === 'rejected') return 'blocked';
+  if (status === 'terminated') return 'blocked';
   return 'in_review';
 }
 
 /**
  * Open the next MVP step after approval or relock later unfinished steps after rejection.
  */
-async function advanceAfterReview(workflow, step, nextStatus) {
+async function advanceAfterReview(workflow, step, nextStatus, formData = {}) {
+  const applicantId = workflow.instance?.applicantId;
   if (nextStatus === 'approved') {
+    const nextStage = {
+      STEP_03: '入党积极分子',
+      STEP_07: '发展对象',
+    }[step.stepCode];
+    if (nextStage && applicantId) {
+      await query(
+        `UPDATE applicant_profiles
+         SET current_stage = :currentStage, updated_at = :updatedAt
+         WHERE user_id = :applicantId`,
+        { currentStage: nextStage, updatedAt: now(), applicantId },
+      );
+      await query(
+        `UPDATE workflow_instances
+         SET current_stage = :currentStage, updated_at = :updatedAt
+         WHERE applicant_id = :applicantId`,
+        { currentStage: nextStage, updatedAt: now(), applicantId },
+      );
+    }
     const nextStep = workflow.steps
       .filter((item) => isMvpStep(item) && Number(item.sortOrder || 0) > Number(step.sortOrder || 0))
       .sort((left, right) => Number(left.sortOrder || 0) - Number(right.sortOrder || 0))[0];
@@ -952,7 +973,7 @@ async function advanceAfterReview(workflow, step, nextStatus) {
     }
     return;
   }
-  if (nextStatus === 'rejected') {
+  if (['pending', 'rejected', 'terminated'].includes(nextStatus)) {
     const laterSteps = workflow.steps.filter((item) => isMvpStep(item) && Number(item.sortOrder || 0) > Number(step.sortOrder || 0) && item.status !== 'approved');
     for (const item of laterSteps) {
       await query(
@@ -962,7 +983,26 @@ async function advanceAfterReview(workflow, step, nextStatus) {
         { id: item.id },
       );
     }
+    const shouldMarkStopped = nextStatus === 'terminated' || formData?.businessFields?.activistDecision === '暂不确定';
+    if (shouldMarkStopped && applicantId) {
+      await query(
+        `UPDATE workflow_instances
+         SET current_stage = :currentStage, updated_at = :updatedAt
+         WHERE applicant_id = :applicantId`,
+        { currentStage: '暂缓发展', updatedAt: now(), applicantId },
+      );
+    }
   }
+}
+
+function resolveReviewOutcome(step, requestedStatus, formData = {}) {
+  if (requestedStatus !== 'approved') return requestedStatus;
+  const fields = formData.businessFields || {};
+  if (step.stepCode === 'STEP_03' && fields.activistDecision === '暂不确定') return 'pending';
+  if (step.stepCode === 'STEP_09' && fields.politicalReviewResult === '不合格') return 'pending';
+  if (step.stepCode === 'STEP_11' && String(fields.branchReviewResult || '').startsWith('不合格')) return 'pending';
+  if (step.stepCode === 'STEP_12' && fields.committeePreReviewResult === '不同意发展') return 'pending';
+  return requestedStatus;
 }
 
 /**
@@ -1012,6 +1052,8 @@ function buildTodoItem(user, applicant, workflow, step) {
     applicantId: applicant.userId || applicant.id,
     applicantName: applicant.name,
     stepCode: step.stepCode,
+    sortOrder: step.sortOrder || stepOrder(step.stepCode),
+    orderLabel: `${step.sortOrder || stepOrder(step.stepCode) || ''}. `,
     stepName: step.name,
     phase: step.phase,
     status: step.status,
@@ -1473,6 +1515,7 @@ module.exports = {
   assertWorkflowActor,
   nextTaskStatus,
   advanceAfterReview,
+  resolveReviewOutcome,
   mobileTaskStatus,
   mobileReviewState,
   buildTodoItem,

@@ -209,6 +209,7 @@ onMounted(loadWorkflow);
           <span class="status-card__mark">{{ currentTask.reviewIcon }}</span>
           <div class="task-hero__top">
             <div>
+              <div class="step-order">{{ currentTask.orderLabel }}</div>
               <div class="task-hero__title">{{ currentTask.stepName }}</div>
               <div class="task-hero__meta">{{ currentTask.phase }} · {{ currentTask.taskOwner }}</div>
             </div>

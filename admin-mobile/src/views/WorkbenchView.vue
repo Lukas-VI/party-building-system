@@ -38,7 +38,11 @@ function openAction(item) {
     router.push({ name: item.routeName, params: item.routeParams || {}, query: item.routeQuery || {} });
     return;
   }
-  router.push(item.route);
+  if (item.route) {
+    router.push(item.route).catch(() => {
+      window.location.hash = `#${item.route}`;
+    });
+  }
 }
 
 function openTask(task) {

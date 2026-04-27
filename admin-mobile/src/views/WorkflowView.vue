@@ -71,6 +71,7 @@ onMounted(loadWorkflow);
           <span class="status-card__mark">{{ currentTask.reviewIcon }}</span>
           <div class="task-hero__top">
             <div>
+              <div class="step-order">{{ currentTask.orderLabel }}</div>
               <div class="task-hero__title">{{ currentTask.stepName }}</div>
               <div class="task-hero__meta">{{ currentTask.taskOwner }} · {{ currentTask.currentStage }}</div>
             </div>
@@ -102,6 +103,7 @@ onMounted(loadWorkflow);
             <span class="status-card__mark">{{ item.reviewIcon }}</span>
             <div class="step-item__head">
               <div>
+                <div class="step-order">{{ item.orderLabel }}</div>
                 <div class="step-item__name">{{ item.stepName }}</div>
                 <div class="step-item__meta">{{ item.phase }}</div>
               </div>
@@ -124,6 +126,7 @@ onMounted(loadWorkflow);
             <span class="status-card__mark">{{ item.reviewIcon }}</span>
             <div class="step-item__head">
               <div>
+                <div class="step-order">{{ item.orderLabel }}</div>
                 <div class="step-item__name">{{ item.stepName }}</div>
                 <div class="step-item__meta">{{ item.phase }}</div>
               </div>

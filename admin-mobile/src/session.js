@@ -58,7 +58,7 @@ export function primaryRoleLabel(user) {
 export function workbenchActions(user) {
   if (isApplicant(user)) {
     return [
-      { title: '我的流程', desc: '查看当前步骤、已完成步骤和后续要求', routeName: 'workflow', routeParams: { workflowId: 'me' } },
+      { title: '我的流程', desc: '查看当前步骤、已完成步骤和后续要求', route: '/workflow/me' },
       { title: '我的资料', desc: '维护基础信息、本人经历和关键联系方式', route: '/profile/edit' },
     ];
   }

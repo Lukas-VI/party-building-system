@@ -75,9 +75,79 @@ function registerOrgRoutes(app, ctx) {
     }
   });
 
+  app.post('/api/orgs', requireAuth(), requirePermission('manage_orgs'), async (req, res) => {
+    try {
+      const name = String(req.body?.name || '').trim();
+      if (!name) return fail(res, 400, '请输入单位名称');
+      const id = String(req.body?.id || '').trim() || `org-${crypto.randomUUID()}`;
+      const existing = await first('SELECT id FROM org_units WHERE id = :id OR name = :name LIMIT 1', { id, name });
+      if (existing) return fail(res, 400, '单位ID或名称已存在');
+      await query('INSERT INTO org_units (id, name) VALUES (:id, :name)', { id, name });
+      await logAudit('org_units', id, 'create_org', req.user.id, { id, name });
+      ok(res, { id }, '单位已新增');
+    } catch (error) {
+      fail(res, 500, error.message);
+    }
+  });
+
+  app.put('/api/orgs/:id', requireAuth(), requirePermission('manage_orgs'), async (req, res) => {
+    try {
+      const name = String(req.body?.name || '').trim();
+      if (!name) return fail(res, 400, '请输入单位名称');
+      const org = await first('SELECT id FROM org_units WHERE id = :id', { id: req.params.id });
+      if (!org) return fail(res, 404, '未找到单位');
+      const duplicate = await first('SELECT id FROM org_units WHERE name = :name AND id <> :id LIMIT 1', { id: req.params.id, name });
+      if (duplicate) return fail(res, 400, '单位名称已存在');
+      await query('UPDATE org_units SET name = :name WHERE id = :id', { id: req.params.id, name });
+      await logAudit('org_units', req.params.id, 'update_org', req.user.id, { name });
+      ok(res, true, '单位已保存');
+    } catch (error) {
+      fail(res, 500, error.message);
+    }
+  });
+
   app.get('/api/branches', requireAuth(), async (req, res) => {
     try {
       ok(res, await query('SELECT id, name, org_id AS orgId FROM branches ORDER BY name ASC'));
+    } catch (error) {
+      fail(res, 500, error.message);
+    }
+  });
+
+  app.post('/api/branches', requireAuth(), requirePermission('manage_orgs'), async (req, res) => {
+    try {
+      const name = String(req.body?.name || '').trim();
+      const orgId = String(req.body?.orgId || '').trim();
+      if (!name) return fail(res, 400, '请输入支部名称');
+      if (!orgId) return fail(res, 400, '请选择所属单位');
+      const org = await first('SELECT id FROM org_units WHERE id = :orgId', { orgId });
+      if (!org) return fail(res, 400, '未找到所属单位');
+      const id = String(req.body?.id || '').trim() || `branch-${crypto.randomUUID()}`;
+      const existing = await first('SELECT id FROM branches WHERE id = :id OR name = :name LIMIT 1', { id, name });
+      if (existing) return fail(res, 400, '支部ID或名称已存在');
+      await query('INSERT INTO branches (id, org_id, name) VALUES (:id, :orgId, :name)', { id, orgId, name });
+      await logAudit('branches', id, 'create_branch', req.user.id, { id, orgId, name });
+      ok(res, { id }, '支部已新增');
+    } catch (error) {
+      fail(res, 500, error.message);
+    }
+  });
+
+  app.put('/api/branches/:id', requireAuth(), requirePermission('manage_orgs'), async (req, res) => {
+    try {
+      const name = String(req.body?.name || '').trim();
+      const orgId = String(req.body?.orgId || '').trim();
+      if (!name) return fail(res, 400, '请输入支部名称');
+      if (!orgId) return fail(res, 400, '请选择所属单位');
+      const branch = await first('SELECT id FROM branches WHERE id = :id', { id: req.params.id });
+      if (!branch) return fail(res, 404, '未找到支部');
+      const org = await first('SELECT id FROM org_units WHERE id = :orgId', { orgId });
+      if (!org) return fail(res, 400, '未找到所属单位');
+      const duplicate = await first('SELECT id FROM branches WHERE name = :name AND id <> :id LIMIT 1', { id: req.params.id, name });
+      if (duplicate) return fail(res, 400, '支部名称已存在');
+      await query('UPDATE branches SET name = :name, org_id = :orgId WHERE id = :id', { id: req.params.id, orgId, name });
+      await logAudit('branches', req.params.id, 'update_branch', req.user.id, { orgId, name });
+      ok(res, true, '支部已保存');
     } catch (error) {
       fail(res, 500, error.message);
     }
