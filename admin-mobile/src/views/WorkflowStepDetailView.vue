@@ -207,8 +207,8 @@ onMounted(loadWorkflow);
       <div class="section-card__bd" v-if="currentTask">
         <div class="task-hero task-hero--static status-card" :class="currentTask.reviewClassName">
           <span class="status-card__mark">{{ currentTask.reviewIcon }}</span>
-          <div class="task-hero__top">
-            <div>
+          <div class="status-card__content">
+            <div class="status-card__main">
               <div class="step-order">{{ currentTask.orderLabel }}</div>
               <div class="task-hero__title">{{ currentTask.stepName }}</div>
               <div class="task-hero__meta">{{ currentTask.phase }} · {{ currentTask.taskOwner }}</div>
@@ -217,11 +217,14 @@ onMounted(loadWorkflow);
               <span class="status-chip__icon">{{ currentTask.reviewIcon }}</span>{{ currentTask.reviewLabel }}
             </span>
           </div>
-          <div class="step-time-row">
-            <span>开始：{{ displayTime(currentTask.startAt) }}</span>
-            <span>结束：{{ displayTime(currentTask.endAt || currentTask.deadline) }}</span>
+          <div class="status-card__footer">
+            <div class="step-time-row">
+              <span>开始 {{ displayTime(currentTask.startAt) }}</span>
+              <span>截止 {{ displayTime(currentTask.endAt || currentTask.deadline) }}</span>
+            </div>
+            <span class="due-pill" :class="{ 'is-overdue': currentTask.isOverdue }">{{ currentTask.remainingLabel }}</span>
           </div>
-          <div class="task-hero__body">{{ currentTask.summary }}</div>
+          <div class="status-card__summary">{{ currentTask.summary }}</div>
           <div class="task-hero__body" v-if="currentTask.blessingText">{{ currentTask.blessingText }}</div>
         </div>
       </div>

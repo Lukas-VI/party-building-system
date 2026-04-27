@@ -69,19 +69,23 @@ onMounted(loadWorkflow);
       <div class="section-card__bd">
         <button class="task-hero status-card" :class="currentTask.reviewClassName" type="button" @click="openStep(currentTask)">
           <span class="status-card__mark">{{ currentTask.reviewIcon }}</span>
-          <div class="task-hero__top">
-            <div>
+          <div class="status-card__content">
+            <div class="status-card__main">
               <div class="step-order">{{ currentTask.orderLabel }}</div>
               <div class="task-hero__title">{{ currentTask.stepName }}</div>
-              <div class="task-hero__meta">{{ currentTask.taskOwner }} · {{ currentTask.currentStage }}</div>
+              <div class="task-hero__meta">{{ currentTask.phase }} · {{ currentTask.taskOwner }} · {{ currentTask.currentStage }}</div>
             </div>
             <span class="status-chip" :class="currentTask.reviewClassName">
               <span class="status-chip__icon">{{ currentTask.reviewIcon }}</span>{{ currentTask.reviewLabel }}
             </span>
           </div>
-          <div class="step-time-row">
-            <span>开始：{{ displayTime(currentTask.startAt) }}</span>
-            <span>结束：{{ displayTime(currentTask.endAt || currentTask.deadline) }}</span>
+          <div class="status-card__summary" v-if="currentTask.summary">{{ currentTask.summary }}</div>
+          <div class="status-card__footer">
+            <div class="step-time-row">
+              <span>开始 {{ displayTime(currentTask.startAt) }}</span>
+              <span>截止 {{ displayTime(currentTask.endAt || currentTask.deadline) }}</span>
+            </div>
+            <span class="due-pill" :class="{ 'is-overdue': currentTask.isOverdue }">{{ currentTask.remainingLabel }}</span>
           </div>
           <div class="task-hero__body" v-if="currentTask.blessingText">{{ currentTask.blessingText }}</div>
           <div class="task-hero__foot">
@@ -101,21 +105,24 @@ onMounted(loadWorkflow);
         <div class="step-list" v-if="unfinishedSteps.length">
           <button v-for="item in unfinishedSteps" :key="item.taskId" type="button" class="step-item status-card" :class="item.reviewClassName" @click="openStep(item)">
             <span class="status-card__mark">{{ item.reviewIcon }}</span>
-            <div class="step-item__head">
-              <div>
+            <div class="status-card__content">
+              <div class="status-card__main">
                 <div class="step-order">{{ item.orderLabel }}</div>
                 <div class="step-item__name">{{ item.stepName }}</div>
-                <div class="step-item__meta">{{ item.phase }}</div>
+                <div class="step-item__meta">{{ item.phase }} · {{ item.taskOwner }}</div>
               </div>
               <span class="status-chip" :class="item.reviewClassName">
                 <span class="status-chip__icon">{{ item.reviewIcon }}</span>{{ item.reviewLabel }}
               </span>
             </div>
-            <div class="step-time-row">
-              <span>开始：{{ displayTime(item.startAt) }}</span>
-              <span>结束：{{ displayTime(item.endAt || item.deadline) }}</span>
+            <div class="status-card__summary">{{ item.summary }}</div>
+            <div class="status-card__footer">
+              <div class="step-time-row">
+                <span>开始 {{ displayTime(item.startAt) }}</span>
+                <span>截止 {{ displayTime(item.endAt || item.deadline) }}</span>
+              </div>
+              <span class="due-pill" :class="{ 'is-overdue': item.isOverdue }">{{ item.remainingLabel }}</span>
             </div>
-            <div class="step-item__meta">{{ item.summary }}</div>
             <div class="step-item__meta" v-if="item.uploadRequired">需提交材料，可点开查看或上传。</div>
           </button>
         </div>
@@ -124,19 +131,22 @@ onMounted(loadWorkflow);
         <div class="step-list" v-if="completedSteps.length">
           <button class="step-item status-card" :class="item.reviewClassName" v-for="item in completedSteps" :key="item.stepCode" type="button" @click="openStep(item)">
             <span class="status-card__mark">{{ item.reviewIcon }}</span>
-            <div class="step-item__head">
-              <div>
+            <div class="status-card__content">
+              <div class="status-card__main">
                 <div class="step-order">{{ item.orderLabel }}</div>
                 <div class="step-item__name">{{ item.stepName }}</div>
-                <div class="step-item__meta">{{ item.phase }}</div>
+                <div class="step-item__meta">{{ item.phase }} · {{ item.taskOwner }}</div>
               </div>
               <span class="status-chip" :class="item.reviewClassName">
                 <span class="status-chip__icon">{{ item.reviewIcon }}</span>{{ item.reviewLabel }}
               </span>
             </div>
-            <div class="step-time-row">
-              <span>开始：{{ displayTime(item.startAt) }}</span>
-              <span>结束：{{ displayTime(item.endAt || item.deadline) }}</span>
+            <div class="status-card__footer">
+              <div class="step-time-row">
+                <span>开始 {{ displayTime(item.startAt) }}</span>
+                <span>截止 {{ displayTime(item.endAt || item.deadline) }}</span>
+              </div>
+              <span class="due-pill">{{ item.remainingLabel }}</span>
             </div>
             <div class="step-item__meta">{{ item.operatedAt || '暂无时间记录' }} · {{ item.lastOperatorName || '系统记录' }}</div>
             <div class="step-item__meta">点击查看节点详情</div>

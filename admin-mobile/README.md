@@ -16,6 +16,30 @@ npm run build
 npm run preview:1919
 ```
 
+## 组件预览与样式微调
+
+本项目接入 `Storybook + Vue 3 + Vite` 作为移动端组件预览工具，用于隔离调试流程卡片、消息卡片等界面部件。它比在业务页面中临时加调试路由更符合组件驱动开发方式。
+
+```bash
+npm run storybook
+```
+
+访问：
+
+```text
+http://localhost:6006
+```
+
+当前已提供 `Mobile/Workflow Cards`，可同时预览待处理、未开放、已通过、未通过等状态。修改 `src/style.css` 后，Storybook 会热更新。
+
+构建静态 Storybook：
+
+```bash
+npm run build-storybook
+```
+
+`storybook-static/` 是构建产物，已加入忽略规则，不纳入版本库。
+
 默认挂载路径：
 - `/wx-app/`
 

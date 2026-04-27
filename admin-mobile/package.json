@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "dev:1919": "vite --host 0.0.0.0 --port 1919",
+    "storybook": "storybook dev -p 6006 --host 0.0.0.0",
+    "build-storybook": "storybook build",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0 --port 1919",
     "preview:1919": "node scripts/serve-preview.mjs"
@@ -17,7 +19,9 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
+    "@storybook/vue3-vite": "^10.3.5",
     "@vitejs/plugin-vue": "^6.0.5",
+    "storybook": "^10.3.5",
     "vite": "^8.0.4"
   }
 }

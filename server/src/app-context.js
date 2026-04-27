@@ -1033,6 +1033,23 @@ function mobileReviewState(step) {
   return { code: 'pending', icon: '○', label: step.statusText || '待处理', className: 'is-pending' };
 }
 
+function daysUntil(value) {
+  if (!value) return null;
+  const due = new Date(value);
+  if (Number.isNaN(due.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  return Math.ceil((due.getTime() - today.getTime()) / 86400000);
+}
+
+function remainingLabel(days) {
+  if (days === null || days === undefined) return '未设时限';
+  if (days < 0) return `已超期${Math.abs(days)}天`;
+  if (days === 0) return '今日截止';
+  return `剩余${days}天`;
+}
+
 // 移动端待办对象在这里统一组装，页面层只消费结果，不再自行拼装流程规则。
 /**
  * Build the mobile task card shape from workflow, applicant and actor state.
@@ -1046,6 +1063,8 @@ function buildTodoItem(user, applicant, workflow, step) {
   const actionKind = uploadRequired ? 'upload' : (canReview ? 'review' : (canSubmit ? 'submit' : 'notice'));
   const isCompleted = step.status === 'approved';
   const reviewState = mobileReviewState(step);
+  const dueAt = step.endAt || step.deadline || null;
+  const remainingDays = daysUntil(dueAt);
   return {
     workflowId: applicant.userId || applicant.id,
     taskId: step.stepCode,
@@ -1087,6 +1106,10 @@ function buildTodoItem(user, applicant, workflow, step) {
     startAt: step.startAt,
     endAt: step.endAt,
     deadline: step.deadline,
+    dueAt,
+    remainingDays,
+    remainingLabel: remainingLabel(remainingDays),
+    isOverdue: remainingDays !== null && remainingDays < 0 && !['approved', 'locked'].includes(step.status),
     operatedAt: step.operatedAt,
     confirmedAt: step.confirmedAt,
     reviewComment: step.reviewComment,
@@ -1518,6 +1541,8 @@ module.exports = {
   resolveReviewOutcome,
   mobileTaskStatus,
   mobileReviewState,
+  daysUntil,
+  remainingLabel,
   buildTodoItem,
   listMobileTodos,
   listNotifications,
