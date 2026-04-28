@@ -115,7 +115,7 @@ onMounted(loadData);
 
     <section class="section-card" v-if="nextTask">
       <div class="section-card__hd">
-        <div class="section-card__title">下一项重点任务</div>
+        <div class="section-card__title">下一步:</div>
       </div>
       <div class="section-card__bd">
         <button type="button" class="workflow-card status-card" :class="nextTask.reviewClassName || `is-${nextTask.status}`" @click="openTask(nextTask)">
