@@ -89,12 +89,7 @@ onMounted(loadWorkflow);
           <van-icon :name="currentTask.reviewIcon" class="status-card__mark" />
           <div class="status-card__content">
             <div class="status-card__main">
-              <div class="step-order">
-                {{ currentTask.orderLabel }}
-                <span class="status-chip" :class="currentTask.reviewClassName">
-                  <van-icon :name="currentTask.reviewIcon" class="status-chip__icon" size="12" />{{ currentTask.reviewLabel }}
-                </span>              
-              </div>
+              <div class="step-order">{{ currentTask.orderLabel }}</div>
               <div class="workflow-card__title">{{ currentTask.stepName }}</div>
               <div class="workflow-card__meta">{{ currentTask.phase }} · {{ currentTask.taskOwner }} · {{ currentTask.currentStage }}</div>
             </div>
@@ -102,8 +97,11 @@ onMounted(loadWorkflow);
           <div class="status-card__summary" v-if="currentTask.summary">{{ currentTask.summary }}</div>
           <div class="status-card__footer">
             <div class="step-time-row">
-              <span>开始: {{ displayTime(currentTask.startAt) }} ~ 截止: {{ displayTime(currentTask.endAt || currentTask.deadline) }}</span>
+              <span>开始: {{ displayTime(currentTask.startAt) }} 截止: {{ displayTime(currentTask.endAt || currentTask.deadline) }}</span>
             </div>
+            <span class="status-chip" :class="currentTask.reviewClassName">
+              <van-icon :name="currentTask.reviewIcon" class="status-chip__icon" size="12" />{{ currentTask.reviewLabel }}
+            </span>     
             <span class="due-pill" :class="{ 'is-overdue': currentTask.isOverdue }">{{ currentTask.remainingLabel }}</span>
           </div>
           <div class="workflow-card__body" v-if="currentTask.blessingText">{{ currentTask.blessingText }}</div>
