@@ -310,7 +310,7 @@ textarea:focus-visible {
 }
 
 .status-card.is-not-started .status-card__mark {
-  color: rgba(99, 84, 72, 0.22);
+  color: rgba(160, 156, 153, 0.22);
 }
 
 .status-card.is-pending .status-card__mark {
@@ -409,7 +409,7 @@ textarea:focus-visible {
   padding: 10px 12px;
   /* 保持与 .due-pill 同高度并垂直居中 */
   min-height: 34px;
-  
+
     /* 不换行 */
   white-space: nowrap;
 
