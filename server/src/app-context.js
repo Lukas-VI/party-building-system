@@ -1733,7 +1733,10 @@ async function reviewWorkflowTask(user, applicantId, stepCode, payload = {}, aud
  * Build a public upload URL from a multer storage filename.
  */
 function fileUrl(fileName) {
-  return `${env.PUBLIC_BASE_URL.replace(/\/$/, '')}/uploads/${fileName}`;
+  const publicBase = env.PUBLIC_BASE_URL.replace(/\/$/, '');
+  return /(^|_)uploads$/i.test(publicBase) || /\/uploads$/i.test(publicBase)
+    ? `${publicBase}/${fileName}`
+    : `${publicBase}/uploads/${fileName}`;
 }
 
 // Material validation is intentionally server-side. Frontend accept attributes
