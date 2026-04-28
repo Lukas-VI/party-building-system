@@ -142,7 +142,7 @@ onMounted(loadWorkflow);
             <div class="status-card__summary">{{ item.summary }}</div>
             <div class="status-card__footer">
               <div class="step-time-row">
-                <span>开始 {{ displayTime(item.startAt) }}</span> ~ 截止 {{ displayTime(item.endAt || item.deadline) }}</span>
+                <span>开始 {{ displayTime(item.startAt) }} ~ 截止 {{ displayTime(item.endAt || item.deadline) }}</span>
               </div>
               <span class="due-pill" :class="{ 'is-overdue': item.isOverdue }">{{ item.remainingLabel }}</span>
             </div>
