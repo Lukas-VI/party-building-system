@@ -1022,15 +1022,15 @@ function mobileTaskStatus(step) {
  */
 function mobileReviewState(step) {
   if (step.status === 'approved') {
-    return { code: 'approved', icon: '√', label: '已通过', className: 'is-approved' };
+    return { code: 'approved', icon: 'passed', label: '已通过', className: 'is-approved' };
   }
   if (step.status === 'rejected' || step.status === 'terminated') {
-    return { code: 'rejected', icon: '×', label: '未通过', className: 'is-rejected' };
+    return { code: 'rejected', icon: 'close', label: '未通过', className: 'is-rejected' };
   }
   if (step.status === 'locked') {
-    return { code: 'not-started', icon: '⊘', label: '未开放', className: 'is-not-started' };
+    return { code: 'not-started', icon: 'stop-circle-o', label: '未开放', className: 'is-not-started' };
   }
-  return { code: 'pending', icon: '○', label: step.statusText || '待处理', className: 'is-pending' };
+  return { code: 'pending', icon: 'clock-o', label: step.statusText || '待处理', className: 'is-pending' };
 }
 
 function daysUntil(value) {

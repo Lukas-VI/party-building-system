@@ -67,7 +67,7 @@ onMounted(loadDetail);
 
     <section class="section-card">
       <div class="section-card__hd">
-        <div class="section-card__title">二十五步流程</div>
+        <div class="section-card__title">二十几步流程</div>
       </div>
       <div class="section-card__bd">
         <div class="step-list" v-if="stepRows.length">

@@ -101,16 +101,20 @@ onMounted(loadData);
         <div class="section-card__title">下一项重点任务</div>
       </div>
       <div class="section-card__bd">
-        <button type="button" class="task-hero" @click="openTask(nextTask)">
-          <div class="task-hero__top">
-            <div>
-              <div class="task-hero__title">{{ nextTask.stepName }}</div>
-              <div class="task-hero__meta">{{ nextTask.phase }} · {{ nextTask.taskOwner }}</div>
+        <button type="button" class="workflow-card status-card" :class="nextTask.reviewClassName || `is-${nextTask.status}`" @click="openTask(nextTask)">
+          <van-icon :name="nextTask.reviewIcon || 'clock-o'" class="status-card__mark" />
+          <div class="status-card__content">
+            <div class="status-card__main">
+              <div class="step-order">{{ nextTask.orderLabel || '下一步' }}</div>
+              <div class="workflow-card__title">{{ nextTask.stepName }}</div>
+              <div class="workflow-card__meta">{{ nextTask.phase }} · {{ nextTask.taskOwner }}</div>
             </div>
-            <span class="status-chip" :class="`is-${nextTask.status}`">{{ nextTask.statusText }}</span>
+            <span class="status-chip" :class="nextTask.reviewClassName || `is-${nextTask.status}`">
+              <van-icon :name="nextTask.reviewIcon || 'clock-o'" class="status-chip__icon" size="12" />{{ nextTask.reviewLabel || nextTask.statusText }}
+            </span>
           </div>
-          <div class="task-hero__body">{{ nextTask.summary }}</div>
-          <div class="task-hero__foot">
+          <div class="status-card__summary">{{ nextTask.summary }}</div>
+          <div class="workflow-card__foot">
             <span>{{ nextTask.applicantName || '本人流程' }}</span>
             <span>{{ nextTask.currentStage }}</span>
           </div>

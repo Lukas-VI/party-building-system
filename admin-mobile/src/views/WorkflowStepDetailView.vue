@@ -205,27 +205,26 @@ onMounted(loadWorkflow);
         </div>
       </div>
       <div class="section-card__bd" v-if="currentTask">
-        <div class="task-hero task-hero--static status-card" :class="currentTask.reviewClassName">
-          <span class="status-card__mark">{{ currentTask.reviewIcon }}</span>
+        <div class="workflow-card workflow-card--static status-card" :class="currentTask.reviewClassName">
+          <van-icon :name="currentTask.reviewIcon" class="status-card__mark" />
           <div class="status-card__content">
             <div class="status-card__main">
               <div class="step-order">{{ currentTask.orderLabel }}</div>
-              <div class="task-hero__title">{{ currentTask.stepName }}</div>
-              <div class="task-hero__meta">{{ currentTask.phase }} · {{ currentTask.taskOwner }}</div>
+              <div class="workflow-card__title">{{ currentTask.stepName }}</div>
+              <div class="workflow-card__meta">{{ currentTask.phase }} · {{ currentTask.taskOwner }}</div>
             </div>
             <span class="status-chip" :class="currentTask.reviewClassName">
-              <span class="status-chip__icon">{{ currentTask.reviewIcon }}</span>{{ currentTask.reviewLabel }}
+              <van-icon :name="currentTask.reviewIcon" class="status-chip__icon" size="12" />{{ currentTask.reviewLabel }}
             </span>
           </div>
           <div class="status-card__footer">
             <div class="step-time-row">
-              <span>开始 {{ displayTime(currentTask.startAt) }}</span>
-              <span>截止 {{ displayTime(currentTask.endAt || currentTask.deadline) }}</span>
+              <span>开始 {{ displayTime(currentTask.startAt) }} ~ 截止 {{ displayTime(currentTask.endAt || currentTask.deadline) }}</span>
             </div>
             <span class="due-pill" :class="{ 'is-overdue': currentTask.isOverdue }">{{ currentTask.remainingLabel }}</span>
           </div>
           <div class="status-card__summary">{{ currentTask.summary }}</div>
-          <div class="task-hero__body" v-if="currentTask.blessingText">{{ currentTask.blessingText }}</div>
+          <div class="workflow-card__body" v-if="currentTask.blessingText">{{ currentTask.blessingText }}</div>
         </div>
       </div>
       <div class="empty-state" v-else-if="!loading">未找到该流程节点。</div>

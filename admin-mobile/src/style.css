@@ -92,45 +92,64 @@ textarea:focus-visible {
 }
 
 .section-card {
+  /* 底部外边距 */
   margin-bottom: 14px;
+  /* 无边框 */
   border: 0;
+  /* 圆角 */
   border-radius: 28px;
+  /* 背景色 */
   background: rgba(255, 253, 249, 0.92);
+  /* 阴影 */
   box-shadow: var(--shadow-card);
+  /* 溢出可见 */
   overflow: visible;
 }
 
 .section-card__hd {
+  /* 内边距 */
   padding: 16px 18px 8px;
 }
 
 .section-card__title {
+  /* 字体大小 */
   font-size: 18px;
+  /* 字体粗细 */
   font-weight: 800;
+  /* 字母间距 */
   letter-spacing: -0.01em;
+  /* 颜色 */
   color: var(--accent-strong);
 }
 
 .section-card__title--sub {
+  /* 外边距 */
   margin: 12px 0 10px;
+  /* 字体大小 */
   font-size: 15px;
 }
 
 .section-card__desc {
+  /* 顶部外边距 */
   margin-top: 4px;
+  /* 字体大小 */
   font-size: 13px;
+  /* 颜色 */
   color: var(--text-subtle);
 }
 
 .section-card__bd {
+  /* 内边距 */
   padding: 0 18px 18px;
 }
 
 .section-card__bd--flush {
+  /* 内边距为0 */
   padding: 0;
 }
 
 .section-card--compact .section-card__hd {
+  /* 底部内边距 */
   padding-bottom: 10px;
 }
 
@@ -207,6 +226,7 @@ textarea:focus-visible {
   color: var(--text-subtle);
 }
 
+.workflow-card,
 .task-hero {
   width: 100%;
   display: block;
@@ -221,25 +241,34 @@ textarea:focus-visible {
   cursor: pointer;
 }
 
+.workflow-card {
+  min-height: 158px;
+}
+
+.workflow-card--static,
 .task-hero--static {
   margin-bottom: 12px;
 }
 
+.workflow-card.is-approved,
 .task-hero.is-approved,
 .step-item.is-approved {
   background: #ddf8e7;
 }
 
+.workflow-card.is-rejected,
 .task-hero.is-rejected,
 .step-item.is-rejected {
   background: #ffe1e5;
 }
 
+.workflow-card.is-not-started,
 .task-hero.is-not-started,
 .step-item.is-not-started {
   background: #f0ebe4;
 }
 
+.workflow-card.is-pending,
 .task-hero.is-pending,
 .step-item.is-pending {
   background: #fff1cc;
@@ -256,12 +285,19 @@ textarea:focus-visible {
   top: -48px;
   right: -20px;
   z-index: 0;
+  display: block;
+  width: 1em;
+  height: 1em;
   font-size: clamp(138px, 34vw, 190px);
   line-height: 1;
   font-weight: 900;
   color: rgba(130, 17, 17, 0.16);
   pointer-events: none;
   transform: rotate(-6deg);
+}
+
+.status-card__mark::before {
+  display: block;
 }
 
 .status-card.is-approved .status-card__mark {
@@ -316,6 +352,8 @@ textarea:focus-visible {
   margin-top: 14px;
 }
 
+.workflow-card__top,
+.workflow-card__foot,
 .task-hero__top,
 .task-hero__foot {
   display: flex;
@@ -324,6 +362,7 @@ textarea:focus-visible {
   gap: 10px;
 }
 
+.workflow-card__title,
 .task-hero__title {
   font-size: 20px;
   line-height: 1.25;
@@ -344,6 +383,8 @@ textarea:focus-visible {
   font-weight: 800;
 }
 
+.workflow-card__meta,
+.workflow-card__foot,
 .task-hero__meta,
 .task-hero__foot {
   margin-top: 6px;
@@ -351,6 +392,7 @@ textarea:focus-visible {
   color: var(--text-subtle);
 }
 
+.workflow-card__body,
 .task-hero__body {
   margin-top: 10px;
   font-size: 14px;
@@ -396,45 +438,67 @@ textarea:focus-visible {
 
 .tag-pair,
 .status-chip {
+  /* 行内弹性布局 */
   display: inline-flex;
+  /* 垂直居中对齐 */
   align-items: center;
+  /* 水平居中对齐 */
   justify-content: center;
+  /* 最小宽度 */
   min-width: 76px;
+  /* 最小高度 */
   min-height: 32px;
+  /* 内边距 */
   padding: 5px 11px;
+  /* 圆角 */
   border-radius: 999px;
+  /* 字体大小 */
   font-size: 12px;
+  /* 字体粗细 */
   font-weight: 700;
+  /* 不换行 */
   white-space: nowrap;
+  /* 背景模糊 */
   backdrop-filter: blur(6px);
 }
 
 .tag-pair {
+  /* 边框 */
   border: 1px solid #d9b9a4;
+  /* 背景色 */
   background: #fff4ea;
+  /* 颜色 */
   color: var(--accent-strong);
 }
 
 .status-chip.is-reviewing,
 .status-chip.is-pending {
+  /* 颜色 */
   color: #7a3f00;
+  /* 背景色 */
   background: #ffe7bf;
 }
 
 .status-chip.is-approved {
+  /* 颜色 */
   color: #0f5f35;
+  /* 背景色 */
   background: #d8f1e1;
 }
 
 .status-chip.is-rejected,
 .status-chip.is-terminated {
+  /* 颜色 */
   color: #8a1111;
+  /* 背景色 */
   background: #ffdede;
 }
 
 .status-chip.is-not-started,
 .status-chip.is-locked {
+  /* 颜色 */
   color: #7b4b2f;
+  /* 背景色 */
   background: #f3e5d3;
 }
 
@@ -678,6 +742,7 @@ textarea:focus-visible {
     font-size: 138px;
   }
 
+  .workflow-card,
   .task-hero,
   .step-item {
     padding: 16px;
@@ -710,8 +775,8 @@ textarea:focus-visible {
 }
 
 .status-chip__icon {
+  /* 右边距 */
   margin-right: 4px;
-  font-weight: 900;
 }
 
 .profile-hero__card {

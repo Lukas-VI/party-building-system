@@ -15,7 +15,7 @@ const baseStep = {
 const states = [
   {
     ...baseStep,
-    reviewIcon: '○',
+    reviewIcon: 'clock-o',
     reviewLabel: '待处理',
     reviewClassName: 'is-pending',
   },
@@ -23,7 +23,7 @@ const states = [
     ...baseStep,
     orderLabel: '第2步',
     stepName: '党组织派人谈话',
-    reviewIcon: '⊘',
+    reviewIcon: 'stop-circle-o',
     reviewLabel: '未开放',
     reviewClassName: 'is-not-started',
     uploadRequired: false,
@@ -32,7 +32,7 @@ const states = [
     ...baseStep,
     orderLabel: '第3步',
     stepName: '确定入党积极分子',
-    reviewIcon: '√',
+    reviewIcon: 'passed',
     reviewLabel: '已通过',
     reviewClassName: 'is-approved',
     blessingText: '该节点已完成，请继续关注后续流程通知。',
@@ -41,7 +41,7 @@ const states = [
     ...baseStep,
     orderLabel: '第4步',
     stepName: '材料审核',
-    reviewIcon: '×',
+    reviewIcon: 'close',
     reviewLabel: '未通过',
     reviewClassName: 'is-rejected',
     summary: '材料审核未通过，请根据审核意见补充后重新提交。',
@@ -50,19 +50,18 @@ const states = [
   },
 ];
 
-function cardTemplate(size = 'step') {
-  const rootClass = size === 'hero' ? 'task-hero status-card' : 'step-item status-card';
+function cardTemplate() {
   return `
-    <button type="button" :class="[rootClass, item.reviewClassName]">
-      <span class="status-card__mark">{{ item.reviewIcon }}</span>
+    <button type="button" class="workflow-card status-card" :class="item.reviewClassName">
+      <van-icon :name="item.reviewIcon" class="status-card__mark" />
       <div class="status-card__content">
         <div class="status-card__main">
           <div class="step-order">{{ item.orderLabel }}</div>
-          <div :class="size === 'hero' ? 'task-hero__title' : 'step-item__name'">{{ item.stepName }}</div>
-          <div class="step-item__meta">{{ item.phase }} · {{ item.taskOwner }}</div>
+          <div class="workflow-card__title">{{ item.stepName }}</div>
+          <div class="workflow-card__meta">{{ item.phase }} · {{ item.taskOwner }}</div>
         </div>
         <span class="status-chip" :class="item.reviewClassName">
-          <span class="status-chip__icon">{{ item.reviewIcon }}</span>{{ item.reviewLabel }}
+          <van-icon :name="item.reviewIcon" class="status-chip__icon" size="12" />{{ item.reviewLabel }}
         </span>
       </div>
       <div class="status-card__summary">{{ item.summary }}</div>
@@ -73,8 +72,8 @@ function cardTemplate(size = 'step') {
         </div>
         <span class="due-pill" :class="{ 'is-overdue': item.isOverdue }">{{ item.remainingLabel }}</span>
       </div>
-      <div class="step-item__meta" v-if="item.uploadRequired">需提交材料，可点开查看或上传。</div>
-      <div class="task-hero__body" v-if="item.blessingText">{{ item.blessingText }}</div>
+      <div class="workflow-card__meta" v-if="item.uploadRequired">需提交材料，可点开查看或上传。</div>
+      <div class="workflow-card__body" v-if="item.blessingText">{{ item.blessingText }}</div>
     </button>
   `;
 }
@@ -85,20 +84,20 @@ export default {
 
 export const AllStates = {
   render: () => ({
-    data: () => ({ states, rootClass: 'step-item status-card', size: 'step' }),
+    data: () => ({ states }),
     template: `
       <div class="list-stack story-card-list">
         <div v-for="item in states" :key="item.orderLabel">
-          ${cardTemplate('step')}
+          ${cardTemplate()}
         </div>
       </div>
     `,
   }),
 };
 
-export const HeroCard = {
+export const WorkflowCard = {
   render: () => ({
-    data: () => ({ item: states[0], rootClass: 'task-hero status-card', size: 'hero' }),
-    template: cardTemplate('hero'),
+    data: () => ({ item: states[0] }),
+    template: cardTemplate(),
   }),
 };
