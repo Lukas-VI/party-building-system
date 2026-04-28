@@ -1,8 +1,9 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { showSuccessToast } from 'vant';
-import { fetchMobileWorkflow, uploadMobileFile } from '../api';
+import { useRouter } from 'vue-router';
+import { fetchMobileWorkflow } from '../api';
 
+const router = useRouter();
 const loading = ref(false);
 const workflow = ref(null);
 
@@ -35,19 +36,8 @@ async function loadWorkflow() {
   }
 }
 
-function uploadHandler(step, material) {
-  return async (fileWrapper) => {
-    const uploadSource = Array.isArray(fileWrapper) ? fileWrapper[0] : fileWrapper;
-    const file = uploadSource.file || uploadSource;
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('workflowId', workflow.value.workflowId);
-    formData.append('stepCode', step.stepCode);
-    formData.append('materialTag', material.tag);
-    await uploadMobileFile(formData);
-    showSuccessToast(`${material.label}上传成功`);
-    await loadWorkflow();
-  };
+function openStep(step) {
+  router.push(`/workflow/${workflow.value?.workflowId || 'me'}/steps/${step.stepCode}`);
 }
 
 onMounted(loadWorkflow);
@@ -61,7 +51,7 @@ onMounted(loadWorkflow);
       </div>
       <div class="section-card__bd">
         <div class="table-like" v-if="materialSteps.length">
-          <div class="workflow-card status-card" :class="cardClass(step)" v-for="step in materialSteps" :key="step.stepCode">
+          <div class="workflow-card status-card" :class="cardClass(step)" v-for="step in materialSteps" :key="step.stepCode" role="button" tabindex="0" @click="openStep(step)" @keydown.enter="openStep(step)">
             <van-icon :name="cardIcon(step)" class="status-card__mark" />
             <div class="status-card__content">
               <div class="status-card__main">
@@ -81,13 +71,13 @@ onMounted(loadWorkflow);
             </div>
             <div class="material-block" v-for="material in step.materialSchema" :key="material.key">
               <div class="field-label">{{ material.label }}</div>
-              <van-uploader :after-read="uploadHandler(step, material)" />
               <div class="upload-list" v-if="step.attachments?.length">
                 <div class="upload-list__item" v-for="item in step.attachments.filter((attachment) => attachment.materialTag === material.tag)" :key="item.id">
                   <span>{{ item.fileName }}</span>
-                  <span class="tag-pair">{{ item.materialTag }}</span>
+                  <a class="text-link" :href="item.fileUrl" target="_blank" rel="noreferrer" @click.stop>预览/下载</a>
                 </div>
               </div>
+              <div class="empty-state empty-state--compact" v-else>暂未提交该项材料，点击卡片进入节点详情办理。</div>
             </div>
           </div>
         </div>

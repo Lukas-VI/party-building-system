@@ -53,6 +53,14 @@ function createApp() {
   registerStatsRoutes(app);
   registerExportRoutes(app);
 
+  app.use((error, req, res, next) => {
+    if (!error) return next();
+    const isJsonSyntaxError = error instanceof SyntaxError && 'body' in error;
+    const status = isJsonSyntaxError ? 400 : error.status || 500;
+    const message = isJsonSyntaxError ? '请求 JSON 格式不正确' : error.message || '服务端错误';
+    return res.status(status).json({ code: status, message, data: null });
+  });
+
   return app;
 }
 

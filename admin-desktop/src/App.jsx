@@ -79,7 +79,7 @@ function App() {
     if (shouldSkipAutoRoute()) return;
     if (!isMobileDevice()) return;
     const currentPath = window.location.pathname || '';
-    if (!currentPath.startsWith('/web-admin')) return;
+    if (!currentPath.startsWith('/admin-desktop') && !currentPath.startsWith('/web-admin')) return;
     window.location.replace(desktopToMobileUrl());
   }, []);
 

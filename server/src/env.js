@@ -13,6 +13,14 @@ function parseOrigins(raw) {
     .filter(Boolean);
 }
 
+function resolvePublicBaseUrl() {
+  if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('生产环境必须配置 PUBLIC_BASE_URL，用于生成可访问的附件 URL');
+  }
+  return 'http://127.0.0.1:3000';
+}
+
 const env = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: process.env.PORT || '3000',
@@ -23,7 +31,7 @@ const env = {
   DB_USER: process.env.DB_USER || 'root',
   DB_PASSWORD: process.env.DB_PASSWORD || '',
   UPLOAD_DIR: process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads'),
-  PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL || 'https://api.example.com',
+  PUBLIC_BASE_URL: resolvePublicBaseUrl(),
   CORS_ORIGINS: parseOrigins(process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173'),
   ALLOW_ALL_CORS: process.env.ALLOW_ALL_CORS === 'true' || process.env.NODE_ENV === 'development',
   WECHAT_APP_ID: process.env.WECHAT_APP_ID || '',

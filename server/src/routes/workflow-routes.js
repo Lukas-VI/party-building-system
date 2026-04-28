@@ -4,9 +4,9 @@ const { now } = require('../lib/utils');
 const { logAudit } = require('../services/audit-service');
 const { requireAuth, requirePermission } = require('../services/permission-service');
 const { canAccessApplicant } = require('../services/applicant-service');
-const { getWorkflowByApplicantId, submitWorkflowTask, reviewWorkflowTask } = require('../services/workflow-service');
+const { getWorkflowByApplicantId, submitWorkflowTask, reviewWorkflowTask, assertWorkflowActor, isReviewerActor } = require('../services/workflow-service');
 const { getWorkflowSettings, updateWorkflowSettings } = require('../services/settings-service');
-const { fileUrl } = require('../services/file-service');
+const { fileUrl, acceptedTypesForMaterial, validateUploadedFile } = require('../services/file-service');
 const { upload } = require('../upload-middleware');
 
 function registerWorkflowRoutes(app) {
@@ -96,14 +96,37 @@ function registerWorkflowRoutes(app) {
 
   app.post('/api/files/upload', requireAuth(), upload.single('file'), async (req, res) => {
     try {
+      const { applicantId = '', stepCode = '', materialTag = '' } = req.body || {};
+      if (!applicantId || !stepCode || !materialTag) {
+        return fail(res, 400, '请在流程节点详情中上传材料');
+      }
+      if (!(await canAccessApplicant(req.user, applicantId))) return fail(res, 403, '无权上传该流程材料');
+      const workflow = await getWorkflowByApplicantId(applicantId);
+      const step = workflow.steps.find((item) => item.stepCode === stepCode);
+      assertWorkflowActor(req.user, applicantId, workflow, step, isReviewerActor(req.user, step) ? 'review' : 'submit');
+      validateUploadedFile(req.file, acceptedTypesForMaterial(step, materialTag));
+      const inserted = await query(
+        `INSERT INTO attachments (step_record_id, file_name, file_url, mime_type, material_tag, created_at)
+         VALUES (:stepRecordId, :fileName, :fileUrl, :mimeType, :materialTag, :createdAt)`,
+        {
+          stepRecordId: step.id,
+          fileName: req.file.originalname,
+          fileUrl: fileUrl(req.file.filename),
+          mimeType: req.file.mimetype,
+          materialTag,
+          createdAt: now(),
+        },
+      );
       ok(res, {
+        attachmentId: inserted.insertId,
         fileName: req.file.originalname,
         fileUrl: fileUrl(req.file.filename),
         mimeType: req.file.mimetype,
+        materialTag,
         storageName: req.file.filename,
       });
     } catch (error) {
-      fail(res, 500, error.message);
+      fail(res, error.status || 500, error.message);
     }
   });
 }
