@@ -98,15 +98,14 @@ onMounted(loadWorkflow);
           <div class="status-card__footer">
             <div class="step-time-row">
               <span>开始: {{ displayTime(currentTask.startAt) }} 截止: {{ displayTime(currentTask.endAt || currentTask.deadline) }}</span>
-            </div>
+            </div>    
+            <span class="due-pill" :class="{ 'is-overdue': currentTask.isOverdue }">{{ currentTask.remainingLabel }}</span>
             <span class="status-chip" :class="currentTask.reviewClassName">
               <van-icon :name="currentTask.reviewIcon" class="status-chip__icon" size="12" />{{ currentTask.reviewLabel }}
-            </span>     
-            <span class="due-pill" :class="{ 'is-overdue': currentTask.isOverdue }">{{ currentTask.remainingLabel }}</span>
+            </span> 
           </div>
           <div class="workflow-card__body" v-if="currentTask.blessingText">{{ currentTask.blessingText }}</div>
           <div class="workflow-card__foot">
-            <span>点击查看详情</span>
             <span v-if="currentTask.uploadRequired">含材料事项</span>
           </div>
         </button>
@@ -118,7 +117,7 @@ onMounted(loadWorkflow);
       <!-- 卡片头部 -->
       <div class="section-card__hd">
         <!-- 卡片标题 -->
-        <div class="section-card__title">步骤总览</div>
+        <div class="section-card__title">未完成步骤</div>
         <!-- 注释掉的描述 -->
         <!-- <div class="section-card__desc">点击任一步骤进入详情页查看记录或办理事项。</div> -->
       </div>

@@ -283,7 +283,7 @@ textarea:focus-visible {
 /* 状态图标 */
 .status-card__mark {
   position: absolute;
-  top: -85px;
+  top: -32px;
   right: -10px;
   z-index: 0;
   display: block;
@@ -380,7 +380,7 @@ textarea:focus-visible {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.76);
   color: var(--accent-strong);
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 800;
 }
 
