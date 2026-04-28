@@ -1,17 +1,8 @@
-/**
- * Health route group.
- *
- * This module wires endpoint shape only. Shared validation, permissions and
- * workflow transitions stay in app-context for consistent PC and H5 behavior.
- */
-function registerHealthRoutes(app, ctx) {
-  const {
-    query,
-    getPool,
-    ok,
-    fail,
-    now,
-  } = ctx;
+const { getPool } = require('../db');
+const { ok, fail } = require('../lib/http');
+const { now } = require('../lib/utils');
+
+function registerHealthRoutes(app) {
 
   app.get('/api/health', async (req, res) => {
     try {

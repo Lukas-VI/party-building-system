@@ -1,17 +1,8 @@
-/**
- * Review queue route group.
- *
- * This module wires endpoint shape only. Shared validation, permissions and
- * workflow transitions stay in app-context for consistent PC and H5 behavior.
- */
-function registerReviewRoutes(app, ctx) {
-  const {
-    query,
-    ok,
-    fail,
-    requireAuth,
-    scopeClause,
-  } = ctx;
+const { query } = require('../db');
+const { ok, fail } = require('../lib/http');
+const { requireAuth, scopeClause } = require('../services/permission-service');
+
+function registerReviewRoutes(app) {
 
   app.get('/api/reviews/pending', requireAuth(), async (req, res) => {
     try {

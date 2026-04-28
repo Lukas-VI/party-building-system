@@ -1,41 +1,16 @@
-/**
- * H5 mobile workflow route group.
- *
- * This module wires endpoint shape only. Shared validation, permissions and
- * workflow transitions stay in app-context for consistent PC and H5 behavior.
- */
-function registerMobileRoutes(app, ctx) {
-  const {
-    query,
-    first,
-    ok,
-    fail,
-    now,
-    logAudit,
-    requireAuth,
-    assertCanAccessApplicant,
-    getProfileViewByUser,
-    upsertUserProfile,
-    getWorkflowByApplicantId,
-    isApplicantActor,
-    isReviewerActor,
-    assertWorkflowActor,
-    listMobileTodos,
-    listNotifications,
-    getNotificationForUser,
-    markNotificationRead,
-    createNotification,
-    buildMobileWorkflow,
-    buildMobileWorkbench,
-    resolveMobileWorkflowId,
-    notificationRecipientsForStep,
-    submitWorkflowTask,
-    reviewWorkflowTask,
-    fileUrl,
-    acceptedTypesForMaterial,
-    validateUploadedFile,
-    upload,
-  } = ctx;
+const { query, first } = require('../db');
+const { ok, fail } = require('../lib/http');
+const { now } = require('../lib/utils');
+const { logAudit } = require('../services/audit-service');
+const { requireAuth, assertCanAccessApplicant } = require('../services/permission-service');
+const { getProfileViewByUser, upsertUserProfile } = require('../services/profile-service');
+const { getWorkflowByApplicantId, isApplicantActor, isReviewerActor, assertWorkflowActor, submitWorkflowTask, reviewWorkflowTask } = require('../services/workflow-service');
+const { listMobileTodos, buildMobileWorkflow, buildMobileWorkbench, resolveMobileWorkflowId } = require('../services/mobile-workbench-service');
+const { listNotifications, getNotificationForUser, markNotificationRead, createNotification, notificationRecipientsForStep } = require('../services/notification-service');
+const { fileUrl, acceptedTypesForMaterial, validateUploadedFile } = require('../services/file-service');
+const { upload } = require('../upload-middleware');
+
+function registerMobileRoutes(app) {
 
   app.get('/api/mobile/workbench', requireAuth(), async (req, res) => {
     try {

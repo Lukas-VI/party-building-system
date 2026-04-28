@@ -1,9 +1,7 @@
 const fs = require('node:fs');
 const express = require('express');
 const cors = require('cors');
-const multer = require('multer');
 const { env } = require('./env');
-const context = require('./app-context');
 const { registerHealthRoutes } = require('./routes/health-routes');
 const { registerPublicRoutes } = require('./routes/public-routes');
 const { registerAuthRoutes } = require('./routes/auth-routes');
@@ -26,7 +24,6 @@ const { registerExportRoutes } = require('./routes/export-routes');
 function createApp() {
   const app = express();
   fs.mkdirSync(env.UPLOAD_DIR, { recursive: true });
-  const upload = multer({ dest: env.UPLOAD_DIR });
 
   app.use(
     cors({
@@ -43,19 +40,18 @@ function createApp() {
   app.use(express.json({ limit: '5mb' }));
   app.use('/uploads', express.static(env.UPLOAD_DIR));
 
-  const ctx = { ...context, upload };
-  registerHealthRoutes(app, ctx);
-  registerPublicRoutes(app, ctx);
-  registerAuthRoutes(app, ctx);
-  registerWechatRoutes(app, ctx);
-  registerMobileRoutes(app, ctx);
-  registerProfileRoutes(app, ctx);
-  registerApplicantRoutes(app, ctx);
-  registerWorkflowRoutes(app, ctx);
-  registerOrgRoutes(app, ctx);
-  registerReviewRoutes(app, ctx);
-  registerStatsRoutes(app, ctx);
-  registerExportRoutes(app, ctx);
+  registerHealthRoutes(app);
+  registerPublicRoutes(app);
+  registerAuthRoutes(app);
+  registerWechatRoutes(app);
+  registerMobileRoutes(app);
+  registerProfileRoutes(app);
+  registerApplicantRoutes(app);
+  registerWorkflowRoutes(app);
+  registerOrgRoutes(app);
+  registerReviewRoutes(app);
+  registerStatsRoutes(app);
+  registerExportRoutes(app);
 
   return app;
 }

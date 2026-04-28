@@ -1,27 +1,15 @@
-/**
- * PC workflow route group.
- *
- * This module wires endpoint shape only. Shared validation, permissions and
- * workflow transitions stay in app-context for consistent PC and H5 behavior.
- */
-function registerWorkflowRoutes(app, ctx) {
-  const {
-    query,
-    ok,
-    fail,
-    now,
-    logAudit,
-    requireAuth,
-    requirePermission,
-    canAccessApplicant,
-    getWorkflowByApplicantId,
-    getWorkflowSettings,
-    updateWorkflowSettings,
-    submitWorkflowTask,
-    reviewWorkflowTask,
-    fileUrl,
-    upload,
-  } = ctx;
+const { query } = require('../db');
+const { ok, fail } = require('../lib/http');
+const { now } = require('../lib/utils');
+const { logAudit } = require('../services/audit-service');
+const { requireAuth, requirePermission } = require('../services/permission-service');
+const { canAccessApplicant } = require('../services/applicant-service');
+const { getWorkflowByApplicantId, submitWorkflowTask, reviewWorkflowTask } = require('../services/workflow-service');
+const { getWorkflowSettings, updateWorkflowSettings } = require('../services/settings-service');
+const { fileUrl } = require('../services/file-service');
+const { upload } = require('../upload-middleware');
+
+function registerWorkflowRoutes(app) {
 
   app.get('/api/workflows/me', requireAuth(), async (req, res) => {
     try {

@@ -1,6 +1,14 @@
 const fs = require('node:fs');
 const crypto = require('node:crypto');
 const XLSX = require('xlsx');
+const { query, first } = require('../db');
+const { ok, fail } = require('../lib/http');
+const { now } = require('../lib/utils');
+const { HIGH_PRIVILEGE_ROLES } = require('../lib/constants');
+const { hashPassword } = require('../password');
+const { logAudit } = require('../services/audit-service');
+const { requireAuth, requirePermission, canAccessScopedRecord } = require('../services/permission-service');
+const { upload } = require('../upload-middleware');
 
 /**
  * Organization and role route group.
@@ -51,21 +59,7 @@ async function resolveOrgBranch(query, { orgId = '', branchId = '' }) {
   };
 }
 
-function registerOrgRoutes(app, ctx) {
-  const {
-    query,
-    first,
-    ok,
-    fail,
-    now,
-    hashPassword,
-    logAudit,
-    requireAuth,
-    requirePermission,
-    canAccessScopedRecord,
-    HIGH_PRIVILEGE_ROLES,
-    upload,
-  } = ctx;
+function registerOrgRoutes(app) {
 
   app.get('/api/orgs', requireAuth(), async (req, res) => {
     try {

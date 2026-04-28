@@ -1,20 +1,11 @@
-/**
- * WeChat service-account route group.
- *
- * This module wires endpoint shape only. Shared validation, permissions and
- * workflow transitions stay in app-context for consistent PC and H5 behavior.
- */
-function registerWechatRoutes(app, ctx) {
-  const {
-    env,
-    query,
-    ok,
-    fail,
-    now,
-    logAudit,
-    requireAuth,
-    getWechatBindingByUserId,
-  } = ctx;
+const { env } = require('../env');
+const { query } = require('../db');
+const { ok, fail } = require('../lib/http');
+const { logAudit } = require('../services/audit-service');
+const { requireAuth } = require('../services/permission-service');
+const { getWechatBindingByUserId } = require('../services/wechat-service');
+
+function registerWechatRoutes(app) {
 
   app.get('/api/wechat/bind/status', requireAuth(), async (req, res) => {
     try {

@@ -1,16 +1,7 @@
-/**
- * Public bootstrap route group.
- *
- * These endpoints intentionally return only low-risk acceptance and onboarding
- * data such as login hints. They must never leak tokens, passwords or
- * scope-sensitive business records.
- */
-function registerPublicRoutes(app, ctx) {
-  const {
-    ok,
-    fail,
-    buildPublicBootstrap,
-  } = ctx;
+const { ok, fail } = require('../lib/http');
+const { buildPublicBootstrap } = require('../services/auth-service');
+
+function registerPublicRoutes(app) {
 
   app.get('/api/public/bootstrap', async (_req, res) => {
     try {

@@ -1,29 +1,15 @@
-/**
- * Authentication route group.
- *
- * This module wires endpoint shape only. Shared validation, permissions and
- * workflow transitions stay in app-context for consistent PC and H5 behavior.
- */
-function registerAuthRoutes(app, ctx) {
-  const {
-    query,
-    first,
-    ok,
-    fail,
-    now,
-    hashPassword,
-    verifyPassword,
-    needsPasswordRehash,
-    signToken,
-    logAudit,
-    getUserWithAuth,
-    requireAuth,
-    requirePermission,
-    canAccessScopedRecord,
-    listRegistrationRequests,
-    ensureApplicantEnrollment,
-    ALLOWED_REVIEW_STATUSES,
-  } = ctx;
+const { query, first } = require('../db');
+const { ok, fail } = require('../lib/http');
+const { now } = require('../lib/utils');
+const { ALLOWED_REVIEW_STATUSES } = require('../lib/constants');
+const { hashPassword, verifyPassword, needsPasswordRehash } = require('../password');
+const { signToken, getUserWithAuth } = require('../services/auth-service');
+const { logAudit } = require('../services/audit-service');
+const { requireAuth, requirePermission, canAccessScopedRecord } = require('../services/permission-service');
+const { listRegistrationRequests, ensureApplicantEnrollment } = require('../services/applicant-service');
+const { ageFromIdNo } = require('../services/registration-service');
+
+function registerAuthRoutes(app) {
 
   app.post('/api/auth/login', async (req, res) => {
     try {
@@ -64,7 +50,7 @@ function registerAuthRoutes(app, ctx) {
       if (!normalizedPassword || normalizedPassword.length < 8) return fail(res, 400, '密码至少 8 位');
 
       const birthYear = Number(normalizedIdNo.slice(6, 10));
-      const age = ctx.ageFromIdNo(normalizedIdNo);
+      const age = ageFromIdNo(normalizedIdNo);
       if (!birthYear || age === null) return fail(res, 400, '身份证号格式不正确');
       if (age < 18) return fail(res, 400, '未满18周岁，不能提交入党申请');
 

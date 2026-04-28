@@ -1,20 +1,11 @@
-/**
- * Applicant directory route group.
- *
- * This module wires endpoint shape only. Shared validation, permissions and
- * workflow transitions stay in app-context for consistent PC and H5 behavior.
- */
-function registerApplicantRoutes(app, ctx) {
-  const {
-    query,
-    ok,
-    fail,
-    parseJson,
-    requireAuth,
-    getApplicants,
-    canAccessApplicant,
-    getApplicantProfileByUserId,
-  } = ctx;
+const { query } = require('../db');
+const { ok, fail } = require('../lib/http');
+const { parseJson } = require('../lib/utils');
+const { requireAuth } = require('../services/permission-service');
+const { getApplicants, canAccessApplicant } = require('../services/applicant-service');
+const { getApplicantProfileByUserId } = require('../services/profile-service');
+
+function registerApplicantRoutes(app) {
 
   app.get('/api/users', requireAuth(), async (req, res) => {
     try {

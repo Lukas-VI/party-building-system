@@ -1,21 +1,12 @@
-/**
- * Dashboard and profile route group.
- *
- * This module wires endpoint shape only. Shared validation, permissions and
- * workflow transitions stay in app-context for consistent PC and H5 behavior.
- */
-function registerProfileRoutes(app, ctx) {
-  const {
-    query,
-    ok,
-    fail,
-    now,
-    logAudit,
-    requireAuth,
-    getProfileViewByUser,
-    upsertUserProfile,
-    dashboardForUser,
-  } = ctx;
+const { query } = require('../db');
+const { ok, fail } = require('../lib/http');
+const { now } = require('../lib/utils');
+const { logAudit } = require('../services/audit-service');
+const { requireAuth } = require('../services/permission-service');
+const { getProfileViewByUser, upsertUserProfile } = require('../services/profile-service');
+const { dashboardForUser } = require('../services/mobile-workbench-service');
+
+function registerProfileRoutes(app) {
 
   app.get('/api/dashboard/me', requireAuth(), async (req, res) => {
     try {

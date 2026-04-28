@@ -1,18 +1,10 @@
-/**
- * Excel export route group.
- *
- * This module wires endpoint shape only. Shared validation, permissions and
- * workflow transitions stay in app-context for consistent PC and H5 behavior.
- */
-function registerExportRoutes(app, ctx) {
-  const {
-    query,
-    fail,
-    requireAuth,
-    getApplicants,
-    getWorkflowByApplicantId,
-    workbookBuffer,
-  } = ctx;
+const { fail } = require('../lib/http');
+const { requireAuth } = require('../services/permission-service');
+const { getApplicants } = require('../services/applicant-service');
+const { getWorkflowByApplicantId } = require('../services/workflow-service');
+const { workbookBuffer } = require('../services/export-service');
+
+function registerExportRoutes(app) {
 
   app.get('/api/export/applicants', requireAuth(), async (req, res) => {
     try {

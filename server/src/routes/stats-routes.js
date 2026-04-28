@@ -1,20 +1,9 @@
-/**
- * Statistics route group.
- *
- * This module wires endpoint shape only. Shared validation, permissions and
- * workflow transitions stay in app-context for consistent PC and H5 behavior.
- */
-function registerStatsRoutes(app, ctx) {
-  const {
-    first,
-    ok,
-    fail,
-    requireAuth,
-    hasPermission,
-    scopeClause,
-    getApplicants,
-    listRegistrationRequests,
-  } = ctx;
+const { first } = require('../db');
+const { ok, fail } = require('../lib/http');
+const { requireAuth, hasPermission, scopeClause } = require('../services/permission-service');
+const { getApplicants, listRegistrationRequests } = require('../services/applicant-service');
+
+function registerStatsRoutes(app) {
 
   app.get('/api/stats/overview', requireAuth(), async (req, res) => {
     try {
