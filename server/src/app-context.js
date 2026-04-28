@@ -1072,7 +1072,7 @@ function buildTodoItem(user, applicant, workflow, step) {
     applicantName: applicant.name,
     stepCode: step.stepCode,
     sortOrder: step.sortOrder || stepOrder(step.stepCode),
-    orderLabel: `${step.sortOrder || stepOrder(step.stepCode) || ''}`,
+    orderLabel: `${step.sortOrder || stepOrder(step.stepCode) || ''}. `,
     stepName: step.name,
     phase: step.phase,
     status: step.status,

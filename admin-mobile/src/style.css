@@ -407,6 +407,9 @@ textarea:focus-visible {
   gap: 3px;
   margin-top: 0;
   padding: 10px 12px;
+  /* 保持与 .due-pill 同高度并垂直居中 */
+  min-height: 34px;
+  align-items: center;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.62);
   color: var(--text-subtle);
