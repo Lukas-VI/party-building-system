@@ -409,6 +409,10 @@ textarea:focus-visible {
   padding: 10px 12px;
   /* 保持与 .due-pill 同高度并垂直居中 */
   min-height: 34px;
+  
+    /* 不换行 */
+  white-space: nowrap;
+
   align-items: center;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.62);
@@ -442,6 +446,7 @@ textarea:focus-visible {
 
 .tag-pair,
 .status-chip {
+  margin-top: 14px;
   /* 行内弹性布局 */
   display: inline-flex;
   /* 垂直居中对齐 */
