@@ -1063,8 +1063,8 @@ function buildTodoItem(user, applicant, workflow, step) {
   const taskOwner = isApplicantActor(user, applicant.userId || applicant.id, step) ? '申请人' : '审核者';
   const materialSchema = configuredMaterialSchema(step);
   const uploadRequired = materialSchema.length > 0;
-  const canSubmit = isApplicantActor(user, applicant.userId || applicant.id, step);
-  const canReview = isReviewerActor(user, step);
+  const canSubmit = isApplicantActor(user, applicant.userId || applicant.id, step) && ['pending', 'rejected'].includes(step.status);
+  const canReview = isReviewerActor(user, step) && ['pending', 'reviewing'].includes(step.status);
   const actionKind = canReview ? 'review' : (canSubmit ? (uploadRequired ? 'upload' : 'submit') : 'notice');
   const isCompleted = step.status === 'approved';
   const reviewState = mobileReviewState(step);
