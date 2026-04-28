@@ -41,7 +41,7 @@ const states = [
     ...baseStep,
     orderLabel: '第4步',
     stepName: '材料审核',
-    reviewIcon: 'close',
+    reviewIcon: 'closed',
     reviewLabel: '未通过',
     reviewClassName: 'is-rejected',
     summary: '材料审核未通过，请根据审核意见补充后重新提交。',
@@ -54,7 +54,7 @@ function cardTemplate() {
   return `
     <button type="button" class="workflow-card status-card" :class="item.reviewClassName">
       <van-icon :name="item.reviewIcon" class="status-card__mark" />
-      <div class="status-card__content">
+      <van-icon name="https://fastly.jsdelivr.net/npm/@vant/assets/icon-demo.png" />      <div class="status-card__content">
         <div class="status-card__main">
           <div class="step-order">{{ item.orderLabel }}</div>
           <div class="workflow-card__title">{{ item.stepName }}</div>
@@ -67,8 +67,7 @@ function cardTemplate() {
       <div class="status-card__summary">{{ item.summary }}</div>
       <div class="status-card__footer">
         <div class="step-time-row">
-          <span>开始 {{ item.startAt }}</span>
-          <span>截止 {{ item.endAt }}</span>
+          <span>开始： {{ item.startAt }} ~ 截止： {{ item.endAt }}</span>
         </div>
         <span class="due-pill" :class="{ 'is-overdue': item.isOverdue }">{{ item.remainingLabel }}</span>
       </div>

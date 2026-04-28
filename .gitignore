@@ -22,3 +22,4 @@ docs/assets/.$*.bkp
 docs/assets/*.drawio.png
 docs/assets/report-*.png
 .codex/
+admin-mobile/src/stories/
