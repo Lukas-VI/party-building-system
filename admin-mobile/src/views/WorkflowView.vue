@@ -89,18 +89,20 @@ onMounted(loadWorkflow);
           <van-icon :name="currentTask.reviewIcon" class="status-card__mark" />
           <div class="status-card__content">
             <div class="status-card__main">
-              <div class="step-order">{{ currentTask.orderLabel }}</div>
+              <div class="step-order">
+                {{ currentTask.orderLabel }}
+                <span class="status-chip" :class="currentTask.reviewClassName">
+                  <van-icon :name="currentTask.reviewIcon" class="status-chip__icon" size="12" />{{ currentTask.reviewLabel }}
+                </span>              
+              </div>
               <div class="workflow-card__title">{{ currentTask.stepName }}</div>
               <div class="workflow-card__meta">{{ currentTask.phase }} · {{ currentTask.taskOwner }} · {{ currentTask.currentStage }}</div>
             </div>
-            <span class="status-chip" :class="currentTask.reviewClassName">
-              <van-icon :name="currentTask.reviewIcon" class="status-chip__icon" size="12" />{{ currentTask.reviewLabel }}
-            </span>
           </div>
           <div class="status-card__summary" v-if="currentTask.summary">{{ currentTask.summary }}</div>
           <div class="status-card__footer">
             <div class="step-time-row">
-              <span>开始 {{ displayTime(currentTask.startAt) }} ~ 截止 {{ displayTime(currentTask.endAt || currentTask.deadline) }}</span>
+              <span>开始: {{ displayTime(currentTask.startAt) }} ~ 截止: {{ displayTime(currentTask.endAt || currentTask.deadline) }}</span>
             </div>
             <span class="due-pill" :class="{ 'is-overdue': currentTask.isOverdue }">{{ currentTask.remainingLabel }}</span>
           </div>
@@ -134,10 +136,11 @@ onMounted(loadWorkflow);
                 <div class="step-order">{{ item.orderLabel }}</div>
                 <div class="workflow-card__title">{{ item.stepName }}</div>
                 <div class="workflow-card__meta">{{ item.phase }} · {{ item.taskOwner }}</div>
+                <span class="status-chip" :class="item.reviewClassName">
+                  <van-icon :name="item.reviewIcon" class="status-chip__icon" size="12" />{{ item.reviewLabel }}
+                </span>
               </div>
-              <span class="status-chip" :class="item.reviewClassName">
-                <van-icon :name="item.reviewIcon" class="status-chip__icon" size="12" />{{ item.reviewLabel }}
-              </span>
+              
             </div>
             <div class="status-card__summary">{{ item.summary }}</div>
             <div class="status-card__footer">
@@ -163,10 +166,10 @@ onMounted(loadWorkflow);
                 <div class="step-order">{{ item.orderLabel }}</div>
                 <div class="workflow-card__title">{{ item.stepName }}</div>
                 <div class="workflow-card__meta">{{ item.phase }} · {{ item.taskOwner }}</div>
-              </div>
-              <span class="status-chip" :class="item.reviewClassName">
-                <van-icon :name="item.reviewIcon" class="status-chip__icon" size="12" />{{ item.reviewLabel }}
-              </span>
+                <span class="status-chip" :class="item.reviewClassName">
+                  <van-icon :name="item.reviewIcon" class="status-chip__icon" size="12" />{{ item.reviewLabel }}
+                </span>              </div>
+
             </div>
             <div class="status-card__footer">
               <div class="step-time-row">
