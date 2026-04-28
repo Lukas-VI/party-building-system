@@ -99,7 +99,7 @@ onMounted(loadWorkflow);
           <div class="status-card__summary" v-if="currentTask.summary">{{ currentTask.summary }}</div>
           <div class="status-card__footer">
             <div class="step-time-row">
-              <span>开始: {{ displayTime(currentTask.startAt) }} ~ 截止: {{ displayTime(currentTask.endAt || currentTask.deadline) }}</span>
+              <span>{{ displayTime(currentTask.startAt) }}开始  {{ displayTime(currentTask.endAt || currentTask.deadline) }}截止</span>
             </div>    
             <span class="due-pill" :class="{ 'is-overdue': currentTask.isOverdue }">{{ currentTask.remainingLabel }}</span>
  
