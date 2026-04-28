@@ -19,6 +19,7 @@ const STEP_DETAIL_OVERRIDES = {
     ],
     businessFields: [
       { key: 'applicationSubmittedAt', label: '申请书提交时间', type: 'datetime', required: true, owner: 'applicant', placeholder: '例如 2026-05-01 09:00' },
+      { key: 'applicationText', label: '申请说明/正文摘要', type: 'textarea', required: true, owner: 'applicant', placeholder: '请概述本人提交入党申请书的主要内容' },
     ],
     timeRule: { keepOnly: ['submittedAt'], allowManualEdit: false },
     taskSummary: '提交入党申请书并补全基础信息',
@@ -137,7 +138,7 @@ const STEP_DETAIL_OVERRIDES = {
     requiresReviewerAction: 1,
     notificationTemplate: 'political_review_materials',
     materialSchema: [
-      { key: 'politicalReviewScan', label: '政审扫描件', tag: 'political-review', accept: ['image'], required: true },
+      { key: 'politicalReviewScan', label: '政审扫描件', tag: 'political-review', accept: ['pdf', 'image'], required: true },
     ],
     businessFields: [
       { key: 'politicalReviewResult', label: '政审结论', type: 'select', required: true, owner: 'reviewer', options: ['合格', '需补充', '不合格'] },
@@ -195,7 +196,202 @@ const STEP_DETAIL_OVERRIDES = {
     taskSummary: '基层党委预审并填写同意或不同意发展意见',
   },
   // 建议预留余下步骤的位置
-  // STEP_13: 
+  // 13-25 步先按已确认的材料节点和责任角色预留，不臆造尚未确认的制度细节。
+  STEP_13: {
+    actorType: 'collaborative',
+    responsibleRoles: ['applicant', 'organizer', 'branchSecretary'],
+    requiresApplicantAction: 1,
+    requiresReviewerAction: 1,
+    notificationTemplate: 'volunteer_form_submitted',
+    materialSchema: [
+      { key: 'volunteerFormPdf', label: '入党志愿书扫描件', tag: 'volunteer-form', accept: ['pdf'], required: true },
+    ],
+    businessFields: [
+      { key: 'volunteerFormSubmittedAt', label: '志愿书提交时间', type: 'datetime', required: true, owner: 'applicant' },
+      { key: 'volunteerFormNote', label: '提交说明', type: 'textarea', required: false, owner: 'applicant' },
+    ],
+    timeRule: { recordFields: ['submittedAt', 'reviewedAt'] },
+    taskSummary: '提交入党志愿书扫描件并由支部核对。',
+  },
+  STEP_14: {
+    actorType: 'reviewer',
+    responsibleRoles: ['branchSecretary', 'organizer'],
+    requiresApplicantAction: 0,
+    requiresReviewerAction: 1,
+    notificationTemplate: 'branch_meeting_review',
+    materialSchema: [
+      { key: 'branchMeetingMaterials', label: '支部大会材料', tag: 'branch-meeting', accept: ['pdf', 'image'], required: false },
+    ],
+    businessFields: [
+      { key: 'meetingAt', label: '会议时间', type: 'datetime', required: true, owner: 'reviewer' },
+      { key: 'meetingResult', label: '会议表决结果', type: 'textarea', required: true, owner: 'reviewer' },
+    ],
+    timeRule: { recordFields: ['meetingAt', 'reviewedAt'] },
+    taskSummary: '记录支部大会讨论与表决情况，材料要求待后续细化。',
+  },
+  STEP_15: {
+    actorType: 'reviewer',
+    responsibleRoles: ['secretary', 'deputySecretary', 'organizer'],
+    requiresApplicantAction: 0,
+    requiresReviewerAction: 1,
+    notificationTemplate: 'committee_talk_recorded',
+    materialSchema: [
+      { key: 'committeeTalkRecord', label: '党委谈话记录', tag: 'committee-talk', accept: ['pdf', 'image'], required: false },
+    ],
+    businessFields: [
+      { key: 'talkAt', label: '谈话时间及地点', type: 'textarea', required: true, owner: 'reviewer' },
+      { key: 'talkOpinion', label: '谈话意见', type: 'textarea', required: true, owner: 'reviewer' },
+    ],
+    timeRule: { recordFields: ['talkAt'] },
+    taskSummary: '上级党委派人同发展对象谈话并记录意见。',
+  },
+  STEP_16: {
+    actorType: 'reviewer',
+    responsibleRoles: ['secretary', 'deputySecretary', 'organizer'],
+    requiresApplicantAction: 0,
+    requiresReviewerAction: 1,
+    notificationTemplate: 'committee_approval',
+    materialSchema: [],
+    businessFields: [
+      { key: 'committeeMeetingAt', label: '党委会时间', type: 'datetime', required: true, owner: 'reviewer' },
+      { key: 'approvalOpinion', label: '审批意见', type: 'textarea', required: true, owner: 'reviewer' },
+    ],
+    timeRule: { recordFields: ['reviewedAt'] },
+    taskSummary: '基层党委审批接收预备党员事项。',
+  },
+  STEP_17: {
+    actorType: 'reviewer',
+    responsibleRoles: ['organizer', 'branchSecretary'],
+    requiresApplicantAction: 0,
+    requiresReviewerAction: 1,
+    notificationTemplate: 'oath_recorded',
+    materialSchema: [],
+    businessFields: [
+      { key: 'oathAt', label: '入党宣誓时间', type: 'datetime', required: true, owner: 'reviewer' },
+      { key: 'oathLocation', label: '宣誓地点', type: 'text', required: false, owner: 'reviewer' },
+    ],
+    timeRule: { recordFields: ['oathAt'] },
+    taskSummary: '记录预备党员入党宣誓情况。',
+  },
+  STEP_18: {
+    actorType: 'reviewer',
+    responsibleRoles: ['organizer', 'branchSecretary'],
+    requiresApplicantAction: 0,
+    requiresReviewerAction: 1,
+    notificationTemplate: 'branch_group_assigned',
+    materialSchema: [],
+    businessFields: [
+      { key: 'branchGroupName', label: '编入党支部和党小组名称', type: 'text', required: true, owner: 'reviewer' },
+      { key: 'assignedAt', label: '编入时间', type: 'date', required: false, owner: 'reviewer' },
+    ],
+    timeRule: { recordFields: ['assignedAt'] },
+    taskSummary: '记录预备党员编入党支部和党小组情况。',
+  },
+  STEP_19: {
+    actorType: 'reviewer',
+    responsibleRoles: ['organizer', 'branchSecretary'],
+    requiresApplicantAction: 0,
+    requiresReviewerAction: 1,
+    notificationTemplate: 'quarterly_cultivation',
+    materialSchema: [
+      { key: 'quarterlyReview', label: '季度考察材料', tag: 'quarterly-review', accept: ['pdf', 'image'], required: false },
+    ],
+    businessFields: [
+      { key: 'reviewPeriod', label: '考察时间区间', type: 'text', required: true, owner: 'reviewer' },
+      { key: 'reviewContent', label: '教育考察内容', type: 'textarea', required: true, owner: 'reviewer' },
+    ],
+    timeRule: { recordFields: ['reviewedAt'] },
+    taskSummary: '维护预备党员教育考察记录。',
+  },
+  STEP_20: {
+    actorType: 'collaborative',
+    responsibleRoles: ['applicant', 'organizer', 'branchSecretary'],
+    requiresApplicantAction: 1,
+    requiresReviewerAction: 1,
+    notificationTemplate: 'regularization_application',
+    materialSchema: [
+      { key: 'regularizationApplication', label: '转正申请书扫描件', tag: 'regularization-application', accept: ['pdf'], required: true },
+    ],
+    businessFields: [
+      { key: 'regularizationSubmittedAt', label: '转正申请提交时间', type: 'datetime', required: true, owner: 'applicant' },
+      { key: 'regularizationSummary', label: '转正申请说明', type: 'textarea', required: true, owner: 'applicant' },
+    ],
+    timeRule: { recordFields: ['submittedAt', 'reviewedAt'] },
+    taskSummary: '提交转正申请并由支部核对。',
+  },
+  STEP_21: {
+    actorType: 'reviewer',
+    responsibleRoles: ['branchSecretary', 'organizer'],
+    requiresApplicantAction: 0,
+    requiresReviewerAction: 1,
+    notificationTemplate: 'regularization_branch_meeting',
+    materialSchema: [],
+    businessFields: [
+      { key: 'regularizationMeetingAt', label: '支部大会时间', type: 'datetime', required: true, owner: 'reviewer' },
+      { key: 'regularizationVoteResult', label: '转正表决结果', type: 'textarea', required: true, owner: 'reviewer' },
+    ],
+    timeRule: { recordFields: ['meetingAt'] },
+    taskSummary: '记录支部大会讨论转正情况。',
+  },
+  STEP_22: {
+    actorType: 'reviewer',
+    responsibleRoles: ['secretary', 'deputySecretary', 'organizer'],
+    requiresApplicantAction: 0,
+    requiresReviewerAction: 1,
+    notificationTemplate: 'regularization_committee_approval',
+    materialSchema: [],
+    businessFields: [
+      { key: 'regularizationApprovalResult', label: '党委审批结果', type: 'select', required: true, owner: 'reviewer', options: ['按期转正', '延长预备期', '取消预备党员资格'] },
+      { key: 'regularizationApprovalOpinion', label: '审批意见', type: 'textarea', required: true, owner: 'reviewer' },
+    ],
+    timeRule: { recordFields: ['reviewedAt'] },
+    taskSummary: '基层党委审批预备党员转正事项。',
+  },
+  STEP_23: {
+    actorType: 'reviewer',
+    responsibleRoles: ['secretary', 'deputySecretary', 'organizer', 'orgDept'],
+    requiresApplicantAction: 0,
+    requiresReviewerAction: 1,
+    notificationTemplate: 'probation_result',
+    materialSchema: [],
+    businessFields: [
+      { key: 'probationResult', label: '结项处理结果', type: 'select', required: true, owner: 'reviewer', options: ['转入正式党员', '延长预备期', '终止发展'] },
+      { key: 'probationResultNote', label: '处理说明', type: 'textarea', required: true, owner: 'reviewer' },
+    ],
+    timeRule: { recordFields: ['reviewedAt'] },
+    taskSummary: '记录延长预备期或流程结项处理结果。',
+  },
+  STEP_24: {
+    actorType: 'reviewer',
+    responsibleRoles: ['organizer', 'orgDept'],
+    requiresApplicantAction: 0,
+    requiresReviewerAction: 1,
+    notificationTemplate: 'archive_completed',
+    materialSchema: [
+      { key: 'archiveMaterials', label: '归档材料扫描件', tag: 'archive', accept: ['pdf', 'image'], required: false },
+    ],
+    businessFields: [
+      { key: 'archiveOrgName', label: '接收档案党组织', type: 'text', required: true, owner: 'reviewer' },
+      { key: 'archiveReceiver', label: '接收人', type: 'text', required: true, owner: 'reviewer' },
+      { key: 'archivedAt', label: '归档日期', type: 'date', required: true, owner: 'reviewer' },
+    ],
+    timeRule: { recordFields: ['archivedAt'] },
+    taskSummary: '完成材料归档登记。',
+  },
+  STEP_25: {
+    actorType: 'reviewer',
+    responsibleRoles: ['organizer', 'orgDept'],
+    requiresApplicantAction: 0,
+    requiresReviewerAction: 1,
+    notificationTemplate: 'formal_member_confirmed',
+    materialSchema: [],
+    businessFields: [
+      { key: 'finalMemberStatus', label: '最终党员状态', type: 'select', required: true, owner: 'reviewer', options: ['正式党员', '终止发展'] },
+      { key: 'finalConfirmedAt', label: '确认日期', type: 'date', required: true, owner: 'reviewer' },
+    ],
+    timeRule: { recordFields: ['confirmedAt'] },
+    taskSummary: '确认发展党员流程最终状态。',
+  },
 
 };
 

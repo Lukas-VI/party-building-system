@@ -172,6 +172,14 @@ function attachmentsByTag(tag) {
   return materialUploads.value.filter((item) => item.materialTag === tag);
 }
 
+function materialAccept(material) {
+  const acceptMap = {
+    pdf: '.pdf,application/pdf',
+    image: '.jpg,.jpeg,.png,image/jpeg,image/png',
+  };
+  return (material?.accept || []).map((item) => acceptMap[item]).filter(Boolean).join(',');
+}
+
 function buildBusinessPayload() {
   return activeBusinessFields.value.reduce((payload, field) => {
     payload[field.key] = businessForm[field.key] || '';
@@ -211,20 +219,22 @@ onMounted(loadWorkflow);
             <div class="status-card__main">
               <div class="step-order">{{ currentTask.orderLabel }}</div>
               <div class="workflow-card__title">{{ currentTask.stepName }}</div>
-              <div class="workflow-card__meta">{{ currentTask.phase }} · {{ currentTask.taskOwner }}</div>
+              <span class="status-chip" :class="currentTask.reviewClassName">
+                <van-icon :name="currentTask.reviewIcon" class="status-chip__icon" size="12" />{{ currentTask.reviewLabel }}
+              </span>
             </div>
-            <span class="status-chip" :class="currentTask.reviewClassName">
-              <van-icon :name="currentTask.reviewIcon" class="status-chip__icon" size="12" />{{ currentTask.reviewLabel }}
-            </span>
           </div>
           <div class="status-card__footer">
             <div class="step-time-row">
-              <span>开始 {{ displayTime(currentTask.startAt) }} ~ 截止 {{ displayTime(currentTask.endAt || currentTask.deadline) }}</span>
+              <span>{{ displayTime(currentTask.startAt) }} 开始   {{ displayTime(currentTask.endAt || currentTask.deadline) }} 截止</span>
             </div>
             <span class="due-pill" :class="{ 'is-overdue': currentTask.isOverdue }">{{ currentTask.remainingLabel }}</span>
           </div>
           <div class="status-card__summary">{{ currentTask.summary }}</div>
           <div class="workflow-card__body" v-if="currentTask.blessingText">{{ currentTask.blessingText }}</div>
+          <div class="workflow-card__foot">
+            <span v-if="currentTask.uploadRequired">含材料事项</span>
+          </div>
         </div>
       </div>
       <div class="empty-state" v-else-if="!loading">未找到该流程节点。</div>
@@ -262,7 +272,7 @@ onMounted(loadWorkflow);
             </div>
             <span class="tag-pair">{{ material.tag }}</span>
           </div>
-          <van-uploader v-if="currentTask.canSubmit || currentTask.canReview" :after-read="(file) => handleUpload(file, material)" />
+          <van-uploader v-if="currentTask.canSubmit || currentTask.canReview" :accept="materialAccept(material)" :after-read="(file) => handleUpload(file, material)" />
           <div class="upload-list" v-if="attachmentsByTag(material.tag).length">
             <div class="upload-list__item" v-for="item in attachmentsByTag(material.tag)" :key="item.fileUrl">
               <span>{{ item.fileName }}</span>

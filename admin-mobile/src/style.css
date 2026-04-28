@@ -269,6 +269,7 @@ textarea:focus-visible {
 }
 
 .workflow-card.is-pending,
+.workflow-card.is-reviewing,
 .task-hero.is-pending,
 .step-item.is-pending {
   background: #fff1cc;
@@ -314,6 +315,10 @@ textarea:focus-visible {
 }
 
 .status-card.is-pending .status-card__mark {
+  color: rgba(164, 104, 0, 0.28);
+}
+
+.status-card.is-reviewing .status-card__mark {
   color: rgba(164, 104, 0, 0.28);
 }
 
@@ -616,6 +621,9 @@ textarea:focus-visible {
 }
 
 .login-brand__title {
+    /* 垂直居中对齐 */
+  align-items: center;
+
   font-size: 24px;
   font-weight: 800;
   line-height: 1.3;

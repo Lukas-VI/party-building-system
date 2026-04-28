@@ -20,9 +20,6 @@ function registerMobileRoutes(app, ctx) {
     isApplicantActor,
     isReviewerActor,
     assertWorkflowActor,
-    nextTaskStatus,
-    advanceAfterReview,
-    resolveReviewOutcome,
     listMobileTodos,
     listNotifications,
     getNotificationForUser,
@@ -31,12 +28,12 @@ function registerMobileRoutes(app, ctx) {
     buildMobileWorkflow,
     buildMobileWorkbench,
     resolveMobileWorkflowId,
-    ensureAdultApplicant,
     notificationRecipientsForStep,
+    submitWorkflowTask,
+    reviewWorkflowTask,
     fileUrl,
     acceptedTypesForMaterial,
     validateUploadedFile,
-    ALLOWED_REVIEW_STATUSES,
     upload,
   } = ctx;
 
@@ -134,53 +131,7 @@ function registerMobileRoutes(app, ctx) {
   app.post('/api/mobile/workflows/:workflowId/tasks/:taskId/submit', requireAuth(), async (req, res) => {
     try {
       const applicantId = resolveMobileWorkflowId(req.user, req.params.workflowId);
-      await assertCanAccessApplicant(req.user, applicantId);
-      const workflow = await getWorkflowByApplicantId(applicantId);
-      const step = workflow.steps.find((item) => item.stepCode === req.params.taskId);
-      assertWorkflowActor(req.user, applicantId, workflow, step, 'submit');
-      if (step.stepCode === 'STEP_01') {
-        await ensureAdultApplicant(applicantId);
-      }
-      const incomingFormData = req.body.formData || req.body || {};
-      const mergedFormData = {
-        ...step.formData,
-        ...incomingFormData,
-        businessFields: {
-          ...(step.formData?.businessFields || {}),
-          ...(incomingFormData.businessFields || {}),
-        },
-      };
-      await query(
-        `UPDATE workflow_step_records
-         SET status = 'reviewing',
-             task_status = 'in_review',
-             form_data_json = :formDataJson,
-             review_comment = :reviewComment,
-             last_operator_id = :operatorId,
-             operated_at = :operatedAt
-         WHERE id = :id`,
-        {
-          formDataJson: JSON.stringify(mergedFormData),
-          reviewComment: req.body.reviewComment || '',
-          operatorId: req.user.id,
-          operatedAt: now(),
-          id: step.id,
-        },
-      );
-      await logAudit('workflow_step_records', step.id, 'mobile_submit_task', req.user.id, req.body || {});
-      const recipients = await notificationRecipientsForStep(step, applicantId, [req.user.id]);
-      for (const userId of recipients) {
-        await createNotification(
-          userId,
-          'task_submitted',
-          `${step.name}待处理`,
-          `${req.user.name}已提交“${step.name}”，请按流程要求及时处理。`,
-          step.stepCode,
-          'workflow',
-          applicantId,
-        );
-      }
-      ok(res, true, '任务已提交');
+      ok(res, await submitWorkflowTask(req.user, applicantId, req.params.taskId, req.body || {}, 'mobile_submit_task'), '任务已提交');
     } catch (error) {
       fail(res, error.status || 500, error.message);
     }
@@ -189,55 +140,7 @@ function registerMobileRoutes(app, ctx) {
   app.post('/api/mobile/workflows/:workflowId/tasks/:taskId/review', requireAuth(), async (req, res) => {
     try {
       const applicantId = resolveMobileWorkflowId(req.user, req.params.workflowId);
-      await assertCanAccessApplicant(req.user, applicantId);
-      const workflow = await getWorkflowByApplicantId(applicantId);
-      const step = workflow.steps.find((item) => item.stepCode === req.params.taskId);
-      assertWorkflowActor(req.user, applicantId, workflow, step, 'review');
-      const requestedStatus = req.body.status || 'approved';
-      if (!ALLOWED_REVIEW_STATUSES.has(requestedStatus)) return fail(res, 400, '审核状态不合法');
-      const incomingFormData = req.body.formData || {};
-      const mergedFormData = {
-        ...step.formData,
-        ...incomingFormData,
-        businessFields: {
-          ...(step.formData?.businessFields || {}),
-          ...(incomingFormData.businessFields || {}),
-        },
-      };
-      const nextStatus = resolveReviewOutcome(step, requestedStatus, mergedFormData);
-      await query(
-        `UPDATE workflow_step_records
-         SET status = :status,
-             task_status = :taskStatus,
-             form_data_json = :formDataJson,
-             review_comment = :reviewComment,
-             last_operator_id = :operatorId,
-             operated_at = :operatedAt,
-             confirmed_at = :confirmedAt
-         WHERE id = :id`,
-        {
-          status: nextStatus,
-          taskStatus: nextTaskStatus(nextStatus),
-          formDataJson: JSON.stringify(mergedFormData),
-          reviewComment: req.body.comment || '',
-          operatorId: req.user.id,
-          operatedAt: now(),
-          confirmedAt: nextStatus === 'approved' ? now() : null,
-          id: step.id,
-        },
-      );
-      await advanceAfterReview(workflow, step, nextStatus, mergedFormData);
-      await logAudit('workflow_step_records', step.id, 'mobile_review_task', req.user.id, req.body || {});
-      await createNotification(
-        applicantId,
-        'task_reviewed',
-        `${step.name}${nextStatus === 'approved' ? '已通过' : '需补充'}`,
-        nextStatus === 'approved' ? `“${step.name}”已审核通过，请关注下一步通知。` : `“${step.name}”已退回，请根据意见补充材料。`,
-        step.stepCode,
-        'workflow',
-        applicantId,
-      );
-      ok(res, true, '审核结果已保存');
+      ok(res, await reviewWorkflowTask(req.user, applicantId, req.params.taskId, req.body || {}, 'mobile_review_task'), '审核结果已保存');
     } catch (error) {
       fail(res, error.status || 500, error.message);
     }

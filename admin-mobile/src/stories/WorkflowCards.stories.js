@@ -41,7 +41,7 @@ const states = [
     ...baseStep,
     orderLabel: '第4步',
     stepName: '材料审核',
-    reviewIcon: 'closed',
+    reviewIcon: 'close',
     reviewLabel: '未通过',
     reviewClassName: 'is-rejected',
     summary: '材料审核未通过，请根据审核意见补充后重新提交。',
@@ -54,25 +54,26 @@ function cardTemplate() {
   return `
     <button type="button" class="workflow-card status-card" :class="item.reviewClassName">
       <van-icon :name="item.reviewIcon" class="status-card__mark" />
-      <van-icon name="https://fastly.jsdelivr.net/npm/@vant/assets/icon-demo.png" />      <div class="status-card__content">
+      <div class="status-card__content">
         <div class="status-card__main">
           <div class="step-order">{{ item.orderLabel }}</div>
           <div class="workflow-card__title">{{ item.stepName }}</div>
-          <div class="workflow-card__meta">{{ item.phase }} · {{ item.taskOwner }}</div>
+          <span class="status-chip" :class="item.reviewClassName">
+            <van-icon :name="item.reviewIcon" class="status-chip__icon" size="12" />{{ item.reviewLabel }}
+          </span>
         </div>
-        <span class="status-chip" :class="item.reviewClassName">
-          <van-icon :name="item.reviewIcon" class="status-chip__icon" size="12" />{{ item.reviewLabel }}
-        </span>
       </div>
       <div class="status-card__summary">{{ item.summary }}</div>
       <div class="status-card__footer">
         <div class="step-time-row">
-          <span>开始： {{ item.startAt }} ~ 截止： {{ item.endAt }}</span>
+          <span>{{ item.startAt }} 开始   {{ item.endAt }} 截止</span>
         </div>
         <span class="due-pill" :class="{ 'is-overdue': item.isOverdue }">{{ item.remainingLabel }}</span>
       </div>
-      <div class="workflow-card__meta" v-if="item.uploadRequired">需提交材料，可点开查看或上传。</div>
       <div class="workflow-card__body" v-if="item.blessingText">{{ item.blessingText }}</div>
+      <div class="workflow-card__foot">
+        <span v-if="item.uploadRequired">含材料事项</span>
+      </div>
     </button>
   `;
 }

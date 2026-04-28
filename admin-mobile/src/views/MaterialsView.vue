@@ -10,6 +10,22 @@ const materialSteps = computed(() =>
   (workflow.value?.steps || []).filter((item) => Array.isArray(item.materialSchema) && item.materialSchema.length > 0),
 );
 
+function displayTime(value) {
+  return value || '未设置';
+}
+
+function cardClass(step) {
+  return step.reviewClassName || `is-${step.status || 'pending'}`;
+}
+
+function cardIcon(step) {
+  return step.reviewIcon || (step.status === 'approved' ? 'passed' : step.status === 'rejected' ? 'close' : step.status === 'locked' ? 'stop-circle-o' : 'clock-o');
+}
+
+function cardLabel(step) {
+  return step.reviewLabel || step.statusText || '待处理';
+}
+
 async function loadWorkflow() {
   loading.value = true;
   try {
@@ -45,12 +61,24 @@ onMounted(loadWorkflow);
       </div>
       <div class="section-card__bd">
         <div class="table-like" v-if="materialSteps.length">
-          <div class="panel-note" v-for="step in materialSteps" :key="step.stepCode">
-            <div class="table-row__head">
-              <div class="table-row__title">{{ step.stepName }}</div>
-              <span class="status-chip" :class="`is-${step.status}`">{{ step.statusText }}</span>
+          <div class="workflow-card status-card" :class="cardClass(step)" v-for="step in materialSteps" :key="step.stepCode">
+            <van-icon :name="cardIcon(step)" class="status-card__mark" />
+            <div class="status-card__content">
+              <div class="status-card__main">
+                <div class="step-order">{{ step.orderLabel || step.stepCode }}</div>
+                <div class="workflow-card__title">{{ step.stepName }}</div>
+                <span class="status-chip" :class="cardClass(step)">
+                  <van-icon :name="cardIcon(step)" class="status-chip__icon" size="12" />{{ cardLabel(step) }}
+                </span>
+              </div>
             </div>
-            <div class="panel-note__text">{{ step.summary }}</div>
+            <div class="status-card__summary">{{ step.summary }}</div>
+            <div class="status-card__footer">
+              <div class="step-time-row">
+                <span>{{ displayTime(step.startAt) }} 开始   {{ displayTime(step.endAt || step.deadline) }} 截止</span>
+              </div>
+              <span class="due-pill" :class="{ 'is-overdue': step.isOverdue }">{{ step.remainingLabel || '材料节点' }}</span>
+            </div>
             <div class="material-block" v-for="material in step.materialSchema" :key="material.key">
               <div class="field-label">{{ material.label }}</div>
               <van-uploader :after-read="uploadHandler(step, material)" />

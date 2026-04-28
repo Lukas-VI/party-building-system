@@ -64,6 +64,7 @@ function App() {
   const [orgStats, setOrgStats] = useState([]);
   const [branchStats, setBranchStats] = useState([]);
   const [configs, setConfigs] = useState([]);
+  const [workflowSettings, setWorkflowSettings] = useState({ enforceTimeLimit: false });
   const [assignForm, setAssignForm] = useState({ userId: '', roleId: 'branchSecretary' });
   const [staffImportFile, setStaffImportFile] = useState(null);
   const [staffImportResult, setStaffImportResult] = useState(null);
@@ -213,8 +214,9 @@ function App() {
         setOverview(overviewRes);
       }
       if (view === 'workflowConfig') {
-        const result = await api('/workflow-steps/config');
-        setConfigs(result);
+        const [configResult, settingsResult] = await Promise.all([api('/workflow-steps/config'), api('/workflow-settings')]);
+        setConfigs(configResult);
+        setWorkflowSettings(settingsResult);
       }
     } catch (error) {
       MessagePlugin.error(error.message);
@@ -429,6 +431,19 @@ function App() {
         body: JSON.stringify({ startAt, endAt }),
       });
       MessagePlugin.success('流程配置已保存');
+    } catch (error) {
+      MessagePlugin.error(error.message);
+    }
+  }
+
+  async function saveWorkflowSettings(nextSettings) {
+    try {
+      const result = await api('/workflow-settings', {
+        method: 'PUT',
+        body: JSON.stringify(nextSettings),
+      });
+      setWorkflowSettings(result);
+      MessagePlugin.success('流程调试开关已保存');
     } catch (error) {
       MessagePlugin.error(error.message);
     }
@@ -882,26 +897,45 @@ function App() {
         )}
 
         {activeView === 'workflowConfig' && (
-          <Card title="流程时限配置">
-            <div className="table-scroll">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>步骤</th>
-                  <th>名称</th>
-                  <th>开始时间</th>
-                  <th>截止时间</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {configs.map((item) => (
-                  <ConfigRow key={item.stepCode} item={item} onSave={saveConfig} />
-                ))}
-              </tbody>
-            </table>
-            </div>
-          </Card>
+          <div className="content-stack">
+            <Card title="流程调试开关">
+              <div className="setting-row">
+                <div>
+                  <div className="setting-row__title">启用节点时间限制</div>
+                  <div className="setting-row__desc">关闭时，提交和审核不受节点开始/截止日期阻断；用于当前联调。开启后由服务端校验时间范围。</div>
+                </div>
+                <label className="switch-field">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(workflowSettings.enforceTimeLimit)}
+                    disabled={user.primaryRole !== 'superAdmin'}
+                    onChange={(event) => saveWorkflowSettings({ enforceTimeLimit: event.target.checked })}
+                  />
+                  <span>{workflowSettings.enforceTimeLimit ? '已启用' : '已关闭'}</span>
+                </label>
+              </div>
+            </Card>
+            <Card title="流程时限配置">
+              <div className="table-scroll">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>步骤</th>
+                    <th>名称</th>
+                    <th>开始时间</th>
+                    <th>截止时间</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {configs.map((item) => (
+                    <ConfigRow key={item.stepCode} item={item} onSave={saveConfig} />
+                  ))}
+                </tbody>
+              </table>
+              </div>
+            </Card>
+          </div>
         )}
       </main>
     </div>

@@ -22,6 +22,21 @@ function statusClass(status) {
   }[status] || 'is-pending';
 }
 
+function statusIcon(status) {
+  return {
+    reviewing: 'clock-o',
+    approved: 'passed',
+    rejected: 'close',
+    terminated: 'close',
+    pending: 'clock-o',
+    locked: 'stop-circle-o',
+  }[status] || 'clock-o';
+}
+
+function displayTime(value) {
+  return value || '未设置';
+}
+
 async function loadDetail() {
   loading.value = true;
   try {
@@ -71,17 +86,28 @@ onMounted(loadDetail);
       </div>
       <div class="section-card__bd">
         <div class="step-list" v-if="stepRows.length">
-          <div class="step-item" v-for="item in stepRows" :key="item.stepCode">
-            <div class="step-item__head">
-              <div>
-                <div class="step-item__name">{{ item.sortOrder }}. {{ item.name }}</div>
-                <div class="step-item__meta">{{ item.phase }}</div>
+          <div class="workflow-card status-card" :class="statusClass(item.status)" v-for="item in stepRows" :key="item.stepCode">
+            <van-icon :name="statusIcon(item.status)" class="status-card__mark" />
+            <div class="status-card__content">
+              <div class="status-card__main">
+                <div class="step-order">第{{ item.sortOrder }}步</div>
+                <div class="workflow-card__title">{{ item.name }}</div>
+                <span class="status-chip" :class="statusClass(item.status)">
+                  <van-icon :name="statusIcon(item.status)" class="status-chip__icon" size="12" />{{ item.statusText }}
+                </span>
               </div>
-              <span class="status-chip" :class="statusClass(item.status)">{{ item.statusText }}</span>
             </div>
-            <div class="step-item__meta">办理时间：{{ item.operatedAt || '暂无记录' }}</div>
-            <div class="step-item__meta">办理人：{{ item.lastOperatorName || '待办理' }}</div>
-            <div class="step-item__meta" v-if="item.reviewComment">审核意见：{{ item.reviewComment }}</div>
+            <div class="status-card__summary">{{ item.phase }}</div>
+            <div class="status-card__footer">
+              <div class="step-time-row">
+                <span>{{ displayTime(item.startAt) }} 开始   {{ displayTime(item.endAt || item.deadline) }} 截止</span>
+              </div>
+              <span class="due-pill">{{ item.operatedAt || '暂无记录' }}</span>
+            </div>
+            <div class="workflow-card__body" v-if="item.reviewComment">审核意见：{{ item.reviewComment }}</div>
+            <div class="workflow-card__foot">
+              <span>{{ item.lastOperatorName || '待办理' }}</span>
+            </div>
           </div>
         </div>
         <div class="empty-state" v-else-if="!loading">当前暂无流程记录。</div>

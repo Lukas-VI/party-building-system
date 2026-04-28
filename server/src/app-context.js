@@ -1050,6 +1050,11 @@ function remainingLabel(days) {
   return `剩余${days}天`;
 }
 
+function isWithinTodoWindow(step) {
+  const remainingDays = daysUntil(step.endAt || step.deadline || null);
+  return remainingDays === null || remainingDays >= 0;
+}
+
 // 移动端待办对象在这里统一组装，页面层只消费结果，不再自行拼装流程规则。
 /**
  * Build the mobile task card shape from workflow, applicant and actor state.
@@ -1060,7 +1065,7 @@ function buildTodoItem(user, applicant, workflow, step) {
   const uploadRequired = materialSchema.length > 0;
   const canSubmit = isApplicantActor(user, applicant.userId || applicant.id, step);
   const canReview = isReviewerActor(user, step);
-  const actionKind = uploadRequired ? 'upload' : (canReview ? 'review' : (canSubmit ? 'submit' : 'notice'));
+  const actionKind = canReview ? 'review' : (canSubmit ? (uploadRequired ? 'upload' : 'submit') : 'notice');
   const isCompleted = step.status === 'approved';
   const reviewState = mobileReviewState(step);
   const dueAt = step.endAt || step.deadline || null;
@@ -1128,10 +1133,15 @@ async function listMobileTodos(user) {
   const todos = [];
   for (const applicant of applicants.filter(Boolean)) {
     const workflow = await getWorkflowByApplicantId(applicant.userId || applicant.id);
-    for (const step of workflow.steps.filter(isMvpStep)) {
+    const mvpSteps = workflow.steps.filter(isMvpStep);
+    const currentStep = mvpSteps.find((item) => ['pending', 'reviewing', 'rejected'].includes(item.status));
+    for (const step of mvpSteps) {
       const visibleToApplicant = isApplicantActor(user, applicant.userId || applicant.id, step) && ['pending', 'rejected'].includes(step.status);
       const visibleToReviewer = isReviewerActor(user, step) && ['reviewing', 'pending'].includes(step.status);
-      if (!visibleToApplicant && !visibleToReviewer) continue;
+      const isApplicantOwner = user.primaryRole === 'applicant' && user.id === (applicant.userId || applicant.id);
+      const visibleCurrentNode = isApplicantOwner && step.id === currentStep?.id && ['pending', 'reviewing'].includes(step.status) && isWithinTodoWindow(step);
+      const visibleFailedNode = isApplicantOwner && step.status === 'rejected';
+      if (!visibleToApplicant && !visibleToReviewer && !visibleCurrentNode && !visibleFailedNode) continue;
       todos.push(buildTodoItem(user, applicant, workflow, step));
     }
   }
@@ -1231,15 +1241,29 @@ async function markNotificationRead(user, notificationId) {
 
 /**
  * Create a notification row for a specific recipient.
+ *
+ * The notification record is the current in-system message source. The receipt
+ * row is kept as the later service-account push/click bridge, so message links
+ * can jump back to the exact workflow step after WeChat integration is added.
  */
 async function createNotification(userId, type, title, content, relatedStepCode = null, relatedTargetType = null, relatedTargetId = null) {
   const createdAt = now();
-  await query(
+  const inserted = await query(
     `INSERT INTO notifications
      (user_id, type, title, content, related_step_code, related_target_type, related_target_id, status, created_at)
      VALUES (:userId, :type, :title, :content, :relatedStepCode, :relatedTargetType, :relatedTargetId, 'unread', :createdAt)`,
     { userId, type, title, content, relatedStepCode, relatedTargetType, relatedTargetId, createdAt },
   );
+  if (inserted.insertId) {
+    await query(
+      `INSERT INTO notification_receipts
+       (notification_id, user_id, status, created_at)
+       VALUES (:notificationId, :userId, 'sent', :createdAt)
+       ON DUPLICATE KEY UPDATE status = VALUES(status)`,
+      { notificationId: inserted.insertId, userId, createdAt },
+    );
+  }
+  return inserted.insertId || null;
 }
 
 /**
@@ -1439,6 +1463,271 @@ async function notificationRecipientsForStep(step, applicantId, excludeUserIds =
     .map((row) => row.id);
 }
 
+async function ensureSystemSettingsTable() {
+  await query(`
+    CREATE TABLE IF NOT EXISTS system_settings (
+      setting_key VARCHAR(128) PRIMARY KEY,
+      setting_value TEXT NULL,
+      description VARCHAR(255) NULL,
+      updated_by VARCHAR(64) NULL,
+      updated_at DATETIME NOT NULL
+    )
+  `);
+}
+
+async function getSystemSetting(settingKey, fallbackValue = '') {
+  await ensureSystemSettingsTable();
+  const row = await first(
+    `SELECT setting_value AS settingValue
+     FROM system_settings
+     WHERE setting_key = :settingKey`,
+    { settingKey },
+  );
+  return row ? row.settingValue : fallbackValue;
+}
+
+async function setSystemSetting(settingKey, settingValue, description = '', operatorId = null) {
+  await ensureSystemSettingsTable();
+  await query(
+    `INSERT INTO system_settings
+      (setting_key, setting_value, description, updated_by, updated_at)
+     VALUES (:settingKey, :settingValue, :description, :operatorId, :updatedAt)
+     ON DUPLICATE KEY UPDATE
+       setting_value = VALUES(setting_value),
+       description = VALUES(description),
+       updated_by = VALUES(updated_by),
+       updated_at = VALUES(updated_at)`,
+    { settingKey, settingValue, description, operatorId, updatedAt: now() },
+  );
+}
+
+async function getWorkflowSettings() {
+  const enforceTimeLimit = await getSystemSetting('workflow.enforceTimeLimit', 'false');
+  return {
+    enforceTimeLimit: enforceTimeLimit === 'true',
+  };
+}
+
+async function updateWorkflowSettings(user, payload = {}) {
+  if (user.primaryRole !== 'superAdmin') {
+    throw errorWithStatus('仅超级管理员可修改流程调试开关', 403);
+  }
+  const enabled = Boolean(payload.enforceTimeLimit);
+  await setSystemSetting(
+    'workflow.enforceTimeLimit',
+    enabled ? 'true' : 'false',
+    '是否启用流程节点开始/截止时间校验；默认关闭以便联调。',
+    user.id,
+  );
+  await logAudit('system_settings', 'workflow.enforceTimeLimit', 'update_workflow_settings', user.id, { enforceTimeLimit: enabled });
+  return getWorkflowSettings();
+}
+
+async function assertWorkflowTimeWindow(step) {
+  const settings = await getWorkflowSettings();
+  if (!settings.enforceTimeLimit) return;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (step.startAt) {
+    const start = new Date(step.startAt);
+    start.setHours(0, 0, 0, 0);
+    if (!Number.isNaN(start.getTime()) && today < start) {
+      throw errorWithStatus('当前节点尚未到开始时间', 400);
+    }
+  }
+  const endValue = step.endAt || step.deadline;
+  if (endValue) {
+    const end = new Date(endValue);
+    end.setHours(0, 0, 0, 0);
+    if (!Number.isNaN(end.getTime()) && today > end) {
+      throw errorWithStatus('当前节点已超过截止时间', 400);
+    }
+  }
+}
+
+function mergeWorkflowFormData(step, incomingFormData = {}) {
+  return {
+    ...(step.formData || {}),
+    ...incomingFormData,
+    businessFields: {
+      ...(step.formData?.businessFields || {}),
+      ...(incomingFormData.businessFields || {}),
+    },
+  };
+}
+
+function fieldsForWorkflowAction(step, action) {
+  const fields = step.taskMeta?.businessFields || step.formSchema?.businessFields || [];
+  if (action === 'submit') {
+    return fields.filter((item) => !item.owner || item.owner === 'applicant' || item.owner === 'both');
+  }
+  if (action === 'review') {
+    return fields.filter((item) => !item.owner || item.owner === 'reviewer' || item.owner === 'both');
+  }
+  return [];
+}
+
+function validateRequiredBusinessFields(step, formData, action) {
+  const businessFields = formData.businessFields || {};
+  const missing = fieldsForWorkflowAction(step, action).find((field) => (
+    field.required && !String(businessFields[field.key] || formData[field.key] || '').trim()
+  ));
+  if (missing) {
+    throw errorWithStatus(`请填写${missing.label}`, 400);
+  }
+}
+
+async function validateRequiredMaterials(step) {
+  const requiredMaterials = configuredMaterialSchema(step).filter((item) => item.required);
+  if (!requiredMaterials.length) return;
+  const rows = await query(
+    `SELECT material_tag AS materialTag, file_name AS fileName, mime_type AS mimeType
+     FROM attachments
+     WHERE step_record_id = :stepRecordId`,
+    { stepRecordId: step.id },
+  );
+  for (const material of requiredMaterials) {
+    const matched = rows.filter((item) => item.materialTag === material.tag);
+    if (!matched.length) {
+      throw errorWithStatus(`请上传${material.label}`, 400);
+    }
+    const acceptedRules = material.accept || [];
+    if (acceptedRules.length) {
+      for (const item of matched) {
+        const extension = path.extname(item.fileName || '').toLowerCase();
+        const extensionAllowed = acceptedRules.some((type) => (FILE_ACCEPT_RULES[type]?.extensions || []).includes(extension));
+        const mimeAllowed = acceptedRules.some((type) => (FILE_ACCEPT_RULES[type]?.mimeTypes || []).includes(item.mimeType));
+        if (!extensionAllowed || !mimeAllowed) {
+          throw errorWithStatus(`${material.label}文件类型不符合要求`, 400);
+        }
+      }
+    }
+  }
+}
+
+async function notifyWorkflowSubmission(user, applicantId, step) {
+  const recipients = await notificationRecipientsForStep(step, applicantId, [user.id]);
+  for (const userId of recipients) {
+    await createNotification(
+      userId,
+      'task_submitted',
+      `${step.name}待处理`,
+      `${user.name}已提交“${step.name}”，请按流程要求及时处理。`,
+      step.stepCode,
+      'workflow',
+      applicantId,
+    );
+  }
+}
+
+async function notifyWorkflowReview(user, applicantId, workflow, step, nextStatus) {
+  await createNotification(
+    applicantId,
+    'task_reviewed',
+    `${step.name}${nextStatus === 'approved' ? '已通过' : '需补充'}`,
+    nextStatus === 'approved' ? `“${step.name}”已审核通过，请关注下一步通知。` : `“${step.name}”已退回，请根据意见补充材料。`,
+    step.stepCode,
+    'workflow',
+    applicantId,
+  );
+  if (nextStatus !== 'approved') return;
+  const nextStep = workflow.steps
+    .filter((item) => isMvpStep(item) && Number(item.sortOrder || 0) > Number(step.sortOrder || 0))
+    .sort((left, right) => Number(left.sortOrder || 0) - Number(right.sortOrder || 0))[0];
+  if (!nextStep) return;
+  const recipients = await notificationRecipientsForStep(nextStep, applicantId, [user.id, applicantId]);
+  for (const userId of recipients) {
+    await createNotification(
+      userId,
+      'next_step_opened',
+      `${nextStep.name}已开放`,
+      `上一节点“${step.name}”已通过，请按要求办理“${nextStep.name}”。`,
+      nextStep.stepCode,
+      'workflow',
+      applicantId,
+    );
+  }
+}
+
+async function submitWorkflowTask(user, applicantId, stepCode, payload = {}, auditAction = 'submit_step') {
+  await assertCanAccessApplicant(user, applicantId);
+  const workflow = await getWorkflowByApplicantId(applicantId);
+  const step = workflow.steps.find((item) => item.stepCode === stepCode);
+  assertWorkflowActor(user, applicantId, workflow, step, 'submit');
+  await assertWorkflowTimeWindow(step);
+  if (step.stepCode === 'STEP_01') {
+    await ensureAdultApplicant(applicantId);
+  }
+  const incomingFormData = payload.formData || payload || {};
+  const mergedFormData = mergeWorkflowFormData(step, incomingFormData);
+  validateRequiredBusinessFields(step, mergedFormData, 'submit');
+  await validateRequiredMaterials(step);
+  await query(
+    `UPDATE workflow_step_records
+     SET status = 'reviewing',
+         task_status = 'in_review',
+         form_data_json = :formDataJson,
+         review_comment = :reviewComment,
+         last_operator_id = :operatorId,
+         operated_at = :operatedAt
+     WHERE id = :id`,
+    {
+      formDataJson: JSON.stringify(mergedFormData),
+      reviewComment: payload.reviewComment || '',
+      operatorId: user.id,
+      operatedAt: now(),
+      id: step.id,
+    },
+  );
+  await logAudit('workflow_step_records', step.id, auditAction, user.id, payload || {});
+  await notifyWorkflowSubmission(user, applicantId, step);
+  return { applicantId, stepCode: step.stepCode, status: 'reviewing' };
+}
+
+async function reviewWorkflowTask(user, applicantId, stepCode, payload = {}, auditAction = 'review_step') {
+  await assertCanAccessApplicant(user, applicantId);
+  const workflow = await getWorkflowByApplicantId(applicantId);
+  const step = workflow.steps.find((item) => item.stepCode === stepCode);
+  assertWorkflowActor(user, applicantId, workflow, step, 'review');
+  await assertWorkflowTimeWindow(step);
+  const requestedStatus = payload.status || 'approved';
+  if (!ALLOWED_REVIEW_STATUSES.has(requestedStatus)) {
+    throw errorWithStatus('审核状态不合法', 400);
+  }
+  const incomingFormData = payload.formData || {};
+  const mergedFormData = mergeWorkflowFormData(step, incomingFormData);
+  if (requestedStatus === 'approved') {
+    validateRequiredBusinessFields(step, mergedFormData, 'review');
+    await validateRequiredMaterials(step);
+  }
+  const nextStatus = resolveReviewOutcome(step, requestedStatus, mergedFormData);
+  await query(
+    `UPDATE workflow_step_records
+     SET status = :status,
+         task_status = :taskStatus,
+         form_data_json = :formDataJson,
+         review_comment = :reviewComment,
+         last_operator_id = :operatorId,
+         operated_at = :operatedAt,
+         confirmed_at = :confirmedAt
+     WHERE id = :id`,
+    {
+      status: nextStatus,
+      taskStatus: nextTaskStatus(nextStatus),
+      formDataJson: JSON.stringify(mergedFormData),
+      reviewComment: payload.comment || '',
+      operatorId: user.id,
+      operatedAt: now(),
+      confirmedAt: nextStatus === 'approved' ? now() : null,
+      id: step.id,
+    },
+  );
+  await advanceAfterReview(workflow, step, nextStatus, mergedFormData);
+  await logAudit('workflow_step_records', step.id, auditAction, user.id, payload || {});
+  await notifyWorkflowReview(user, applicantId, workflow, step, nextStatus);
+  return { applicantId, stepCode: step.stepCode, status: nextStatus };
+}
+
 /**
  * Build a public upload URL from a multer storage filename.
  */
@@ -1559,6 +1848,10 @@ module.exports = {
   getUserScopeById,
   roleMatchesApplicantScope,
   notificationRecipientsForStep,
+  getWorkflowSettings,
+  updateWorkflowSettings,
+  submitWorkflowTask,
+  reviewWorkflowTask,
   fileUrl,
   acceptedTypesForMaterial,
   validateUploadedFile,

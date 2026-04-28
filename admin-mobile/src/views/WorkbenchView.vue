@@ -12,6 +12,23 @@ const actions = computed(() => workbenchActions(sessionState.user));
 const previewMessages = computed(() => workbench.value?.messages || []);
 const todoItems = computed(() => workbench.value?.todos || []);
 const nextTask = computed(() => workbench.value?.nextTask || null);
+
+function displayTime(value) {
+  return value || '未设置';
+}
+
+function cardClass(item) {
+  return item.reviewClassName || `is-${item.status || 'pending'}`;
+}
+
+function cardIcon(item) {
+  return item.reviewIcon || (item.status === 'approved' ? 'passed' : item.status === 'rejected' ? 'close' : item.status === 'locked' ? 'stop-circle-o' : 'clock-o');
+}
+
+function cardLabel(item) {
+  return item.reviewLabel || item.statusText || '待处理';
+}
+
 async function loadData() {
   loading.value = true;
   try {
@@ -107,16 +124,21 @@ onMounted(loadData);
             <div class="status-card__main">
               <div class="step-order">{{ nextTask.orderLabel || '下一步' }}</div>
               <div class="workflow-card__title">{{ nextTask.stepName }}</div>
-              <div class="workflow-card__meta">{{ nextTask.phase }} · {{ nextTask.taskOwner }}</div>
+              <span class="status-chip" :class="nextTask.reviewClassName || `is-${nextTask.status}`">
+                <van-icon :name="nextTask.reviewIcon || 'clock-o'" class="status-chip__icon" size="12" />{{ nextTask.reviewLabel || nextTask.statusText }}
+              </span>
             </div>
-            <span class="status-chip" :class="nextTask.reviewClassName || `is-${nextTask.status}`">
-              <van-icon :name="nextTask.reviewIcon || 'clock-o'" class="status-chip__icon" size="12" />{{ nextTask.reviewLabel || nextTask.statusText }}
-            </span>
           </div>
           <div class="status-card__summary">{{ nextTask.summary }}</div>
+          <div class="status-card__footer">
+            <div class="step-time-row">
+              <span>{{ displayTime(nextTask.startAt) }} 开始   {{ displayTime(nextTask.endAt || nextTask.deadline) }} 截止</span>
+            </div>
+            <span class="due-pill" :class="{ 'is-overdue': nextTask.isOverdue }">{{ nextTask.remainingLabel }}</span>
+          </div>
+          <div class="workflow-card__body" v-if="nextTask.blessingText">{{ nextTask.blessingText }}</div>
           <div class="workflow-card__foot">
-            <span>{{ nextTask.applicantName || '本人流程' }}</span>
-            <span>{{ nextTask.currentStage }}</span>
+            <span v-if="nextTask.uploadRequired">含材料事项</span>
           </div>
         </button>
       </div>
@@ -141,12 +163,28 @@ onMounted(loadData);
       </div>
       <div class="section-card__bd">
         <div class="table-like" v-if="todoItems.length">
-          <button v-for="item in todoItems" :key="`${item.workflowId}-${item.taskId}`" type="button" class="table-row" @click="openTask(item)">
-            <div class="table-row__head">
-              <div class="table-row__title">{{ item.stepName }}</div>
-              <span class="status-chip" :class="`is-${item.status}`">{{ item.statusText }}</span>
+          <button v-for="item in todoItems" :key="`${item.workflowId}-${item.taskId}`" type="button" class="workflow-card status-card" :class="cardClass(item)" @click="openTask(item)">
+            <van-icon :name="cardIcon(item)" class="status-card__mark" />
+            <div class="status-card__content">
+              <div class="status-card__main">
+                <div class="step-order">{{ item.orderLabel || '待办' }}</div>
+                <div class="workflow-card__title">{{ item.stepName }}</div>
+                <span class="status-chip" :class="cardClass(item)">
+                  <van-icon :name="cardIcon(item)" class="status-chip__icon" size="12" />{{ cardLabel(item) }}
+                </span>
+              </div>
             </div>
-            <div class="table-row__sub">{{ item.applicantName || '本人流程' }} · {{ item.summary }}</div>
+            <div class="status-card__summary">{{ item.summary }}</div>
+            <div class="status-card__footer">
+              <div class="step-time-row">
+                <span>{{ displayTime(item.startAt) }} 开始   {{ displayTime(item.endAt || item.deadline) }} 截止</span>
+              </div>
+              <span class="due-pill" :class="{ 'is-overdue': item.isOverdue }">{{ item.remainingLabel || '待办理' }}</span>
+            </div>
+            <div class="workflow-card__body" v-if="item.blessingText">{{ item.blessingText }}</div>
+            <div class="workflow-card__foot">
+              <span v-if="item.uploadRequired">含材料事项</span>
+            </div>
           </button>
         </div>
         <div class="empty-state" v-else-if="!loading">当前没有待办事项。</div>

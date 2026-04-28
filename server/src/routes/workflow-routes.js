@@ -14,15 +14,12 @@ function registerWorkflowRoutes(app, ctx) {
     requireAuth,
     requirePermission,
     canAccessApplicant,
-    assertCanAccessApplicant,
     getWorkflowByApplicantId,
-    assertWorkflowActor,
-    nextTaskStatus,
-    advanceAfterReview,
-    resolveReviewOutcome,
-    ensureAdultApplicant,
+    getWorkflowSettings,
+    updateWorkflowSettings,
+    submitWorkflowTask,
+    reviewWorkflowTask,
     fileUrl,
-    ALLOWED_REVIEW_STATUSES,
     upload,
   } = ctx;
 
@@ -45,41 +42,7 @@ function registerWorkflowRoutes(app, ctx) {
 
   app.post('/api/workflows/:applicantId/steps/:stepCode/submit', requireAuth(), async (req, res) => {
     try {
-      await assertCanAccessApplicant(req.user, req.params.applicantId);
-      const workflow = await getWorkflowByApplicantId(req.params.applicantId);
-      const step = workflow.steps.find((item) => item.stepCode === req.params.stepCode);
-      assertWorkflowActor(req.user, req.params.applicantId, workflow, step, 'submit');
-      if (step.stepCode === 'STEP_01') {
-        await ensureAdultApplicant(req.params.applicantId);
-      }
-      const incomingFormData = req.body.formData || req.body || {};
-      const mergedFormData = {
-        ...step.formData,
-        ...incomingFormData,
-        businessFields: {
-          ...(step.formData?.businessFields || {}),
-          ...(incomingFormData.businessFields || {}),
-        },
-      };
-      await query(
-        `UPDATE workflow_step_records
-         SET status = 'reviewing',
-             task_status = 'in_review',
-             form_data_json = :formDataJson,
-             review_comment = :reviewComment,
-             last_operator_id = :operatorId,
-             operated_at = :operatedAt
-         WHERE id = :id`,
-        {
-          formDataJson: JSON.stringify(mergedFormData),
-          reviewComment: req.body.reviewComment || '',
-          operatorId: req.user.id,
-          operatedAt: now(),
-          id: step.id,
-        },
-      );
-      await logAudit('workflow_step_records', step.id, 'submit_step', req.user.id, req.body);
-      ok(res, true, '步骤已提交');
+      ok(res, await submitWorkflowTask(req.user, req.params.applicantId, req.params.stepCode, req.body || {}, 'submit_step'), '步骤已提交');
     } catch (error) {
       fail(res, error.status || 500, error.message);
     }
@@ -87,46 +50,23 @@ function registerWorkflowRoutes(app, ctx) {
 
   app.post('/api/workflows/:applicantId/steps/:stepCode/review', requireAuth(), async (req, res) => {
     try {
-      await assertCanAccessApplicant(req.user, req.params.applicantId);
-      const workflow = await getWorkflowByApplicantId(req.params.applicantId);
-      const step = workflow.steps.find((item) => item.stepCode === req.params.stepCode);
-      assertWorkflowActor(req.user, req.params.applicantId, workflow, step, 'review');
-      const requestedStatus = req.body.status || 'approved';
-      if (!ALLOWED_REVIEW_STATUSES.has(requestedStatus)) return fail(res, 400, '审核状态不合法');
-      const incomingFormData = req.body.formData || {};
-      const mergedFormData = {
-        ...step.formData,
-        ...incomingFormData,
-        businessFields: {
-          ...(step.formData?.businessFields || {}),
-          ...(incomingFormData.businessFields || {}),
-        },
-      };
-      const nextStatus = resolveReviewOutcome(step, requestedStatus, mergedFormData);
-      await query(
-        `UPDATE workflow_step_records
-         SET status = :status,
-             task_status = :taskStatus,
-             form_data_json = :formDataJson,
-             review_comment = :reviewComment,
-             last_operator_id = :operatorId,
-             operated_at = :operatedAt,
-             confirmed_at = :confirmedAt
-         WHERE id = :id`,
-        {
-          status: nextStatus,
-          taskStatus: nextTaskStatus(nextStatus),
-          formDataJson: JSON.stringify(mergedFormData),
-          reviewComment: req.body.comment || '',
-          operatorId: req.user.id,
-          operatedAt: now(),
-          confirmedAt: nextStatus === 'approved' ? now() : null,
-          id: step.id,
-        },
-      );
-      await advanceAfterReview(workflow, step, nextStatus, mergedFormData);
-      await logAudit('workflow_step_records', step.id, 'review_step', req.user.id, req.body);
-      ok(res, true, '审核结果已保存');
+      ok(res, await reviewWorkflowTask(req.user, req.params.applicantId, req.params.stepCode, req.body || {}, 'review_step'), '审核结果已保存');
+    } catch (error) {
+      fail(res, error.status || 500, error.message);
+    }
+  });
+
+  app.get('/api/workflow-settings', requireAuth(), async (req, res) => {
+    try {
+      ok(res, await getWorkflowSettings());
+    } catch (error) {
+      fail(res, error.status || 500, error.message);
+    }
+  });
+
+  app.put('/api/workflow-settings', requireAuth(), requirePermission('configure_workflow'), async (req, res) => {
+    try {
+      ok(res, await updateWorkflowSettings(req.user, req.body || {}), '流程调试开关已保存');
     } catch (error) {
       fail(res, error.status || 500, error.message);
     }

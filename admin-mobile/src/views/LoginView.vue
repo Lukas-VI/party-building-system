@@ -80,7 +80,7 @@ onMounted(() => {
           <van-button v-if="inWechat" plain type="danger" block round :loading="oauthLoading" @click="startWechatLogin">微信授权入口</van-button>
         </div>
         <div class="auth-switch">
-          <span>首次使用服务号工作台？</span>
+          <span>首次使用？</span>
           <router-link to="/register">立即注册</router-link>
         </div>
         <div class="section-card__desc" v-if="bootstrap.defaultPasswordHint" style="padding-top: 8px;">

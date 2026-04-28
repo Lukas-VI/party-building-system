@@ -129,23 +129,27 @@ onMounted(loadWorkflow);
           <button v-for="item in unfinishedSteps" :key="item.taskId" type="button" class="workflow-card status-card" :class="item.reviewClassName" @click="openStep(item)">
             <van-icon :name="item.reviewIcon" class="status-card__mark" />
             <div class="status-card__content">
-              <div class="status-card__main">
-                <div class="step-order">{{ item.orderLabel }}</div>
-                <div class="workflow-card__title">{{ item.stepName }}</div>
-                <span class="status-chip" :class="item.reviewClassName">
-                  <van-icon :name="item.reviewIcon" class="status-chip__icon" size="12" />{{ item.reviewLabel }}
-                </span>
+            <div class="status-card__main">
+              <div class="step-order">{{ item.orderLabel }}</div>
+              <div class="workflow-card__title">{{ item.stepName }}</div>
+              <span class="status-chip" :class="item.reviewClassName">
+                <van-icon :name="item.reviewIcon" class="status-chip__icon" size="12" />{{ item.reviewLabel }}
+              </span>
               </div>
               
             </div>
             <div class="status-card__summary">{{ item.summary }}</div>
             <div class="status-card__footer">
               <div class="step-time-row">
-                <span>开始 {{ displayTime(item.startAt) }} ~ 截止 {{ displayTime(item.endAt || item.deadline) }}</span>
+                <span>{{ displayTime(item.startAt) }} 开始   {{ displayTime(item.endAt || item.deadline) }} 截止</span>
               </div>
               <span class="due-pill" :class="{ 'is-overdue': item.isOverdue }">{{ item.remainingLabel }}</span>
+
             </div>
-            <div class="workflow-card__meta" v-if="item.uploadRequired">需提交材料，可点开查看或上传。</div>
+            <div class="workflow-card__body" v-if="item.blessingText">{{ item.blessingText }}</div>
+            <div class="workflow-card__foot">
+              <span v-if="item.uploadRequired">含材料事项</span>
+            </div>
           </button>
         </div>
         <!-- 分割线 -->
@@ -158,23 +162,26 @@ onMounted(loadWorkflow);
           <button class="workflow-card status-card" :class="item.reviewClassName" v-for="item in completedSteps" :key="item.stepCode" type="button" @click="openStep(item)">
             <van-icon :name="item.reviewIcon" class="status-card__mark" />
             <div class="status-card__content">
-              <div class="status-card__main">
-                <div class="step-order">{{ item.orderLabel }}</div>
-                <div class="workflow-card__title">{{ item.stepName }}</div>
-                <div class="workflow-card__meta">{{ item.phase }} · {{ item.taskOwner }}</div>
-                <span class="status-chip" :class="item.reviewClassName">
-                  <van-icon :name="item.reviewIcon" class="status-chip__icon" size="12" />{{ item.reviewLabel }}
-                </span>              </div>
-
+            <div class="status-card__main">
+              <div class="step-order">{{ item.orderLabel }}</div>
+              <div class="workflow-card__title">{{ item.stepName }}</div>
+              <span class="status-chip" :class="item.reviewClassName">
+                <van-icon :name="item.reviewIcon" class="status-chip__icon" size="12" />{{ item.reviewLabel }}
+              </span>
             </div>
+            </div>
+            <div class="status-card__summary" v-if="item.summary">{{ item.summary }}</div>
             <div class="status-card__footer">
               <div class="step-time-row">
-                <span>开始 {{ displayTime(item.startAt) }} ~ 截止 {{ displayTime(item.endAt || item.deadline) }}</span>
+                <span>{{ displayTime(item.startAt) }} 开始   {{ displayTime(item.endAt || item.deadline) }} 截止</span>
               </div>
               <span class="due-pill">{{ item.remainingLabel }}</span>
+
             </div>
-            <div class="workflow-card__meta">{{ item.operatedAt || '暂无时间记录' }} · {{ item.lastOperatorName || '系统记录' }}</div>
-            <div class="workflow-card__meta">点击查看节点详情</div>
+            <div class="workflow-card__body" v-if="item.blessingText">{{ item.blessingText }}</div>
+            <div class="workflow-card__foot">
+              <span v-if="item.uploadRequired">含材料事项</span>
+            </div>
           </button>
         </div>
         <!-- 加载骨架屏 -->

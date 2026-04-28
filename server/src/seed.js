@@ -141,6 +141,23 @@ async function ensureAdditiveMigrations() {
       UNIQUE KEY uk_notification_receipt (notification_id, user_id)
     );
   `);
+
+  await raw(`
+    CREATE TABLE IF NOT EXISTS system_settings (
+      setting_key VARCHAR(128) PRIMARY KEY,
+      setting_value TEXT NULL,
+      description VARCHAR(255) NULL,
+      updated_by VARCHAR(64) NULL,
+      updated_at DATETIME NOT NULL
+    );
+  `);
+
+  await query(
+    `INSERT INTO system_settings
+      (setting_key, setting_value, description, updated_by, updated_at)
+     VALUES ('workflow.enforceTimeLimit', 'false', '是否启用流程节点开始/截止时间校验；默认关闭以便联调。', NULL, NOW())
+     ON DUPLICATE KEY UPDATE setting_key = setting_key`,
+  );
 }
 
 /**

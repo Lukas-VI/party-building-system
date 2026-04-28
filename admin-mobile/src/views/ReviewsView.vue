@@ -8,6 +8,22 @@ const loading = ref(false);
 const reviews = ref([]);
 const registrationRequests = ref([]);
 
+function displayTime(value) {
+  return value || '未设置';
+}
+
+function cardClass(item) {
+  return item.reviewClassName || `is-${item.status || 'reviewing'}`;
+}
+
+function cardIcon(item) {
+  return item.reviewIcon || (item.status === 'approved' ? 'passed' : item.status === 'rejected' ? 'close' : item.status === 'locked' ? 'stop-circle-o' : 'clock-o');
+}
+
+function cardLabel(item) {
+  return item.reviewLabel || item.statusText || '待审核';
+}
+
 async function loadReviews() {
   loading.value = true;
   try {
@@ -74,23 +90,23 @@ onMounted(loadReviews);
       </div>
       <div class="section-card__bd" v-if="registrationRequests.length">
         <div class="table-like">
-          <div class="table-row" v-for="item in registrationRequests" :key="item.requestNo">
-            <div class="table-row__head">
-              <div>
-                <div class="table-row__title">{{ item.name }}</div>
-                <div class="table-row__sub">{{ item.employeeNo }} · {{ item.orgName || '未配置单位' }}</div>
+          <div class="workflow-card status-card is-reviewing" v-for="item in registrationRequests" :key="item.requestNo">
+            <van-icon name="clock-o" class="status-card__mark" />
+            <div class="status-card__content">
+              <div class="status-card__main">
+                <div class="step-order">注册审核</div>
+                <div class="workflow-card__title">{{ item.name }}</div>
+                <span class="status-chip is-reviewing">
+                  <van-icon name="clock-o" class="status-chip__icon" size="12" />待审核
+                </span>
               </div>
-              <span class="status-chip is-reviewing">待审核</span>
             </div>
-            <div class="kv-grid">
-              <div class="kv-item">
-                <div class="kv-item__label">支部</div>
-                <div class="kv-item__value">{{ item.branchName || '未限定支部' }}</div>
+            <div class="status-card__summary">{{ item.employeeNo }} · {{ item.orgName || '未配置单位' }} · {{ item.branchName || '未限定支部' }}</div>
+            <div class="status-card__footer">
+              <div class="step-time-row">
+                <span>{{ displayTime(item.createdAt) }} 提交   {{ displayTime(item.reviewedAt) }} 审核</span>
               </div>
-              <div class="kv-item">
-                <div class="kv-item__label">申请时间</div>
-                <div class="kv-item__value">{{ item.createdAt }}</div>
-              </div>
+              <span class="due-pill">待审核</span>
             </div>
             <div class="section-actions">
               <van-button size="small" type="danger" @click="reviewRegistration(item, 'approved')">通过注册</van-button>
@@ -109,23 +125,27 @@ onMounted(loadReviews);
       </div>
       <div class="section-card__bd" v-if="reviews.length">
         <div class="table-like">
-          <div class="table-row" v-for="item in reviews" :key="`${item.applicantId}-${item.stepCode}`">
-            <div class="table-row__head">
-              <div>
-                <div class="table-row__title">{{ item.stepName }}</div>
-                <div class="table-row__sub">{{ item.applicantName }} · {{ item.orgName || '未配置单位' }}</div>
+          <div class="workflow-card status-card" :class="cardClass(item)" v-for="item in reviews" :key="`${item.applicantId}-${item.stepCode}`">
+            <van-icon :name="cardIcon(item)" class="status-card__mark" />
+            <div class="status-card__content">
+              <div class="status-card__main">
+                <div class="step-order">{{ item.orderLabel || item.stepCode }}</div>
+                <div class="workflow-card__title">{{ item.stepName }}</div>
+                <span class="status-chip" :class="cardClass(item)">
+                  <van-icon :name="cardIcon(item)" class="status-chip__icon" size="12" />{{ cardLabel(item) }}
+                </span>
               </div>
-              <span class="status-chip is-reviewing">待审核</span>
             </div>
-            <div class="kv-grid">
-              <div class="kv-item">
-                <div class="kv-item__label">支部</div>
-                <div class="kv-item__value">{{ item.branchName || '未限定支部' }}</div>
+            <div class="status-card__summary">{{ item.applicantName }} · {{ item.orgName || '未配置单位' }} · {{ item.branchName || '未限定支部' }}</div>
+            <div class="status-card__footer">
+              <div class="step-time-row">
+                <span>{{ displayTime(item.startAt) }} 开始   {{ displayTime(item.endAt || item.deadline) }} 截止</span>
               </div>
-              <div class="kv-item">
-                <div class="kv-item__label">截止时间</div>
-                <div class="kv-item__value">{{ item.deadline || '未配置' }}</div>
-              </div>
+              <span class="due-pill" :class="{ 'is-overdue': item.isOverdue }">{{ item.remainingLabel || '待审核' }}</span>
+            </div>
+            <div class="workflow-card__body" v-if="item.summary">{{ item.summary }}</div>
+            <div class="workflow-card__foot">
+              <span v-if="item.uploadRequired">含材料事项</span>
             </div>
             <div class="section-actions">
               <van-button size="small" type="danger" @click="reviewItem(item, 'approved')">通过</van-button>
