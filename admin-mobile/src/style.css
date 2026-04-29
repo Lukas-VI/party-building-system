@@ -742,6 +742,18 @@ textarea:focus-visible {
   white-space: nowrap;
 }
 
+.text-link--button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+}
+
+.material-uploader {
+  display: block;
+  margin: 10px 0 8px;
+}
+
 .formal-divider {
   height: 1px;
   margin: 16px 0;

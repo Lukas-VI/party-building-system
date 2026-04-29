@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { showFailToast, showSuccessToast } from 'vant';
 import { fetchMobileWorkflow, markMessageRead, rescheduleMobileTask, reviewMobileTask, submitMobileTask, uploadMobileFile } from '../api';
@@ -10,6 +10,7 @@ const loading = ref(false);
 const submitting = ref(false);
 const workflow = ref(null);
 const materialUploads = ref([]);
+const operationSection = ref(null);
 const form = reactive({
   summary: '',
   note: '',
@@ -23,16 +24,26 @@ const businessForm = reactive({});
 const workflowId = computed(() => route.params.workflowId || 'me');
 const stepCode = computed(() => route.params.stepCode);
 const currentTask = computed(() => (workflow.value?.steps || []).find((item) => item.stepCode === stepCode.value));
-const canOperate = computed(() => Boolean(currentTask.value?.canSubmit || currentTask.value?.canReview || currentTask.value?.canReschedule));
+const canSubmitTask = computed(() => Boolean(currentTask.value?.canSubmit));
+const canReviewTask = computed(() => Boolean(currentTask.value?.canReview));
+const canOperate = computed(() => Boolean(canSubmitTask.value || canReviewTask.value || currentTask.value?.canReschedule));
+const operationHint = computed(() => {
+  if (!currentTask.value) return '';
+  if (canOperate.value) return '';
+  if (currentTask.value.status === 'approved') return '该节点已通过，当前仅可查看办理记录和已提交材料。';
+  if (currentTask.value.status === 'reviewing') return '该节点已提交审核，请等待有权限的审核人员处理。';
+  if (currentTask.value.status === 'locked') return '该节点尚未开放，请先完成前置流程。';
+  return '当前账号或节点状态暂不支持办理操作。';
+});
 const activeBusinessFields = computed(() => {
   const fields = currentTask.value?.businessFields || [];
-  if (currentTask.value?.canSubmit && currentTask.value?.canReview) {
+  if (canSubmitTask.value && canReviewTask.value) {
     return fields;
   }
-  if (currentTask.value?.canSubmit) {
+  if (canSubmitTask.value) {
     return fields.filter((item) => !item.owner || item.owner === 'applicant' || item.owner === 'both');
   }
-  if (currentTask.value?.canReview) {
+  if (canReviewTask.value) {
     return fields.filter((item) => !item.owner || item.owner === 'reviewer' || item.owner === 'both');
   }
   return [];
@@ -46,6 +57,11 @@ const filledBusinessFields = computed(() => {
 
 function displayTime(value) {
   return value || '未设置';
+}
+
+async function scrollToOperation() {
+  await nextTick();
+  operationSection.value?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
 }
 
 function syncFormFromTask(task) {
@@ -234,6 +250,7 @@ onMounted(loadWorkflow);
           <div class="workflow-card__body" v-if="currentTask.blessingText">{{ currentTask.blessingText }}</div>
           <div class="workflow-card__foot">
             <span v-if="currentTask.uploadRequired">含材料事项</span>
+            <button v-if="canOperate" class="text-link text-link--button" type="button" @click="scrollToOperation">去办理</button>
           </div>
         </div>
       </div>
@@ -272,7 +289,14 @@ onMounted(loadWorkflow);
             </div>
             <span class="tag-pair">{{ material.tag }}</span>
           </div>
-          <van-uploader v-if="currentTask.canSubmit || currentTask.canReview" :accept="materialAccept(material)" :after-read="(file) => handleUpload(file, material)" />
+          <van-uploader
+            v-if="canSubmitTask || canReviewTask"
+            class="material-uploader"
+            :accept="materialAccept(material)"
+            :after-read="(file) => handleUpload(file, material)"
+          >
+            <van-button icon="plus" size="small" type="danger" plain>上传{{ material.label }}</van-button>
+          </van-uploader>
           <div class="upload-list" v-if="attachmentsByTag(material.tag).length">
             <div class="upload-list__item" v-for="item in attachmentsByTag(material.tag)" :key="item.fileUrl">
               <span>{{ item.fileName }}</span>
@@ -284,17 +308,17 @@ onMounted(loadWorkflow);
       </div>
     </section>
 
-    <section class="section-card" v-if="currentTask && canOperate">
+    <section class="section-card" v-if="currentTask" ref="operationSection">
       <div class="section-card__hd">
         <div class="section-card__title">办理操作</div>
         <div class="section-card__desc">请确认内容无误后再提交，操作将写入流程日志。</div>
       </div>
-      <div class="section-card__bd">
-        <div class="field-block" v-if="currentTask.canSubmit">
+      <div class="section-card__bd" v-if="canOperate">
+        <div class="field-block" v-if="canSubmitTask">
           <div class="field-label">办理说明</div>
           <van-field v-model="form.summary" rows="3" autosize type="textarea" placeholder="请填写本步骤的提交说明或补充内容" />
         </div>
-        <div class="field-block" v-if="currentTask.canSubmit">
+        <div class="field-block" v-if="canSubmitTask">
           <div class="field-label">补充备注</div>
           <van-field v-model="form.note" rows="2" autosize type="textarea" placeholder="可填写补充说明或材料目录" />
         </div>
@@ -333,17 +357,20 @@ onMounted(loadWorkflow);
           </div>
         </template>
 
-        <div class="field-block" v-if="currentTask.canReview">
+        <div class="field-block" v-if="canReviewTask">
           <div class="field-label">审核意见</div>
           <van-field v-model="form.comment" rows="2" autosize type="textarea" placeholder="请填写审核意见或退回原因" />
         </div>
 
         <div class="section-actions">
-          <van-button v-if="currentTask.canSubmit" type="danger" :loading="submitting" @click="submitTask">确认提交</van-button>
-          <van-button v-if="currentTask.canReview" type="danger" plain :loading="submitting" @click="approveTask('approved')">确认通过</van-button>
-          <van-button v-if="currentTask.canReview" plain :loading="submitting" @click="approveTask('rejected')">退回补充</van-button>
+          <van-button v-if="canSubmitTask" type="danger" :loading="submitting" @click="submitTask">确认提交</van-button>
+          <van-button v-if="canReviewTask" type="danger" plain :loading="submitting" @click="approveTask('approved')">确认通过</van-button>
+          <van-button v-if="canReviewTask" plain :loading="submitting" @click="approveTask('rejected')">退回补充</van-button>
           <van-button v-if="currentTask.canReschedule" plain type="warning" :loading="submitting" @click="requestReschedule">提交改期申请</van-button>
         </div>
+      </div>
+      <div class="section-card__bd" v-else>
+        <div class="empty-state empty-state--compact">{{ operationHint }}</div>
       </div>
     </section>
   </div>
