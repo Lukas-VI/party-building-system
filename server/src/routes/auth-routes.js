@@ -1,13 +1,12 @@
 const { query, first } = require('../db');
 const { ok, fail } = require('../lib/http');
 const { now } = require('../lib/utils');
-const { ALLOWED_REVIEW_STATUSES } = require('../lib/constants');
 const { hashPassword, verifyPassword, needsPasswordRehash } = require('../password');
 const { signToken, getUserWithAuth } = require('../services/auth-service');
 const { logAudit } = require('../services/audit-service');
-const { requireAuth, requirePermission, canAccessScopedRecord } = require('../services/permission-service');
-const { listRegistrationRequests, ensureApplicantEnrollment } = require('../services/applicant-service');
-const { ageFromIdNo } = require('../services/registration-service');
+const { requireAuth, requirePermission } = require('../services/permission-service');
+const { listRegistrationRequests } = require('../services/applicant-service');
+const { ageFromIdNo, approveRegistrationRequest } = require('../services/registration-service');
 
 function registerAuthRoutes(app) {
 
@@ -101,49 +100,9 @@ function registerAuthRoutes(app) {
   app.post('/api/auth/approve-registration', requireAuth(), requirePermission('approve_registration'), async (req, res) => {
     try {
       const { requestNo, status = 'approved' } = req.body || {};
-      if (!ALLOWED_REVIEW_STATUSES.has(status)) return fail(res, 400, '注册审核状态不合法');
-      const request = await first(
-        `SELECT
-            rr.request_no AS requestNo,
-            rr.status,
-            rr.user_id AS userId,
-            u.id,
-            u.org_id AS orgId,
-            u.branch_id AS branchId
-         FROM registration_requests rr
-         INNER JOIN users u ON u.id = rr.user_id
-         WHERE rr.request_no = :requestNo`,
-        { requestNo },
-      );
-      if (!request) return fail(res, 404, '未找到注册申请');
-      if (request.status !== 'pending') return fail(res, 400, '该注册申请已处理');
-      if (!canAccessScopedRecord(req.user, request)) return fail(res, 403, '无权审核该注册申请');
-      await query('UPDATE registration_requests SET status = :status, reviewed_at = :reviewedAt WHERE request_no = :requestNo', {
-        status,
-        reviewedAt: now(),
-        requestNo,
-      });
-      if (status === 'approved') {
-        await query('UPDATE users SET status = :status WHERE id = :userId', {
-          status: 'active',
-          userId: request.userId,
-        });
-        const currentRole = await first('SELECT id FROM user_roles WHERE user_id = :userId AND role_id = :roleId', {
-          userId: request.userId,
-          roleId: 'applicant',
-        });
-        if (!currentRole) {
-          await query('INSERT INTO user_roles (user_id, role_id) VALUES (:userId, :roleId)', {
-            userId: request.userId,
-            roleId: 'applicant',
-          });
-        }
-        await ensureApplicantEnrollment(request.userId);
-      }
-      await logAudit('registration_requests', requestNo, 'approve_registration', req.user.id, { status });
-      ok(res, true);
+      ok(res, await approveRegistrationRequest(req.user, requestNo, status));
     } catch (error) {
-      fail(res, 500, error.message);
+      fail(res, error.status || 500, error.message);
     }
   });
 
