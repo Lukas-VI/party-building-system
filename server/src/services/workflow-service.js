@@ -10,7 +10,7 @@ const { logAudit } = require('./audit-service');
 
 function statusText(status) {
   return {
-    pending: '待填写',
+    pending: '进行中',
     reviewing: '待审核',
     approved: '已通过',
     rejected: '已驳回',

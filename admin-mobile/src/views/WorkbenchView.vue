@@ -11,7 +11,6 @@ const workbench = ref(null);
 const actions = computed(() => workbenchActions(sessionState.user));
 const previewMessages = computed(() => workbench.value?.messages || []);
 const todoItems = computed(() => workbench.value?.todos || []);
-const nextTask = computed(() => workbench.value?.nextTask || null);
 
 function displayTime(value) {
   return value || '未设置';
@@ -110,37 +109,6 @@ onMounted(loadData);
             <div class="metric-item__desc">{{ item.desc }}</div>
           </button>
         </div>
-      </div>
-    </section>
-
-    <section class="section-card" v-if="nextTask">
-      <div class="section-card__hd">
-        <div class="section-card__title">下一步:</div>
-      </div>
-      <div class="section-card__bd">
-        <button type="button" class="workflow-card status-card" :class="nextTask.reviewClassName || `is-${nextTask.status}`" @click="openTask(nextTask)">
-          <van-icon :name="nextTask.reviewIcon || 'clock-o'" class="status-card__mark" />
-          <div class="status-card__content">
-            <div class="status-card__main">
-              <div class="step-order">{{ nextTask.orderLabel || '下一步' }}</div>
-              <div class="workflow-card__title">{{ nextTask.stepName }}</div>
-              <span class="status-chip" :class="nextTask.reviewClassName || `is-${nextTask.status}`">
-                <van-icon :name="nextTask.reviewIcon || 'clock-o'" class="status-chip__icon" size="12" />{{ nextTask.reviewLabel || nextTask.statusText }}
-              </span>
-            </div>
-          </div>
-          <div class="status-card__summary">{{ nextTask.summary }}</div>
-          <div class="status-card__footer">
-            <div class="step-time-row">
-              <span>{{ displayTime(nextTask.startAt) }} 开始   {{ displayTime(nextTask.endAt || nextTask.deadline) }} 截止</span>
-            </div>
-            <span class="due-pill" :class="{ 'is-overdue': nextTask.isOverdue }">{{ nextTask.remainingLabel }}</span>
-          </div>
-          <div class="workflow-card__body" v-if="nextTask.blessingText">{{ nextTask.blessingText }}</div>
-          <div class="workflow-card__foot">
-            <span v-if="nextTask.uploadRequired">含材料事项</span>
-          </div>
-        </button>
       </div>
     </section>
 
