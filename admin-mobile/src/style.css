@@ -754,6 +754,44 @@ textarea:focus-visible {
   margin: 10px 0 8px;
 }
 
+.pdf-preview-card {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid rgba(143, 21, 21, 0.14);
+  border-radius: 18px;
+  background: #fffdf9;
+}
+
+.pdf-preview-frame {
+  width: 100%;
+  height: min(68vh, 520px);
+  margin-top: 10px;
+  border: 0;
+  border-radius: 14px;
+  background: #f4efe8;
+}
+
+.message-item {
+  width: 100%;
+  border: 0;
+  text-align: left;
+}
+
+.message-item.is-read {
+  opacity: 0.72;
+}
+
+.message-fold {
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 16px;
+  background: #f4eadf;
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
 .formal-divider {
   height: 1px;
   margin: 16px 0;

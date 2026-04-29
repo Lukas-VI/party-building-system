@@ -134,6 +134,14 @@ export function reviewMobileTask(workflowId, taskId, payload) {
   return http.post(`/mobile/workflows/${workflowId}/tasks/${taskId}/review`, payload);
 }
 
+export function resetMobileTaskStatus(workflowId, taskId, payload) {
+  return http.post(`/mobile/workflows/${workflowId}/tasks/${taskId}/status`, payload);
+}
+
+export function requestMobileTaskChange(workflowId, taskId, payload) {
+  return http.post(`/mobile/workflows/${workflowId}/tasks/${taskId}/change-request`, payload);
+}
+
 export function rescheduleMobileTask(workflowId, taskId, payload) {
   return http.post(`/mobile/workflows/${workflowId}/tasks/${taskId}/reschedule`, payload);
 }

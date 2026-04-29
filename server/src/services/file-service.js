@@ -16,10 +16,21 @@ function fileUrl(fileName) {
     : `${publicBase}/uploads/${fileName}`;
 }
 
+function normalizeOriginalName(file) {
+  const originalName = file?.originalname || '';
+  if (!originalName) return '';
+  try {
+    const decoded = Buffer.from(originalName, 'latin1').toString('utf8');
+    return decoded.includes('\uFFFD') ? originalName : decoded;
+  } catch (error) {
+    return originalName;
+  }
+}
+
 function acceptedTypesForMaterial(step, materialTag) {
   const material = configuredMaterialSchema(step).find((item) => item.tag === materialTag);
   if (!material) throw errorWithStatus('材料类型不属于当前步骤', 400);
-  return material.accept || [];
+  return ['pdf'];
 }
 
 function validateUploadedFile(file, acceptTypes) {
@@ -51,7 +62,7 @@ async function validateRequiredMaterials(step) {
     if (!matched.length) {
       throw errorWithStatus(`请上传${material.label}`, 400);
     }
-    const acceptedRules = material.accept || [];
+    const acceptedRules = ['pdf'];
     if (acceptedRules.length) {
       for (const item of matched) {
         const extension = path.extname(item.fileName || '').toLowerCase();
@@ -68,6 +79,7 @@ async function validateRequiredMaterials(step) {
 module.exports = {
   configuredMaterialSchema,
   fileUrl,
+  normalizeOriginalName,
   acceptedTypesForMaterial,
   validateUploadedFile,
   validateRequiredMaterials,

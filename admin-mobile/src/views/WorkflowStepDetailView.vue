@@ -2,7 +2,8 @@
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { showFailToast, showSuccessToast } from 'vant';
-import { fetchMobileWorkflow, markMessageRead, rescheduleMobileTask, reviewMobileTask, submitMobileTask, uploadMobileFile } from '../api';
+import { fetchMobileWorkflow, markMessageRead, requestMobileTaskChange, resetMobileTaskStatus, rescheduleMobileTask, reviewMobileTask, submitMobileTask, uploadMobileFile } from '../api';
+import { sessionState } from '../session';
 
 const route = useRoute();
 const router = useRouter();
@@ -11,6 +12,7 @@ const submitting = ref(false);
 const workflow = ref(null);
 const materialUploads = ref([]);
 const operationSection = ref(null);
+const previewFile = ref(null);
 const form = reactive({
   summary: '',
   note: '',
@@ -18,6 +20,7 @@ const form = reactive({
   scheduledAt: '',
   location: '',
   reason: '',
+  changeReason: '',
 });
 const businessForm = reactive({});
 
@@ -26,6 +29,12 @@ const stepCode = computed(() => route.params.stepCode);
 const currentTask = computed(() => (workflow.value?.steps || []).find((item) => item.stepCode === stepCode.value));
 const canSubmitTask = computed(() => Boolean(currentTask.value?.canSubmit));
 const canReviewTask = computed(() => Boolean(currentTask.value?.canReview));
+const canRequestChange = computed(() => Boolean(
+  currentTask.value
+    && !canSubmitTask.value
+    && !canReviewTask.value
+    && workflow.value?.applicant?.userId === sessionState.user?.id,
+));
 const canOperate = computed(() => Boolean(canSubmitTask.value || canReviewTask.value || currentTask.value?.canReschedule));
 const operationHint = computed(() => {
   if (!currentTask.value) return '';
@@ -59,6 +68,21 @@ function displayTime(value) {
   return value || '未设置';
 }
 
+function inputTypeForField(field) {
+  if (field.type === 'date') return 'date';
+  if (field.type === 'datetime') return 'datetime-local';
+  return field.type === 'textarea' ? 'textarea' : 'text';
+}
+
+function normalizeBusinessValue(field, value) {
+  if (field.type === 'datetime') return String(value || '').replace('T', ' ');
+  return value || '';
+}
+
+function previewAttachment(item) {
+  previewFile.value = previewFile.value?.fileUrl === item.fileUrl ? null : item;
+}
+
 async function scrollToOperation() {
   await nextTick();
   operationSection.value?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
@@ -71,10 +95,12 @@ function syncFormFromTask(task) {
   form.scheduledAt = task?.formData?.meetingProposal?.scheduledAt || '';
   form.location = task?.formData?.meetingProposal?.location || '';
   form.reason = task?.formData?.meetingProposal?.reason || '';
+  form.changeReason = '';
   Object.keys(businessForm).forEach((key) => delete businessForm[key]);
   const savedFields = task?.formData?.businessFields || {};
   (task?.businessFields || []).forEach((field) => {
-    businessForm[field.key] = savedFields[field.key] || task?.formData?.[field.key] || '';
+    const savedValue = savedFields[field.key] || task?.formData?.[field.key] || '';
+    businessForm[field.key] = field.type === 'datetime' ? String(savedValue).replace(' ', 'T') : savedValue;
   });
   materialUploads.value = [...(task?.attachments || [])];
 }
@@ -189,16 +215,45 @@ function attachmentsByTag(tag) {
 }
 
 function materialAccept(material) {
-  const acceptMap = {
-    pdf: '.pdf,application/pdf',
-    image: '.jpg,.jpeg,.png,image/jpeg,image/png',
-  };
-  return (material?.accept || []).map((item) => acceptMap[item]).filter(Boolean).join(',');
+  return '.pdf,application/pdf';
+}
+
+async function resetStatus(status) {
+  if (!currentTask.value) return;
+  submitting.value = true;
+  try {
+    await resetMobileTaskStatus(workflow.value.workflowId, currentTask.value.taskId, {
+      status,
+      comment: form.comment || '状态纠正',
+    });
+    showSuccessToast('节点状态已调整');
+    await loadWorkflow();
+  } finally {
+    submitting.value = false;
+  }
+}
+
+async function requestChange() {
+  if (!currentTask.value) return;
+  if (!String(form.changeReason || '').trim()) {
+    showFailToast('请填写更改申请说明');
+    return;
+  }
+  submitting.value = true;
+  try {
+    await requestMobileTaskChange(workflow.value.workflowId, currentTask.value.taskId, {
+      reason: form.changeReason,
+    });
+    showSuccessToast('更改申请已发送');
+    form.changeReason = '';
+  } finally {
+    submitting.value = false;
+  }
 }
 
 function buildBusinessPayload() {
   return activeBusinessFields.value.reduce((payload, field) => {
-    payload[field.key] = businessForm[field.key] || '';
+    payload[field.key] = normalizeBusinessValue(field, businessForm[field.key]);
     return payload;
   }, {});
 }
@@ -285,7 +340,7 @@ onMounted(loadWorkflow);
           <div class="table-row__head">
             <div>
               <div class="table-row__title">{{ material.label }}</div>
-              <div class="step-item__meta">{{ material.required ? '必交材料' : '可选材料' }} · {{ (material.accept || []).join('、') }}</div>
+              <div class="step-item__meta">{{ material.required ? '必交材料' : '可选材料' }} · PDF</div>
             </div>
             <span class="tag-pair">{{ material.tag }}</span>
           </div>
@@ -300,10 +355,18 @@ onMounted(loadWorkflow);
           <div class="upload-list" v-if="attachmentsByTag(material.tag).length">
             <div class="upload-list__item" v-for="item in attachmentsByTag(material.tag)" :key="item.fileUrl">
               <span>{{ item.fileName }}</span>
-              <a class="text-link" :href="item.fileUrl" target="_blank" rel="noreferrer">预览/下载</a>
+              <button class="text-link text-link--button" type="button" @click="previewAttachment(item)">预览</button>
+              <a class="text-link" :href="item.fileUrl" target="_blank" rel="noreferrer">下载</a>
             </div>
           </div>
-          <div class="empty-state empty-state--compact" v-else>暂未提交该项材料。</div>
+          <div class="pdf-preview-card" v-if="previewFile?.materialTag === material.tag">
+            <div class="table-row__head">
+              <div class="table-row__title">{{ previewFile.fileName }}</div>
+              <button class="text-link text-link--button" type="button" @click="previewFile = null">收起</button>
+            </div>
+            <iframe class="pdf-preview-frame" :src="previewFile.fileUrl" title="PDF预览"></iframe>
+          </div>
+          <div class="empty-state empty-state--compact" v-if="!attachmentsByTag(material.tag).length">暂未提交该项材料。</div>
         </div>
       </div>
     </section>
@@ -337,8 +400,8 @@ onMounted(loadWorkflow);
             v-model="businessForm[field.key]"
             :rows="field.type === 'textarea' ? 3 : 1"
             :autosize="field.type === 'textarea'"
-            :type="field.type === 'textarea' ? 'textarea' : 'text'"
-            :placeholder="field.placeholder || (field.type === 'date' ? '例如 2026-05-01' : field.type === 'datetime' ? '例如 2026-05-01 14:30' : `请填写${field.label}`)"
+            :type="inputTypeForField(field)"
+            :placeholder="field.placeholder || `请填写${field.label}`"
           />
         </div>
 
@@ -371,6 +434,25 @@ onMounted(loadWorkflow);
       </div>
       <div class="section-card__bd" v-else>
         <div class="empty-state empty-state--compact">{{ operationHint }}</div>
+        <template v-if="canRequestChange">
+          <div class="field-block">
+            <div class="field-label">更改申请说明</div>
+            <van-field v-model="form.changeReason" rows="2" autosize type="textarea" placeholder="请说明需要调整的原因，由有权限人员处理" />
+          </div>
+          <div class="section-actions">
+            <van-button type="danger" plain :loading="submitting" @click="requestChange">提交更改申请</van-button>
+          </div>
+        </template>
+      </div>
+      <div class="section-card__bd" v-if="canReviewTask && ['approved', 'rejected'].includes(currentTask.status)">
+        <div class="field-block">
+          <div class="field-label">状态纠正</div>
+          <div class="step-item__meta">用于处理误通过、误驳回等情况，操作会写入流程日志。</div>
+        </div>
+        <div class="section-actions">
+          <van-button plain type="danger" :loading="submitting" @click="resetStatus('pending')">改为进行中</van-button>
+          <van-button plain :loading="submitting" @click="resetStatus('reviewing')">改为待审核</van-button>
+        </div>
       </div>
     </section>
   </div>

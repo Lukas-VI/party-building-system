@@ -1,13 +1,15 @@
 <script setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { showSuccessToast } from 'vant';
 import { fetchMessages, markMessageRead } from '../api';
 
 const route = useRoute();
 const router = useRouter();
 const loading = ref(false);
 const messages = ref([]);
+const showReadMessages = ref(false);
+const unreadMessages = computed(() => messages.value.filter((item) => item.status === 'unread'));
+const readMessages = computed(() => messages.value.filter((item) => item.status !== 'unread'));
 
 async function loadMessages() {
   loading.value = true;
@@ -22,7 +24,6 @@ async function markRead(item) {
   await markMessageRead(item.id);
   item.status = 'read';
   item.isUnread = false;
-  showSuccessToast('已标记为已读');
 }
 
 async function openMessage(item) {
@@ -51,18 +52,27 @@ onMounted(async () => {
       </div>
       <div class="section-card__bd">
         <div class="table-like" v-if="messages.length">
-          <div class="panel-note" v-for="item in messages" :key="item.id">
+          <button class="panel-note message-item" v-for="item in unreadMessages" :key="item.id" type="button" @click="openMessage(item)">
             <div class="table-row__head">
               <div class="table-row__title">{{ item.title }}</div>
-              <span class="tag-pair">{{ item.status === 'unread' ? '未读' : '已读' }}</span>
+              <span class="tag-pair">新消息</span>
             </div>
             <div class="panel-note__text">{{ item.content }}</div>
             <div class="step-item__meta">{{ item.createdAt }} <span v-if="item.targetLabel">· {{ item.targetLabel }}</span></div>
-            <div class="section-actions section-actions--compact">
-              <van-button size="small" plain type="danger" :disabled="item.status !== 'unread'" @click="markRead(item)">标记已读</van-button>
-              <van-button size="small" type="danger" :disabled="!item.targetRoute" @click="openMessage(item)">查看详情</van-button>
-            </div>
-          </div>
+          </button>
+          <button class="message-fold" v-if="readMessages.length" type="button" @click="showReadMessages = !showReadMessages">
+            {{ showReadMessages ? '收起已读消息' : `展开已读消息（${readMessages.length}）` }}
+          </button>
+          <template v-if="showReadMessages">
+            <button class="panel-note message-item is-read" v-for="item in readMessages" :key="item.id" type="button" @click="openMessage(item)">
+              <div class="table-row__head">
+                <div class="table-row__title">{{ item.title }}</div>
+                <span class="tag-pair">已读</span>
+              </div>
+              <div class="panel-note__text">{{ item.content }}</div>
+              <div class="step-item__meta">{{ item.createdAt }} <span v-if="item.targetLabel">· {{ item.targetLabel }}</span></div>
+            </button>
+          </template>
         </div>
         <div class="empty-state" v-else-if="!loading">暂无消息记录。</div>
         <van-skeleton v-else title :row="5" />

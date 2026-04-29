@@ -47,7 +47,7 @@ async function dashboardForUser(user) {
     metrics: [
       { label: '申请人数', value: applicants.length, desc: '当前权限范围内台账人数', route: '/applicants' },
       { label: '待注册审核', value: pendingRegistrations.length, desc: '首次注册待审核', route: '/reviews?tab=registration' },
-      { label: '待流程审核', value: pendingReviews?.count || 0, desc: '待审批节点数量', route: '/reviews?tab=workflow' },
+      { label: '待流程审核', value: pendingReviews?.count || 0, desc: '待审批节点数量', route: '/workflow-reviews' },
       { label: '查看范围', value: user.orgName || '全校', desc: user.branchName || '系统级数据范围', route: '/profile' },
     ],
     stageDistribution: Object.entries(stageMap).map(([stage, count]) => ({ stage, count })),
@@ -103,7 +103,7 @@ function buildTodoItem(user, applicant, workflow, step) {
   const materialSchema = step.taskMeta?.materialSchema?.length ? step.taskMeta.materialSchema : (step.materialSchema || []);
   const uploadRequired = materialSchema.length > 0;
   const canSubmit = isApplicantActor(user, applicant.userId || applicant.id, step) && ['pending', 'rejected'].includes(step.status);
-  const canReview = isReviewerActor(user, step) && ['pending', 'reviewing'].includes(step.status);
+  const canReview = isReviewerActor(user, step) && ['pending', 'reviewing', 'approved', 'rejected'].includes(step.status);
   const actionKind = canReview ? 'review' : (canSubmit ? (uploadRequired ? 'upload' : 'submit') : 'notice');
   const isCompleted = step.status === 'approved';
   const reviewState = mobileReviewState(step);
@@ -114,6 +114,7 @@ function buildTodoItem(user, applicant, workflow, step) {
     taskId: step.stepCode,
     applicantId: applicant.userId || applicant.id,
     applicantName: applicant.name,
+    applicantUsername: applicant.username || '',
     stepCode: step.stepCode,
     sortOrder: step.sortOrder || stepOrder(step.stepCode),
     orderLabel: `${step.sortOrder || stepOrder(step.stepCode) || ''}. `,

@@ -4,10 +4,10 @@ const { now } = require('../lib/utils');
 const { logAudit } = require('../services/audit-service');
 const { requireAuth, assertCanAccessApplicant } = require('../services/permission-service');
 const { getProfileViewByUser, upsertUserProfile } = require('../services/profile-service');
-const { getWorkflowByApplicantId, isApplicantActor, isReviewerActor, assertWorkflowActor, submitWorkflowTask, reviewWorkflowTask } = require('../services/workflow-service');
+const { getWorkflowByApplicantId, isApplicantActor, isReviewerActor, assertWorkflowActor, submitWorkflowTask, reviewWorkflowTask, resetWorkflowTaskStatus } = require('../services/workflow-service');
 const { listMobileTodos, buildMobileWorkflow, buildMobileWorkbench, resolveMobileWorkflowId } = require('../services/mobile-workbench-service');
 const { listNotifications, getNotificationForUser, markNotificationRead, createNotification, notificationRecipientsForStep } = require('../services/notification-service');
-const { fileUrl, acceptedTypesForMaterial, validateUploadedFile } = require('../services/file-service');
+const { fileUrl, normalizeOriginalName, acceptedTypesForMaterial, validateUploadedFile } = require('../services/file-service');
 const { upload } = require('../upload-middleware');
 
 function registerMobileRoutes(app) {
@@ -121,6 +121,15 @@ function registerMobileRoutes(app) {
     }
   });
 
+  app.post('/api/mobile/workflows/:workflowId/tasks/:taskId/status', requireAuth(), async (req, res) => {
+    try {
+      const applicantId = resolveMobileWorkflowId(req.user, req.params.workflowId);
+      ok(res, await resetWorkflowTaskStatus(req.user, applicantId, req.params.taskId, req.body || {}), '节点状态已调整');
+    } catch (error) {
+      fail(res, error.status || 500, error.message);
+    }
+  });
+
   app.post('/api/mobile/workflows/:workflowId/tasks/:taskId/reschedule', requireAuth(), async (req, res) => {
     try {
       const applicantId = resolveMobileWorkflowId(req.user, req.params.workflowId);
@@ -187,10 +196,37 @@ function registerMobileRoutes(app) {
     }
   });
 
+  app.post('/api/mobile/workflows/:workflowId/tasks/:taskId/change-request', requireAuth(), async (req, res) => {
+    try {
+      const applicantId = resolveMobileWorkflowId(req.user, req.params.workflowId);
+      await assertCanAccessApplicant(req.user, applicantId);
+      if (req.user.id !== applicantId) return fail(res, 403, '仅申请人本人可发起更改申请');
+      const workflow = await getWorkflowByApplicantId(applicantId);
+      const step = workflow.steps.find((item) => item.stepCode === req.params.taskId);
+      if (!step) return fail(res, 404, '未找到对应任务');
+      const recipients = await notificationRecipientsForStep(step, applicantId, [req.user.id]);
+      for (const userId of recipients) {
+        await createNotification(
+          userId,
+          'change_requested',
+          `${step.name}更改申请`,
+          `${req.user.name}申请调整“${step.name}”：${req.body.reason || '请查看流程节点。'}`,
+          step.stepCode,
+          'workflow',
+          applicantId,
+        );
+      }
+      await logAudit('workflow_step_records', step.id, 'request_step_change', req.user.id, req.body || {});
+      ok(res, { recipients: recipients.length }, '更改申请已发送');
+    } catch (error) {
+      fail(res, error.status || 500, error.message);
+    }
+  });
+
   app.post('/api/mobile/files/upload', requireAuth(), upload.single('file'), async (req, res) => {
     try {
       const { workflowId = '', stepCode = '', materialTag = '' } = req.body || {};
-      validateUploadedFile(req.file, ['pdf', 'image']);
+      validateUploadedFile(req.file, ['pdf']);
       let attachmentId = null;
       if (workflowId && stepCode) {
         const applicantId = resolveMobileWorkflowId(req.user, workflowId);
@@ -210,7 +246,7 @@ function registerMobileRoutes(app) {
              VALUES (:stepRecordId, :fileName, :fileUrl, :mimeType, :materialTag, :createdAt)`,
             {
               stepRecordId: stepRecord.id,
-              fileName: req.file.originalname,
+              fileName: normalizeOriginalName(req.file),
               fileUrl: fileUrl(req.file.filename),
               mimeType: req.file.mimetype,
               materialTag,
@@ -222,7 +258,7 @@ function registerMobileRoutes(app) {
       }
       ok(res, {
         attachmentId,
-        fileName: req.file.originalname,
+        fileName: normalizeOriginalName(req.file),
         fileUrl: fileUrl(req.file.filename),
         mimeType: req.file.mimetype,
         materialTag,

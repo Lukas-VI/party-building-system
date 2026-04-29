@@ -13,10 +13,12 @@ function registerReviewRoutes(app) {
           `SELECT
               i.applicant_id AS applicantId,
               r.step_code AS stepCode,
+              d.sort_order AS sortOrder,
               d.name AS stepName,
               r.status,
               r.deadline,
               u.name AS applicantName,
+              u.username AS applicantUsername,
               o.name AS orgName,
               b.name AS branchName
            FROM workflow_step_records r
@@ -25,7 +27,7 @@ function registerReviewRoutes(app) {
            INNER JOIN users u ON u.id = i.applicant_id
            LEFT JOIN org_units o ON o.id = u.org_id
            LEFT JOIN branches b ON b.id = u.branch_id
-           WHERE r.status = 'reviewing'
+           WHERE r.status IN ('pending', 'reviewing')
            ${scope.sql}
            ORDER BY r.deadline ASC, d.sort_order ASC`,
           scope.params,

@@ -64,7 +64,8 @@ export function workbenchActions(user) {
   }
   const actions = [
     { title: '待办工作', desc: '集中处理待审核、待确认和待通知任务', action: 'open-first-todo' },
-    { title: '审核处理', desc: '查看流程审核任务，并在有权限时处理注册审核', route: '/reviews' },
+    { title: '流程审核', desc: '审核发展党员流程节点', route: '/workflow-reviews' },
+    { title: '注册审核', desc: '处理首次注册申请', route: '/reviews' },
     { title: '消息提醒', desc: '查看节点提醒、审核结果和改期通知', route: '/messages' },
   ];
   actions.push({ title: '桌面后台', desc: '进入 PC 端处理台账、统计和复杂配置', external: DESKTOP_ADMIN_URL });

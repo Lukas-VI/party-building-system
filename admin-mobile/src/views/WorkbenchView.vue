@@ -28,6 +28,13 @@ function cardLabel(item) {
   return item.reviewLabel || item.statusText || '待处理';
 }
 
+function todoSummary(item) {
+  if (sessionState.user?.primaryRole !== 'applicant') {
+    return `${item.applicantName || 'Name'} · ${item.applicantUsername || '未登记学号'}`;
+  }
+  return item.summary;
+}
+
 async function loadData() {
   loading.value = true;
   try {
@@ -142,7 +149,7 @@ onMounted(loadData);
                 </span>
               </div>
             </div>
-            <div class="status-card__summary">{{ item.summary }}</div>
+            <div class="status-card__summary">{{ todoSummary(item) }}</div>
             <div class="status-card__footer">
               <div class="step-time-row">
                 <span>{{ displayTime(item.startAt) }} 开始   {{ displayTime(item.endAt || item.deadline) }} 截止</span>

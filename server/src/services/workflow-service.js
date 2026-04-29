@@ -95,7 +95,7 @@ function assertWorkflowActor(user, applicantId, workflow, step, action) {
     return;
   }
   if (action === 'review') {
-    if (!['pending', 'reviewing'].includes(step.status)) throw errorWithStatus('当前节点不能审核', 400);
+    if (!['pending', 'reviewing', 'approved', 'rejected'].includes(step.status)) throw errorWithStatus('当前节点不能审核', 400);
     if (!isReviewerActor(user, step)) throw errorWithStatus('当前账号不能审核该任务', 403);
     return;
   }
@@ -433,6 +433,42 @@ async function reviewWorkflowTask(user, applicantId, stepCode, payload = {}, aud
   return { applicantId, stepCode: step.stepCode, status: nextStatus };
 }
 
+async function resetWorkflowTaskStatus(user, applicantId, stepCode, payload = {}) {
+  await assertCanAccessApplicant(user, applicantId);
+  const workflow = await getWorkflowByApplicantId(applicantId);
+  const step = workflow.steps.find((item) => item.stepCode === stepCode);
+  if (!step) throw errorWithStatus('未找到对应任务', 404);
+  ensureMvpStep(step);
+  if (!isReviewerActor(user, step)) throw errorWithStatus('当前账号不能调整该任务状态', 403);
+  const nextStatus = payload.status || 'pending';
+  if (!['pending', 'reviewing', 'approved', 'rejected'].includes(nextStatus)) {
+    throw errorWithStatus('目标状态不合法', 400);
+  }
+  await query(
+    `UPDATE workflow_step_records
+     SET status = :status,
+         task_status = :taskStatus,
+         review_comment = :reviewComment,
+         last_operator_id = :operatorId,
+         operated_at = :operatedAt,
+         confirmed_at = CASE WHEN :status = 'approved' THEN COALESCE(confirmed_at, :operatedAt) ELSE NULL END
+     WHERE id = :id`,
+    {
+      status: nextStatus,
+      taskStatus: nextTaskStatus(nextStatus),
+      reviewComment: payload.comment || step.reviewComment || '',
+      operatorId: user.id,
+      operatedAt: now(),
+      id: step.id,
+    },
+  );
+  if (['pending', 'rejected'].includes(nextStatus)) {
+    await advanceAfterReview(workflow, step, nextStatus, {});
+  }
+  await logAudit('workflow_step_records', step.id, 'reset_step_status', user.id, payload || {});
+  return { applicantId, stepCode: step.stepCode, status: nextStatus };
+}
+
 module.exports = {
   statusText,
   statusClass,
@@ -458,4 +494,5 @@ module.exports = {
   validateRequiredBusinessFields,
   submitWorkflowTask,
   reviewWorkflowTask,
+  resetWorkflowTaskStatus,
 };

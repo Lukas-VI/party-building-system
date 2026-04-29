@@ -4,9 +4,9 @@ const { now } = require('../lib/utils');
 const { logAudit } = require('../services/audit-service');
 const { requireAuth, requirePermission } = require('../services/permission-service');
 const { canAccessApplicant } = require('../services/applicant-service');
-const { getWorkflowByApplicantId, submitWorkflowTask, reviewWorkflowTask, assertWorkflowActor, isReviewerActor } = require('../services/workflow-service');
+const { getWorkflowByApplicantId, submitWorkflowTask, reviewWorkflowTask, resetWorkflowTaskStatus, assertWorkflowActor, isReviewerActor } = require('../services/workflow-service');
 const { getWorkflowSettings, updateWorkflowSettings } = require('../services/settings-service');
-const { fileUrl, acceptedTypesForMaterial, validateUploadedFile } = require('../services/file-service');
+const { fileUrl, normalizeOriginalName, acceptedTypesForMaterial, validateUploadedFile } = require('../services/file-service');
 const { upload } = require('../upload-middleware');
 
 function registerWorkflowRoutes(app) {
@@ -39,6 +39,14 @@ function registerWorkflowRoutes(app) {
   app.post('/api/workflows/:applicantId/steps/:stepCode/review', requireAuth(), async (req, res) => {
     try {
       ok(res, await reviewWorkflowTask(req.user, req.params.applicantId, req.params.stepCode, req.body || {}, 'review_step'), '审核结果已保存');
+    } catch (error) {
+      fail(res, error.status || 500, error.message);
+    }
+  });
+
+  app.post('/api/workflows/:applicantId/steps/:stepCode/status', requireAuth(), async (req, res) => {
+    try {
+      ok(res, await resetWorkflowTaskStatus(req.user, req.params.applicantId, req.params.stepCode, req.body || {}), '节点状态已调整');
     } catch (error) {
       fail(res, error.status || 500, error.message);
     }
@@ -110,7 +118,7 @@ function registerWorkflowRoutes(app) {
          VALUES (:stepRecordId, :fileName, :fileUrl, :mimeType, :materialTag, :createdAt)`,
         {
           stepRecordId: step.id,
-          fileName: req.file.originalname,
+          fileName: normalizeOriginalName(req.file),
           fileUrl: fileUrl(req.file.filename),
           mimeType: req.file.mimetype,
           materialTag,
@@ -119,7 +127,7 @@ function registerWorkflowRoutes(app) {
       );
       ok(res, {
         attachmentId: inserted.insertId,
-        fileName: req.file.originalname,
+        fileName: normalizeOriginalName(req.file),
         fileUrl: fileUrl(req.file.filename),
         mimeType: req.file.mimetype,
         materialTag,
