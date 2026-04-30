@@ -5,13 +5,23 @@ param(
   [string]$KeyPath = "$env:USERPROFILE\.ssh\codex_vm_ed25519",
   [string]$RepoPath = "/opt/party-building-mini-app",
   [string]$Branch = "",
-  [switch]$SkipPull
+  [switch]$SkipPull,
+  [string]$VmPath = (Join-Path "D:\Users\lupo\Documents\Virtual Machines" ("Ubuntu 64 {0}\Ubuntu 64 {0}.vmx" -f [char]0x4F4D)),
+  [int]$VmStartupTimeoutSeconds = 180,
+  [switch]$SkipVmStart
 )
 
 $ErrorActionPreference = "Stop"
 
 if ([string]::IsNullOrWhiteSpace($Branch)) {
   $Branch = (git -C $PSScriptRoot\.. branch --show-current).Trim()
+}
+
+if (-not $SkipVmStart) {
+  & (Join-Path $PSScriptRoot "start-test-ubuntu-vm.ps1") `
+    -VmPath $VmPath `
+    -HostName $HostName `
+    -StartupTimeoutSeconds $VmStartupTimeoutSeconds
 }
 
 if (-not (Test-Path -LiteralPath $KeyPath)) {
