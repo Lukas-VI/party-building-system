@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [string]$HostName = "192.168.66.228",
+  [string]$HostName = "172.27.216.10",
   [string]$UserName = "havensky",
   [string]$KeyPath = "$env:USERPROFILE\.ssh\codex_vm_ed25519",
   [string]$RepoPath = "/opt/party-building-mini-app",
