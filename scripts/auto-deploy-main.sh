@@ -45,6 +45,11 @@ if [ "${before}" = "${after}" ]; then
   exit 0
 fi
 
+if git merge-base --is-ancestor "${after}" "${before}"; then
+  echo "${LOG_PREFIX} local ${BRANCH} is ahead of ${REMOTE}/${BRANCH}; waiting for remote to catch up"
+  exit 0
+fi
+
 if ! git merge-base --is-ancestor "${before}" "${after}"; then
   echo "${LOG_PREFIX} remote ${BRANCH} is not a fast-forward from local ${BRANCH}; manual intervention required" >&2
   exit 1
