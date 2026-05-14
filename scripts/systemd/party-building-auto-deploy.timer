@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Party Building auto deploy every minute
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=15s
+Unit=party-building-auto-deploy.service
+
+[Install]
+WantedBy=timers.target
