@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVER_NAME="${SERVER_NAME:-party-building-server}"
 GATEWAY_NAME="${GATEWAY_NAME:-party-building-admin-gateway}"
-FRPC_SERVICE_NAME="${FRPC_SERVICE_NAME:-frpc-party-building.service}"
+FRPC_SERVICE_NAME="${FRPC_SERVICE_NAME:-frpc.service}"
 
 echo "[info] repo: ${ROOT_DIR}"
 cd "${ROOT_DIR}"
