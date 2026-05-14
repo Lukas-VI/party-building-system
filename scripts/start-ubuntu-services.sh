@@ -55,16 +55,21 @@ wait_for_url() {
 
 ensure_active_service() {
   local service_name="$1"
+  local systemctl_cmd=(systemctl)
+
+  if [ "$(id -u)" -ne 0 ]; then
+    systemctl_cmd=(sudo -n systemctl)
+  fi
 
   if systemctl list-unit-files --full --all | awk '{print $1}' | grep -qx "${service_name}"; then
     echo "[info] restarting ${service_name}"
-    systemctl restart "${service_name}"
-    if ! systemctl is-active --quiet "${service_name}"; then
+    "${systemctl_cmd[@]}" restart "${service_name}"
+    if ! "${systemctl_cmd[@]}" is-active --quiet "${service_name}"; then
       echo "[error] ${service_name} failed to start" >&2
-      systemctl status "${service_name}" --no-pager || true
+      "${systemctl_cmd[@]}" status "${service_name}" --no-pager || true
       return 1
     fi
-    systemctl status "${service_name}" --no-pager || true
+    "${systemctl_cmd[@]}" status "${service_name}" --no-pager || true
   else
     echo "[warn] systemd service not found: ${service_name}"
   fi

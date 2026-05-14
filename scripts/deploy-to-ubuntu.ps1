@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
-  [string]$HostName = "192.168.31.135",
-  [string]$UserName = "root",
+  [string]$HostName = "192.168.66.228",
+  [string]$UserName = "havensky",
   [string]$KeyPath = "$env:USERPROFILE\.ssh\codex_vm_ed25519",
   [string]$RepoPath = "/opt/party-building-mini-app",
   [string]$Branch = "",
@@ -22,7 +22,7 @@ if ([string]::IsNullOrWhiteSpace($Branch)) {
   throw "Unable to detect current git branch."
 }
 
-if (-not $SkipVmStart) {
+if (-not $SkipVmStart -and $HostName -eq "192.168.31.135") {
   & (Join-Path $PSScriptRoot "start-test-ubuntu-vm.ps1") `
     -VmPath $VmPath `
     -HostName $HostName `
