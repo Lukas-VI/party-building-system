@@ -117,6 +117,7 @@ npm run dev:1919
 
 详细步骤见：
 - [部署文档](docs/deployment.md)
+- [团队协作与测试服部署流程](docs/team-collaboration-workflow.md)
 - [项目总览](docs/project-overview.md)
 - [全程记实表整理与研发参考](docs/electronic-dossier.md)
 - [4月20会议纪要](docs/4月20会议纪要.md)
