@@ -305,7 +305,7 @@ onMounted(loadWorkflow);
           <div class="workflow-card__body" v-if="currentTask.blessingText">{{ currentTask.blessingText }}</div>
           <div class="workflow-card__foot">
             <span v-if="currentTask.uploadRequired">含材料事项</span>
-            <button v-if="canOperate" class="text-link text-link--button" type="button" @click="scrollToOperation">去办理</button>
+            <button v-if="canOperate" class="text-link text-link--button" type="button" @click="scrollToOperation"></button>
           </div>
         </div>
       </div>
@@ -428,7 +428,7 @@ onMounted(loadWorkflow);
         <div class="section-actions">
           <van-button v-if="canSubmitTask" type="danger" :loading="submitting" @click="submitTask">确认提交</van-button>
           <van-button v-if="canReviewTask" type="danger" plain :loading="submitting" @click="approveTask('approved')">确认通过</van-button>
-          <van-button v-if="canReviewTask" plain :loading="submitting" @click="approveTask('rejected')">退回补充</van-button>
+          <van-button v-if="canReviewTask" plain :loading="submitting" @click="approveTask('rejected')">不通过退回</van-button>
           <van-button v-if="currentTask.canReschedule" plain type="warning" :loading="submitting" @click="requestReschedule">提交改期申请</van-button>
         </div>
       </div>

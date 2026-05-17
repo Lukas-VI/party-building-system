@@ -329,7 +329,7 @@ async function notifyWorkflowReview(user, applicantId, workflow, step, nextStatu
   await createNotification(
     applicantId,
     'task_reviewed',
-    `${step.name}${nextStatus === 'approved' ? '已通过' : '需补充'}`,
+    `${step.name}${nextStatus === 'approved' ? '已通过' : '不通过'}`,
     nextStatus === 'approved' ? `“${step.name}”已审核通过，请关注下一步通知。` : `“${step.name}”已退回，请根据意见补充材料。`,
     step.stepCode,
     'workflow',

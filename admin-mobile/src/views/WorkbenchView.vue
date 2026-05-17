@@ -188,8 +188,8 @@ onMounted(loadData);
         </div>
       </div>
     </section>
-
-    <section class="section-card">
+<!-- 删除主页消息 -->
+    <!-- <section class="section-card">
       <div class="section-card__hd">
         <div class="section-card__title">消息提醒</div>
       </div>
@@ -207,7 +207,7 @@ onMounted(loadData);
         <div class="empty-state" v-else-if="!loading">暂无消息提醒。</div>
         <van-skeleton v-else title :row="3" />
       </div>
-    </section>
+    </section> -->
 
     <section class="section-card" v-if="workbench?.recentLogs?.length">
       <div class="section-card__hd">

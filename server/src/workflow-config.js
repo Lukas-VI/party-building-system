@@ -56,7 +56,7 @@ const STEP_DETAIL_OVERRIDES = {
       { key: 'decisionReason', label: '说明', type: 'textarea', required: false, owner: 'reviewer' },
     ],
     timeRule: { recordFields: ['noticeAt'] },
-    taskSummary: '确认是否确定为入党积极分子，未确定的流程不得继续推进',
+    taskSummary: '',
   },
   STEP_04: {
     actorType: 'system',
@@ -195,6 +195,7 @@ const STEP_DETAIL_OVERRIDES = {
     timeRule: { recordFields: ['submittedAt', 'reviewedAt'] },
     taskSummary: '基层党委预审并填写同意或不同意发展意见',
   },
+  
   // 建议预留余下步骤的位置
   // 13-25 步先按已确认的材料节点和责任角色预留，不臆造尚未确认的制度细节。
   STEP_13: {
