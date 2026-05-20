@@ -66,7 +66,7 @@ onMounted(loadReviews);
               <div class="step-time-row">
                 <span>{{ displayTime(item.deadline) }} 截止</span>
               </div>
-              <span class="due-pill">{{ item.orgName || '未配置单位' }}</span>
+              <span class="due-pill">{{ [item.orgName, item.branchName].filter(Boolean).join(' · ') || '未配置单位' }}</span>
             </div>
           </button>
         </div>

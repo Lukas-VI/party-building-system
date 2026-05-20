@@ -689,9 +689,11 @@ function App() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>申请人</th>
                     <th>单位</th>
                     <th>支部</th>
+                    <th>姓名</th>
+                    <th>学号/工号</th>
+                    <th>步骤</th>
                     <th>当前状态</th>
                     <th>截止时间</th>
                     <th>操作</th>
@@ -700,25 +702,27 @@ function App() {
                 <tbody>
                   {workflowReviews.length ? workflowReviews.map((item) => (
                     <tr key={`${item.applicantId}-${item.stepCode}`}>
-                      <td>{item.applicantName}</td>
                       <td>{item.orgName}</td>
                       <td>{item.branchName}</td>
-                        <td>{item.stepName}</td>
-                        <td>{item.deadline}</td>
-                        <td>
-                          <Space>
-                            <Button size="small" variant="outline" onClick={() => {
-                              setSelectedApplicantId(item.applicantId);
-                              setActiveView('workflowDetail');
-                            }}>查看流程</Button>
-                            <Button size="small" theme="success" onClick={() => doReview(item.applicantId, item.stepCode, 'approved')}>通过</Button>
-                            <Button size="small" theme="danger" variant="outline" onClick={() => doReview(item.applicantId, item.stepCode, 'rejected')}>退回</Button>
+                      <td>{item.applicantName}</td>
+                      <td>{item.applicantUsername || '-'}</td>
+                      <td>{item.sortOrder ? `第${item.sortOrder}步 · ${item.stepName}` : item.stepName}</td>
+                      <td>{item.status === 'reviewing' ? '审核中' : item.status === 'pending' ? '待提交' : item.status}</td>
+                      <td>{item.deadline || '-'}</td>
+                      <td>
+                        <Space>
+                          <Button size="small" variant="outline" onClick={() => {
+                            setSelectedApplicantId(item.applicantId);
+                            setActiveView('workflowDetail');
+                          }}>查看流程</Button>
+                          <Button size="small" theme="success" onClick={() => doReview(item.applicantId, item.stepCode, 'approved')}>通过</Button>
+                          <Button size="small" theme="danger" variant="outline" onClick={() => doReview(item.applicantId, item.stepCode, 'rejected')}>退回</Button>
                         </Space>
                       </td>
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan="6">当前没有待审核流程节点。</td>
+                      <td colSpan="8">当前没有待审核流程节点。</td>
                     </tr>
                   )}
                 </tbody>
