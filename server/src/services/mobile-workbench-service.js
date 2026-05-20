@@ -15,11 +15,34 @@ const { recentAuditLogs } = require('./audit-service');
 
 async function dashboardForUser(user) {
   if (user.primaryRole === 'applicant') {
+    const scope = scopeClause(user, 'u');
+    const pendingReviews = await first(
+      `SELECT COUNT(*) AS count
+       FROM workflow_step_records r
+       INNER JOIN workflow_instances i ON i.id = r.instance_id
+       INNER JOIN users u ON u.id = i.applicant_id
+       WHERE r.status = 'reviewing' ${scope.sql}`,
+      scope.params,
+    );
+    const overdueRow = await first(
+      `SELECT COUNT(*) AS count
+       FROM workflow_step_records r
+       INNER JOIN workflow_instances i ON i.id = r.instance_id
+       INNER JOIN users u ON u.id = i.applicant_id
+       WHERE r.status IN ('pending', 'reviewing', 'rejected')
+         AND r.deadline IS NOT NULL
+         AND r.deadline < CURDATE()
+         ${scope.sql}`,
+      scope.params,
+    );
     return {
       welcome: `${user.roles[0]?.label || '用户'} · ${user.name}`,
       scopeLabel: roleScopeLabel(user),
       currentStage: user.roles[0]?.label || '系统用户',
-      metrics: [],
+      metrics: [
+        { label: '待流程审核', value: pendingReviews?.count || 0, desc: '本人流程中待审批节点', route: '/workflow/me' },
+        { label: '超期事项', value: overdueRow?.count || 0, desc: '超出截止时间未完成节点', route: '/workflow/me' },
+      ],
       stageDistribution: [],
     };
   }
