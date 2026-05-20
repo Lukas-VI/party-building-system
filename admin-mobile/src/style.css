@@ -281,6 +281,37 @@ textarea:focus-visible {
   isolation: isolate;
 }
 
+.status-card.is-current {
+  border: 2px solid #c0392b;
+  box-shadow: 0 0 0 4px rgba(192, 57, 43, 0.15);
+}
+
+.completed-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 14px;
+  margin-top: 4px;
+  background: #f7f5f2;
+  border: 1px solid #e7e2d9;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #4a3f2c;
+  cursor: pointer;
+}
+
+.completed-toggle:active {
+  background: #efece6;
+}
+
+.empty-state {
+  padding: 24px 12px;
+  text-align: center;
+  color: #8a8473;
+  font-size: 13px;
+}
+
 /* 状态图标 */
 .status-card__mark {
   position: absolute;
