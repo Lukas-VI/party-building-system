@@ -46,7 +46,7 @@ async function dashboardForUser(user) {
     currentStage: user.roles[0]?.label || '系统用户',
     metrics: [
       { label: '申请人数', value: applicants.length, desc: '当前权限范围内台账人数', route: '/applicants' },
-      { label: '待注册审核', value: pendingRegistrations.length, desc: '首次注册待审核', route: '/reviews?tab=registration' },
+      { label: '注册待审核', value: pendingRegistrations.length, desc: '首次注册待审核', route: '/reviews?tab=registration' },
       { label: '待流程审核', value: pendingReviews?.count || 0, desc: '待审批节点数量', route: '/workflow-reviews' },
       { label: '查看范围', value: user.orgName || '全校', desc: user.branchName || '系统级数据范围', route: '/profile' },
     ],

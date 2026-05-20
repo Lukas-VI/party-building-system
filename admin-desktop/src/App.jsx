@@ -510,13 +510,13 @@ function App() {
           <div className="content-stack">
             <div className="stats-grid">
               <MetricCard title="申请人数" value={overview.totalApplicants} desc="当前权限范围内的申请人数量" onClick={() => setActiveView('applicants')} />
-              <MetricCard title="待注册审核" value={overview.pendingRegistrations} desc="首次注册待审核" onClick={() => setActiveView('reviews')} />
+              <MetricCard title="注册待审核" value={overview.pendingRegistrations} desc="首次注册待审核" onClick={() => setActiveView('reviews')} />
               <MetricCard title="待流程审核" value={overview.pendingReviews} desc="流程节点待审批数量" onClick={() => setActiveView('reviews')} />
               <MetricCard title="超期事项" value={overview.overdueItems} desc="超出配置截止时间的节点" />
             </div>
             <div className="split-grid">
               <SimpleTableCard title="阶段分布" columns={['阶段', '人数']} rows={overview.stageDistribution.map((item) => [item.stage, item.count])} compact={isMobile} />
-              <SimpleTableCard title="单位统计" columns={['单位', '申请人数', '入门阶段', '重点审核']} rows={orgStats.map((item) => [item.orgName, item.applicants, item.pending, item.reviewing])} compact={isMobile} />
+              <SimpleTableCard title="单位统计" columns={['单位', '申请人数', '重点审核']} rows={orgStats.map((item) => [item.orgName, item.applicants, item.reviewing])} compact={isMobile} />
             </div>
           </div>
         )}
@@ -683,7 +683,7 @@ function App() {
                     <th>申请人</th>
                     <th>单位</th>
                     <th>支部</th>
-                    <th>步骤</th>
+                    <th>当前状态</th>
                     <th>截止时间</th>
                     <th>操作</th>
                   </tr>
@@ -880,7 +880,7 @@ function App() {
               <MetricCard title="流程节点待审" value={overview?.pendingReviews || 0} desc="跨单位待办汇总" />
             </div>
             <div className="split-grid">
-              <SimpleTableCard title="按单位统计" columns={['单位', '申请人数', '入门阶段', '重点审核']} rows={orgStats.map((item) => [item.orgName, item.applicants, item.pending, item.reviewing])} compact={isMobile} />
+              <SimpleTableCard title="按单位统计" columns={['单位', '申请人数', '重点审核']} rows={orgStats.map((item) => [item.orgName, item.applicants, item.reviewing])} compact={isMobile} />
               <SimpleTableCard title="按支部统计" columns={['支部', '申请人数', '活跃流程数']} rows={branchStats.map((item) => [item.branchName, item.applicants, item.activeSteps])} compact={isMobile} />
             </div>
           </div>
