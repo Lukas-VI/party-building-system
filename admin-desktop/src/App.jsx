@@ -508,16 +508,25 @@ function App() {
 
         {activeView === 'dashboard' && overview && (
           <div className="content-stack">
-            <div className="stats-grid">
-              <MetricCard title="申请人数" value={overview.totalApplicants} desc="当前权限范围内的申请人数量" onClick={() => setActiveView('applicants')} />
-              <MetricCard title="注册待审核" value={overview.pendingRegistrations} desc="首次注册待审核" onClick={() => setActiveView('reviews')} />
-              <MetricCard title="待流程审核" value={overview.pendingReviews} desc="流程节点待审批数量" onClick={() => setActiveView('reviews')} />
-              <MetricCard title="超期事项" value={overview.overdueItems} desc="超出配置截止时间的节点" />
-            </div>
-            <div className="split-grid">
-              <SimpleTableCard title="阶段分布" columns={['阶段', '人数']} rows={overview.stageDistribution.map((item) => [item.stage, item.count])} compact={isMobile} />
-              <SimpleTableCard title="单位统计" columns={['单位', '申请人数', '重点审核']} rows={orgStats.map((item) => [item.orgName, item.applicants, item.reviewing])} compact={isMobile} />
-            </div>
+            {user.primaryRole === 'applicant' ? (
+              <div className="stats-grid">
+                <MetricCard title="待流程审核" value={overview.pendingReviews} desc="本人流程中待审批节点" onClick={() => setActiveView('workflowDetail')} />
+                <MetricCard title="超期事项" value={overview.overdueItems} desc="超出截止时间未完成节点" />
+              </div>
+            ) : (
+              <>
+                <div className="stats-grid">
+                  <MetricCard title="申请人数" value={overview.totalApplicants} desc="当前权限范围内的申请人数量" onClick={() => setActiveView('applicants')} />
+                  <MetricCard title="注册待审核" value={overview.pendingRegistrations} desc="首次注册待审核" onClick={() => setActiveView('reviews')} />
+                  <MetricCard title="待流程审核" value={overview.pendingReviews} desc="流程节点待审批数量" onClick={() => setActiveView('reviews')} />
+                  <MetricCard title="超期事项" value={overview.overdueItems} desc="超出配置截止时间的节点" />
+                </div>
+                <div className="split-grid">
+                  <SimpleTableCard title="阶段分布" columns={['阶段', '人数']} rows={overview.stageDistribution.map((item) => [item.stage, item.count])} compact={isMobile} />
+                  <SimpleTableCard title="单位统计" columns={['单位', '申请人数', '重点审核']} rows={orgStats.map((item) => [item.orgName, item.applicants, item.reviewing])} compact={isMobile} />
+                </div>
+              </>
+            )}
           </div>
         )}
 

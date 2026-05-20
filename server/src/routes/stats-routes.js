@@ -7,10 +7,7 @@ function registerStatsRoutes(app) {
 
   app.get('/api/stats/overview', requireAuth(), async (req, res) => {
     try {
-      const applicants = await getApplicants(req.user, {});
-      const pendingRegistrations = hasPermission(req.user, 'approve_registration')
-        ? await listRegistrationRequests(req.user, { status: 'pending' })
-        : [];
+      const isApplicant = req.user.primaryRole === 'applicant';
       const scope = scopeClause(req.user, 'u');
       const pendingReviews = await first(
         `SELECT COUNT(*) AS count
@@ -20,6 +17,31 @@ function registerStatsRoutes(app) {
          WHERE r.status = 'reviewing' ${scope.sql}`,
         scope.params,
       );
+      const overdueRow = await first(
+        `SELECT COUNT(*) AS count
+         FROM workflow_step_records r
+         INNER JOIN workflow_instances i ON i.id = r.instance_id
+         INNER JOIN users u ON u.id = i.applicant_id
+         WHERE r.status IN ('pending', 'reviewing', 'rejected')
+           AND r.deadline IS NOT NULL
+           AND r.deadline < CURDATE()
+           ${scope.sql}`,
+        scope.params,
+      );
+      const overdueItems = overdueRow?.count || 0;
+
+      if (isApplicant) {
+        ok(res, {
+          pendingReviews: pendingReviews?.count || 0,
+          overdueItems,
+        });
+        return;
+      }
+
+      const applicants = await getApplicants(req.user, {});
+      const pendingRegistrations = hasPermission(req.user, 'approve_registration')
+        ? await listRegistrationRequests(req.user, { status: 'pending' })
+        : [];
       const stageMap = {};
       applicants.forEach((item) => {
         stageMap[item.currentStage] = (stageMap[item.currentStage] || 0) + 1;
@@ -28,7 +50,7 @@ function registerStatsRoutes(app) {
         totalApplicants: applicants.length,
         pendingRegistrations: pendingRegistrations.length,
         pendingReviews: pendingReviews?.count || 0,
-        overdueItems: 0,
+        overdueItems,
         stageDistribution: Object.entries(stageMap).map(([stage, count]) => ({ stage, count })),
       });
     } catch (error) {
