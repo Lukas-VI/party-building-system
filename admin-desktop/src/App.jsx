@@ -162,7 +162,7 @@ function App() {
   useEffect(() => {
     if (!user) return;
     refreshForView(activeView);
-  }, [user, activeView]);
+  }, [user, activeView, selectedApplicantId]);
 
   async function refreshForView(view) {
     setLoading(true);
@@ -181,8 +181,14 @@ function App() {
         setOrgs(orgRes);
         setBranches(branchRes);
       }
-      if (view === 'workflowDetail' && selectedApplicantId) {
-        const [detailRes, workflowRes] = await Promise.all([api(`/applicants/${selectedApplicantId}`), api(`/workflows/${selectedApplicantId}`)]);
+      if (view === 'workflowDetail') {
+        const applicantId = user.primaryRole === 'applicant' ? user.id : selectedApplicantId;
+        if (!applicantId) {
+          setApplicantDetail(null);
+          setWorkflow(null);
+          return;
+        }
+        const [detailRes, workflowRes] = await Promise.all([api(`/applicants/${applicantId}`), api(`/workflows/${applicantId}`)]);
         setApplicantDetail(detailRes);
         setWorkflow(workflowRes);
       }
@@ -595,8 +601,8 @@ function App() {
 
         {activeView === 'workflowDetail' && (
           <div className="content-stack">
-            {!selectedApplicantId && <EmptyState text="请先在“申请人台账”中选择一名申请人。" />}
-            {selectedApplicantId && applicantDetail && workflow && (
+            {user.primaryRole !== 'applicant' && !selectedApplicantId && <EmptyState text="请先在“申请人台账”中选择一名申请人。" />}
+            {(user.primaryRole === 'applicant' || selectedApplicantId) && applicantDetail && workflow && (
               <>
                 <Card title="申请人信息">
                   <div className="detail-grid">

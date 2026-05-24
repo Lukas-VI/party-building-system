@@ -47,6 +47,10 @@ function isMobileDevice(userAgent = '') {
   return /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(userAgent);
 }
 
+function shouldSkipAutoRoute(requestUrl) {
+  return ['1', 'true', 'yes'].includes((requestUrl.searchParams.get('no_redirect') || '').toLowerCase());
+}
+
 // 静态文件和 index.html 都从统一出口发出，便于 frp、Nginx 和 1Panel 只维护一个 1919 入口。
 function sendFile(res, filePath) {
   const ext = extname(filePath).toLowerCase();
@@ -74,6 +78,12 @@ createServer((req, res) => {
   if (requestPath === '/web-admin' || requestPath === '/web-admin/') {
     const target = isMobileDevice(req.headers['user-agent'] || '') ? '/wx-app/' : '/admin-desktop/';
     res.writeHead(302, { Location: target });
+    res.end();
+    return;
+  }
+
+  if ((requestPath === '/wx-app' || requestPath === '/wx-app/') && !shouldSkipAutoRoute(requestUrl) && !isMobileDevice(req.headers['user-agent'] || '')) {
+    res.writeHead(302, { Location: '/admin-desktop/' });
     res.end();
     return;
   }
