@@ -614,6 +614,7 @@ function App() {
                     <DetailItem label="联系电话" value={applicantDetail.phone} />
                   </div>
                 </Card>
+                <CurrentWorkflowStepCard step={getCurrentWorkflowStep(workflow)} />
                 <Card title="25 步流程记录">
                   <div className="table-scroll">
                   <table className="data-table">
@@ -1026,6 +1027,46 @@ function formatBusinessFields(step) {
     .filter(Boolean)
     .join('；');
   return text || '-';
+}
+
+function getCurrentWorkflowStep(workflow) {
+  return workflow?.steps?.find((item) => ['pending', 'reviewing', 'rejected'].includes(item.status)) || null;
+}
+
+function statusTagTheme(status) {
+  return {
+    approved: 'success',
+    reviewing: 'warning',
+    pending: 'primary',
+    rejected: 'danger',
+    terminated: 'danger',
+  }[status] || 'default';
+}
+
+function CurrentWorkflowStepCard({ step }) {
+  if (!step) return null;
+  return (
+    <Card title="当前执行步骤">
+      <div className="current-step-panel">
+        <div className="current-step-main">
+          <div className="current-step-order">第 {step.sortOrder} 步</div>
+          <div>
+            <div className="current-step-title">{step.name}</div>
+            <div className="current-step-subtitle">{step.phase}</div>
+          </div>
+          <Tag theme={statusTagTheme(step.status)} variant="light">
+            {step.statusText || step.status}
+          </Tag>
+        </div>
+        <div className="detail-grid current-step-grid">
+          <DetailItem label="截止时间" value={step.deadline || '-'} />
+          <DetailItem label="办理时间" value={step.operatedAt || '-'} />
+          <DetailItem label="办理人" value={step.lastOperatorName || '-'} />
+          <DetailItem label="业务记录" value={formatBusinessFields(step)} />
+        </div>
+      </div>
+    </Card>
+  );
 }
 
 function SimpleTableCard({ title, columns, rows, compact = false }) {
