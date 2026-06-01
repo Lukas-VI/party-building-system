@@ -30,7 +30,7 @@ function normalizeOriginalName(file) {
 function acceptedTypesForMaterial(step, materialTag) {
   const material = configuredMaterialSchema(step).find((item) => item.tag === materialTag);
   if (!material) throw errorWithStatus('材料类型不属于当前步骤', 400);
-  return ['pdf'];
+  return material.accept?.length ? material.accept : ['pdf'];
 }
 
 function validateUploadedFile(file, acceptTypes) {
@@ -62,7 +62,7 @@ async function validateRequiredMaterials(step) {
     if (!matched.length) {
       throw errorWithStatus(`请上传${material.label}`, 400);
     }
-    const acceptedRules = ['pdf'];
+    const acceptedRules = material.accept?.length ? material.accept : ['pdf'];
     if (acceptedRules.length) {
       for (const item of matched) {
         const extension = path.extname(item.fileName || '').toLowerCase();

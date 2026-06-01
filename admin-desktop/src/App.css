@@ -413,6 +413,26 @@ body {
   text-align: center;
 }
 
+.data-table tr.is-current-row td {
+  background: rgba(190, 24, 24, 0.08);
+  border-bottom-color: rgba(190, 24, 24, 0.24);
+}
+
+.nested-table {
+  min-width: 0;
+  background: var(--bg-panel);
+}
+
+.inline-action {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--danger);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .export-actions {
   display: flex;
   gap: 14px;

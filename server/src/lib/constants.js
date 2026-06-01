@@ -1,4 +1,4 @@
-const MVP_MAX_STEP_ORDER = 12;
+const MVP_MAX_STEP_ORDER = 25;
 const HIGH_PRIVILEGE_ROLES = new Set(['superAdmin', 'orgDept']);
 const ALLOWED_REVIEW_STATUSES = new Set(['approved', 'rejected']);
 const FILE_ACCEPT_RULES = {

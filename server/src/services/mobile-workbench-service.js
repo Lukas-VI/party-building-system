@@ -7,6 +7,7 @@ const {
   isMvpStep,
   isApplicantActor,
   isReviewerActor,
+  configuredTaskType,
   stepOrder,
   primaryRoleLabel,
 } = require('./workflow-service');
@@ -40,8 +41,8 @@ async function dashboardForUser(user) {
       scopeLabel: roleScopeLabel(user),
       currentStage: user.roles[0]?.label || '系统用户',
       metrics: [
-        { label: '待流程审核', value: pendingReviews?.count || 0, desc: '本人流程中待审批节点', route: '/workflow/me' },
-        { label: '超期事项', value: overdueRow?.count || 0, desc: '超出截止时间未完成节点', route: '/workflow/me' },
+        { label: '待审核流程', value: pendingReviews?.count || 0, desc: '本人流程中待审核节点', route: '/workflow/me' },
+        { label: '超期预警', value: overdueRow?.count || 0, desc: '已超期且未完成的申请', route: '/workflow/me' },
       ],
       stageDistribution: [],
     };
@@ -70,7 +71,7 @@ async function dashboardForUser(user) {
     metrics: [
       { label: '申请人数', value: applicants.length, desc: '当前权限范围内台账人数', route: '/applicants' },
       { label: '注册待审核', value: pendingRegistrations.length, desc: '首次注册待审核', route: '/reviews?tab=registration' },
-      { label: '待流程审核', value: pendingReviews?.count || 0, desc: '待审批节点数量', route: '/workflow-reviews' },
+      { label: '待审核流程', value: pendingReviews?.count || 0, desc: '当前角色可处理的流程节点', route: '/workflow-reviews' },
       { label: '查看范围', value: user.orgName || '全校', desc: user.branchName || '系统级数据范围', route: '/profile' },
     ],
     stageDistribution: Object.entries(stageMap).map(([stage, count]) => ({ stage, count })),
@@ -125,8 +126,11 @@ function buildTodoItem(user, applicant, workflow, step) {
   const taskOwner = isApplicantActor(user, applicant.userId || applicant.id, step) ? '申请人' : '审核者';
   const materialSchema = step.taskMeta?.materialSchema?.length ? step.taskMeta.materialSchema : (step.materialSchema || []);
   const uploadRequired = materialSchema.length > 0;
+  const taskType = configuredTaskType(step);
   const canSubmit = isApplicantActor(user, applicant.userId || applicant.id, step) && ['pending', 'rejected'].includes(step.status);
-  const canReview = isReviewerActor(user, step) && ['pending', 'reviewing', 'approved', 'rejected'].includes(step.status);
+  const canReview = isReviewerActor(user, step)
+    && ['pending', 'reviewing', 'approved', 'rejected'].includes(step.status)
+    && (taskType !== 'submit' || step.status !== 'pending');
   const actionKind = canReview ? 'review' : (canSubmit ? (uploadRequired ? 'upload' : 'submit') : 'notice');
   const isCompleted = step.status === 'approved';
   const reviewState = mobileReviewState(step);
@@ -151,6 +155,8 @@ function buildTodoItem(user, applicant, workflow, step) {
     reviewClassName: reviewState.className,
     taskStatus: mobileTaskStatus(step),
     actorType: step.actorType || step.taskMeta?.actorType || 'reviewer',
+    taskType,
+    taskTypeLabel: taskType === 'submit' ? '提交类' : '通知类',
     taskOwner,
     summary: step.taskMeta?.taskSummary || '请按要求完成当前节点办理。',
     cardTitle: step.name,
@@ -197,7 +203,10 @@ async function listMobileTodos(user) {
     const currentStep = mvpSteps.find((item) => ['pending', 'reviewing', 'rejected'].includes(item.status));
     for (const step of mvpSteps) {
       const visibleToApplicant = isApplicantActor(user, applicant.userId || applicant.id, step) && ['pending', 'rejected'].includes(step.status);
-      const visibleToReviewer = isReviewerActor(user, step) && ['reviewing', 'pending'].includes(step.status);
+      const taskType = configuredTaskType(step);
+      const visibleToReviewer = isReviewerActor(user, step)
+        && ['reviewing', 'pending'].includes(step.status)
+        && (taskType !== 'submit' || step.status !== 'pending');
       const isApplicantOwner = user.primaryRole === 'applicant' && user.id === (applicant.userId || applicant.id);
       const visibleCurrentNode = isApplicantOwner && step.id === currentStep?.id && ['pending', 'reviewing'].includes(step.status) && isWithinTodoWindow(step);
       const visibleFailedNode = isApplicantOwner && step.status === 'rejected';
