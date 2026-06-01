@@ -60,6 +60,10 @@ function configuredResponsibleRoles(step) {
   return step.allowedRoles || [];
 }
 
+function configuredTaskType(step) {
+  return step.taskMeta?.taskType || (configuredFlag(step, 'requiresApplicantAction') ? 'submit' : 'notice');
+}
+
 function isApplicantActor(user, applicantId, step) {
   return user.primaryRole === 'applicant' && user.id === applicantId && configuredFlag(step, 'requiresApplicantAction');
 }
@@ -72,7 +76,7 @@ function isReviewerActor(user, step) {
 
 function ensureMvpStep(step) {
   if (!isMvpStep(step)) {
-    throw errorWithStatus('该流程节点暂未纳入前12步MVP，暂不开放办理', 400);
+    throw errorWithStatus('该流程节点暂未纳入当前办理范围，暂不开放办理', 400);
   }
 }
 
@@ -96,6 +100,9 @@ function assertWorkflowActor(user, applicantId, workflow, step, action) {
   }
   if (action === 'review') {
     if (!['pending', 'reviewing', 'approved', 'rejected'].includes(step.status)) throw errorWithStatus('当前节点不能审核', 400);
+    if (configuredTaskType(step) === 'submit' && step.status === 'pending') {
+      throw errorWithStatus('该提交类节点需先由申请人提交材料或内容', 400);
+    }
     if (!isReviewerActor(user, step)) throw errorWithStatus('当前账号不能审核该任务', 403);
     return;
   }
@@ -194,6 +201,9 @@ async function advanceAfterReview(workflow, step, nextStatus, formData = {}) {
     const nextStage = {
       STEP_03: '入党积极分子',
       STEP_07: '发展对象',
+      STEP_16: '预备党员',
+      STEP_22: formData?.businessFields?.regularizationApprovalResult === '按期转正' ? '正式党员' : undefined,
+      STEP_25: formData?.businessFields?.finalMemberStatus === '正式党员' ? '正式党员' : undefined,
     }[step.stepCode];
     if (nextStage && applicantId) {
       await query(
@@ -478,6 +488,7 @@ module.exports = {
   primaryRoleLabel,
   configuredFlag,
   configuredResponsibleRoles,
+  configuredTaskType,
   configuredMaterialSchema,
   isApplicantActor,
   isReviewerActor,

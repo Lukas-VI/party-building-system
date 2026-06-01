@@ -31,10 +31,10 @@ onMounted(loadReviews);
   <div class="list-stack">
     <section class="section-card">
       <div class="section-card__hd">
-        <div class="section-card__title">流程审核</div>
+        <div class="section-card__title">待审核流程</div>
       </div>
       <div class="section-card__bd">
-        <van-button type="danger" plain block round @click="loadReviews">刷新流程待办</van-button>
+        <van-button type="danger" plain block round @click="loadReviews">刷新待审核流程</van-button>
       </div>
     </section>
 
@@ -71,7 +71,7 @@ onMounted(loadReviews);
           </button>
         </div>
       </div>
-      <div class="empty-state" v-else>当前没有待审核流程节点。</div>
+      <div class="empty-state" v-else>当前没有待审核流程。</div>
     </section>
   </div>
 </template>

@@ -8,7 +8,9 @@ const loading = ref(false);
 const applicants = ref([]);
 const keyword = ref('');
 const stage = ref('全部阶段');
-const stageOptions = ['全部阶段', '入党申请人', '入党积极分子', '发展对象', '预备党员'];
+const developmentStatus = ref('全部状态');
+const stageOptions = ['全部阶段', '入党申请人', '入党积极分子', '发展对象', '预备党员', '正式党员'];
+const statusOptions = ['全部状态', '发展中', '已完成'];
 
 async function loadApplicants() {
   loading.value = true;
@@ -16,6 +18,7 @@ async function loadApplicants() {
     const params = {};
     if (keyword.value) params.keyword = keyword.value;
     if (stage.value && stage.value !== '全部阶段') params.stage = stage.value;
+    if (developmentStatus.value && developmentStatus.value !== '全部状态') params.developmentStatus = developmentStatus.value;
     applicants.value = await http.get('/applicants', { params });
   } finally {
     loading.value = false;
@@ -43,6 +46,12 @@ onMounted(loadApplicants);
             <van-radio v-for="item in stageOptions" :key="item" :name="item">{{ item }}</van-radio>
           </van-radio-group>
         </div>
+        <div class="field-block">
+          <div class="field-label">状态筛选</div>
+          <van-radio-group v-model="developmentStatus" direction="horizontal">
+            <van-radio v-for="item in statusOptions" :key="item" :name="item">{{ item }}</van-radio>
+          </van-radio-group>
+        </div>
         <van-button type="danger" block round @click="loadApplicants">查询</van-button>
       </div>
     </section>
@@ -59,19 +68,19 @@ onMounted(loadApplicants);
           <button v-for="item in applicants" :key="item.id" class="table-row" type="button" @click="openDetail(item)">
             <div class="table-row__head">
               <div>
-                <div class="table-row__title">{{ item.name }}</div>
-                <div class="table-row__sub">{{ item.username }} · {{ item.orgName || '未配置单位' }}</div>
+                <div class="table-row__title">{{ item.name }} · {{ item.username }}</div>
+                <div class="table-row__sub">{{ item.orgName || '未配置单位' }} · {{ item.branchName || '未限定支部' }}</div>
               </div>
-              <span class="status-chip is-pending">{{ item.currentStage }}</span>
+              <span class="status-chip is-pending">{{ item.developmentStatus }}</span>
             </div>
             <div class="kv-grid">
               <div class="kv-item">
-                <div class="kv-item__label">支部</div>
-                <div class="kv-item__value">{{ item.branchName || '未限定支部' }}</div>
+                <div class="kv-item__label">年级</div>
+                <div class="kv-item__value">{{ item.grade || '未登记' }}</div>
               </div>
               <div class="kv-item">
-                <div class="kv-item__label">状态</div>
-                <div class="kv-item__value">{{ item.status }}</div>
+                <div class="kv-item__label">当前节点</div>
+                <div class="kv-item__value">{{ item.currentStepLabel || '流程已完成' }}</div>
               </div>
             </div>
           </button>

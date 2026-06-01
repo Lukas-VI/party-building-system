@@ -10,9 +10,16 @@ const workflow = ref(null);
 
 const workflowId = computed(() => route.params.workflowId || 'me');
 const currentTask = computed(() => workflow.value?.currentStep || null);
-const completedSteps = computed(() => workflow.value?.completedSteps || []);
 const allSteps = computed(() => workflow.value?.steps || []);
-const unfinishedSteps = computed(() => allSteps.value.filter((step) => step.status !== 'approved'));
+const stepTime = (step) => step.operatedAt || step.confirmedAt || '';
+const completedSteps = computed(() => [...(workflow.value?.completedSteps || [])].sort((left, right) => String(stepTime(right)).localeCompare(String(stepTime(left)))));
+const unfinishedSteps = computed(() => allSteps.value
+  .filter((step) => step.status !== 'approved')
+  .sort((left, right) => {
+    if (left.stepCode === currentTask.value?.stepCode) return -1;
+    if (right.stepCode === currentTask.value?.stepCode) return 1;
+    return Number(left.sortOrder || 0) - Number(right.sortOrder || 0);
+  }));
 
 function displayTime(value) {
   return value || '未设置';
@@ -106,6 +113,7 @@ onMounted(loadWorkflow);
           </div>
           <div class="workflow-card__body" v-if="currentTask.blessingText">{{ currentTask.blessingText }}</div>
           <div class="workflow-card__foot">
+            <span>{{ currentTask.taskTypeLabel }}</span>
             <span v-if="currentTask.uploadRequired">含材料事项</span>
           </div>
         </button>
@@ -148,6 +156,7 @@ onMounted(loadWorkflow);
             </div>
             <div class="workflow-card__body" v-if="item.blessingText">{{ item.blessingText }}</div>
             <div class="workflow-card__foot">
+              <span>{{ item.taskTypeLabel }}</span>
               <span v-if="item.uploadRequired">含材料事项</span>
             </div>
           </button>
@@ -180,6 +189,7 @@ onMounted(loadWorkflow);
             </div>
             <div class="workflow-card__body" v-if="item.blessingText">{{ item.blessingText }}</div>
             <div class="workflow-card__foot">
+              <span>{{ item.taskTypeLabel }}</span>
               <span v-if="item.uploadRequired">含材料事项</span>
             </div>
           </button>

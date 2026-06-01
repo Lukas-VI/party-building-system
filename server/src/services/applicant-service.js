@@ -21,6 +21,28 @@ async function getApplicants(user, filters = {}) {
         o.name AS orgName,
         b.name AS branchName,
         ap.current_stage AS currentStage,
+        CASE WHEN ap.current_stage = '正式党员' THEN '已完成' ELSE '发展中' END AS developmentStatus,
+        SUBSTRING(u.username, 1, 4) AS grade,
+        (
+          SELECT CONCAT(d.sort_order, '-', d.name)
+          FROM workflow_instances wi
+          INNER JOIN workflow_step_records wr ON wr.instance_id = wi.id
+          INNER JOIN workflow_step_definitions d ON d.step_code = wr.step_code
+          WHERE wi.applicant_id = u.id
+            AND wr.status IN ('pending', 'reviewing', 'rejected')
+          ORDER BY d.sort_order ASC
+          LIMIT 1
+        ) AS currentStepLabel,
+        (
+          SELECT wr.deadline
+          FROM workflow_instances wi
+          INNER JOIN workflow_step_records wr ON wr.instance_id = wi.id
+          INNER JOIN workflow_step_definitions d ON d.step_code = wr.step_code
+          WHERE wi.applicant_id = u.id
+            AND wr.status IN ('pending', 'reviewing', 'rejected')
+          ORDER BY d.sort_order ASC
+          LIMIT 1
+        ) AS currentStepDeadline,
         ap.phone,
         ap.unit_name AS unitName,
         ap.occupation
@@ -33,6 +55,7 @@ async function getApplicants(user, filters = {}) {
        ${filters.orgId ? ' AND u.org_id = :orgId' : ''}
        ${filters.branchId ? ' AND u.branch_id = :branchId' : ''}
        ${filters.stage ? ' AND ap.current_stage = :stage' : ''}
+       ${filters.developmentStatus ? " AND (CASE WHEN ap.current_stage = '正式党员' THEN '已完成' ELSE '发展中' END) = :developmentStatus" : ''}
        ${filters.keyword ? ' AND (u.name LIKE :keyword OR u.username LIKE :keyword OR ap.unit_name LIKE :keyword)' : ''}
      ORDER BY u.username ASC`,
     {
@@ -40,6 +63,7 @@ async function getApplicants(user, filters = {}) {
       orgId: filters.orgId,
       branchId: filters.branchId,
       stage: filters.stage,
+      developmentStatus: filters.developmentStatus,
       keyword: filters.keyword ? `%${filters.keyword}%` : undefined,
     },
   );
