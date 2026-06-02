@@ -64,7 +64,7 @@ export function workbenchActions(user) {
   }
   const actions = [
     { title: '待办工作', desc: '集中处理待审核、待确认和待通知任务', action: 'open-first-todo' },
-    { title: '流程审核', desc: '审核发展党员流程节点', route: '/workflow-reviews' },
+    { title: '待审核流程', desc: '审核发展党员流程节点', route: '/workflow-reviews' },
     { title: '注册审核', desc: '处理首次注册申请', route: '/reviews' },
     { title: '消息提醒', desc: '查看节点提醒、审核结果和改期通知', route: '/messages' },
   ];

@@ -122,6 +122,7 @@ npm run dev:1919
 - [全程记实表整理与研发参考](docs/electronic-dossier.md)
 - [4月20会议纪要](docs/4月20会议纪要.md)
 - [发展流程说明](docs/assets/党员发展流程说明.md)
+- [25 步流程办理类型与责任角色](docs/workflow-step-action-mapping.md)
 - [模块维护说明](docs/maintenance-notes.md)
 - [开发调试记录](docs/dev-notes.md)
 

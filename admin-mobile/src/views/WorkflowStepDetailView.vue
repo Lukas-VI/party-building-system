@@ -215,7 +215,11 @@ function attachmentsByTag(tag) {
 }
 
 function materialAccept(material) {
-  return '.pdf,application/pdf';
+  const accept = material?.accept || ['pdf'];
+  const values = [];
+  if (accept.includes('pdf')) values.push('.pdf', 'application/pdf');
+  if (accept.includes('image')) values.push('.jpg', '.jpeg', '.png', 'image/jpeg', 'image/png');
+  return values.join(',');
 }
 
 async function resetStatus(status) {
@@ -304,6 +308,7 @@ onMounted(loadWorkflow);
           <div class="status-card__summary">{{ currentTask.summary }}</div>
           <div class="workflow-card__body" v-if="currentTask.blessingText">{{ currentTask.blessingText }}</div>
           <div class="workflow-card__foot">
+            <span>{{ currentTask.taskTypeLabel }}</span>
             <span v-if="currentTask.uploadRequired">含材料事项</span>
             <button v-if="canOperate" class="text-link text-link--button" type="button" @click="scrollToOperation"></button>
           </div>
@@ -340,7 +345,7 @@ onMounted(loadWorkflow);
           <div class="table-row__head">
             <div>
               <div class="table-row__title">{{ material.label }}</div>
-              <div class="step-item__meta">{{ material.required ? '必交材料' : '可选材料' }} · PDF</div>
+              <div class="step-item__meta">{{ material.required ? '必交材料' : '可选材料' }} · {{ (material.accept || ['pdf']).includes('image') ? 'PDF/图片' : 'PDF' }}</div>
             </div>
             <span class="tag-pair">{{ material.tag }}</span>
           </div>
