@@ -24,10 +24,10 @@ export function isDesktopDevice() {
 // 
 export function mobileToDesktopUrl() {
   if (typeof window === 'undefined') {
-    return '/admin-desktop/';
+    return import.meta.env.VITE_DESKTOP_PATH || '/admin-desktop/';
   }
   const url = new URL(window.location.href);
-  url.pathname = '/admin-desktop/';
+  url.pathname = import.meta.env.VITE_DESKTOP_PATH || '/admin-desktop/';
   url.hash = '';
   return url.toString();
 }

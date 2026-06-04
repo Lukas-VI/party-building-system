@@ -23,10 +23,10 @@ export function isMobileDevice() {
 
 export function desktopToMobileUrl() {
   if (typeof window === 'undefined') {
-    return '/wx-app/';
+    return import.meta.env.VITE_MOBILE_PATH || '/wx-app/';
   }
   const url = new URL(window.location.href);
-  url.pathname = '/wx-app/';
+  url.pathname = import.meta.env.VITE_MOBILE_PATH || '/wx-app/';
   url.hash = '';
   return url.toString();
 }
