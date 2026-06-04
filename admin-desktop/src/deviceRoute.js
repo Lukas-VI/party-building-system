@@ -22,11 +22,5 @@ export function isMobileDevice() {
 }
 
 export function desktopToMobileUrl() {
-  if (typeof window === 'undefined') {
-    return '/wx-app/';
-  }
-  const url = new URL(window.location.href);
-  url.pathname = '/wx-app/';
-  url.hash = '';
-  return url.toString();
+  return import.meta.env.VITE_WX_APP_URL || '/wx-app/';
 }

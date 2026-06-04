@@ -3,12 +3,13 @@
  *
  * 维护原则：
  * 1. 25 步仍是正式流程主线，不在页面里硬编码步骤规则。
- * 2. 当前根据原始需求文档的完善信息可以完成所有步骤,总共应该是21-22步\外加3种最终状态
- * 3. 后续每步填写/提交内容的细化，应结合 docs/electronic-dossier.md 和会议纪要继续维护。
+ * 2. 步骤类型必须区分提交类和通知类；提交类先由申请人提交，通知类由责任角色办理并通知申请人。
+ * 3. 本配置参考 docs/党员发展流程说明.md、docs/4月20会议纪要.md、docs/electronic-dossier.md 和 docs/project-overview.md。
  * 4. 服务端接口和移动端页面都应优先读取这里，而不是各自复制一套条件分支。
  */
 const STEP_DETAIL_OVERRIDES = {
   STEP_01: {
+    taskType: 'submit',
     actorType: 'collaborative',
     responsibleRoles: ['applicant', 'organizer', 'branchSecretary'],
     requiresApplicantAction: 1,
@@ -25,6 +26,7 @@ const STEP_DETAIL_OVERRIDES = {
     taskSummary: '提交入党申请书并补全基础信息',
   },
   STEP_02: {
+    taskType: 'notice',
     actorType: 'collaborative',
     responsibleRoles: ['secretary', 'deputySecretary', 'organizer', 'branchSecretary', 'applicant'],
     requiresApplicantAction: 1,
@@ -43,6 +45,7 @@ const STEP_DETAIL_OVERRIDES = {
     taskSummary: '确定谈话安排并确认谈话结果',
   },
   STEP_03: {
+    taskType: 'notice',
     actorType: 'reviewer',
     responsibleRoles: ['organizer', 'secretary'],
     requiresApplicantAction: 0,
@@ -59,6 +62,7 @@ const STEP_DETAIL_OVERRIDES = {
     taskSummary: '',
   },
   STEP_04: {
+    taskType: 'notice',
     actorType: 'system',
     responsibleRoles: ['organizer'],
     requiresApplicantAction: 0,
@@ -69,6 +73,7 @@ const STEP_DETAIL_OVERRIDES = {
     taskSummary: '完成资格确认并清理冗余信息',
   },
   STEP_05: {
+    taskType: 'notice',
     actorType: 'reviewer',
     responsibleRoles: ['organizer', 'branchSecretary'],
     requiresApplicantAction: 0,
@@ -85,6 +90,7 @@ const STEP_DETAIL_OVERRIDES = {
     taskSummary: '指定培养联系人并完成确认',
   },
   STEP_06: {
+    taskType: 'notice',
     actorType: 'reviewer',
     responsibleRoles: ['organizer', 'branchSecretary'],
     requiresApplicantAction: 0,
@@ -101,6 +107,7 @@ const STEP_DETAIL_OVERRIDES = {
     taskSummary: '培养教育考察记录维护',
   },
   STEP_07: {
+    taskType: 'notice',
     actorType: 'reviewer',
     responsibleRoles: ['secretary', 'deputySecretary', 'organizer'],
     requiresApplicantAction: 0,
@@ -117,6 +124,7 @@ const STEP_DETAIL_OVERRIDES = {
     taskSummary: '确定发展对象并发送党委通知',
   },
   STEP_08: {
+    taskType: 'notice',
     actorType: 'reviewer',
     responsibleRoles: ['organizer', 'branchSecretary'],
     requiresApplicantAction: 0,
@@ -132,8 +140,9 @@ const STEP_DETAIL_OVERRIDES = {
     taskSummary: '确定两名正式党员作为入党介绍人',
   },
   STEP_09: {
+    taskType: 'notice',
     actorType: 'reviewer',
-    responsibleRoles: ['organizer', 'branchSecretary'],
+    responsibleRoles: ['branchSecretary', 'organizer', 'secretary', 'deputySecretary'],
     requiresApplicantAction: 0,
     requiresReviewerAction: 1,
     notificationTemplate: 'political_review_materials',
@@ -148,6 +157,7 @@ const STEP_DETAIL_OVERRIDES = {
     taskSummary: '组织员上传政审扫描件并填写政审结论',
   },
   STEP_10: {
+    taskType: 'submit',
     actorType: 'collaborative',
     responsibleRoles: ['applicant', 'organizer', 'branchSecretary'],
     requiresApplicantAction: 1,
@@ -166,6 +176,7 @@ const STEP_DETAIL_OVERRIDES = {
     taskSummary: '填写短期集中培训时间、地点、方式、内容及个人心得',
   },
   STEP_11: {
+    taskType: 'notice',
     actorType: 'reviewer',
     responsibleRoles: ['branchSecretary', 'organizer'],
     requiresApplicantAction: 0,
@@ -181,6 +192,7 @@ const STEP_DETAIL_OVERRIDES = {
     taskSummary: '通知支部审核结果',
   },
   STEP_12: {
+    taskType: 'notice',
     actorType: 'reviewer',
     responsibleRoles: ['secretary', 'deputySecretary', 'organizer'],
     requiresApplicantAction: 0,
@@ -196,9 +208,8 @@ const STEP_DETAIL_OVERRIDES = {
     taskSummary: '基层党委预审并填写同意或不同意发展意见',
   },
   
-  // 建议预留余下步骤的位置
-  // 13-25 步先按已确认的材料节点和责任角色预留，不臆造尚未确认的制度细节。
   STEP_13: {
+    taskType: 'submit',
     actorType: 'collaborative',
     responsibleRoles: ['applicant', 'organizer', 'branchSecretary'],
     requiresApplicantAction: 1,
@@ -212,9 +223,10 @@ const STEP_DETAIL_OVERRIDES = {
       { key: 'volunteerFormNote', label: '提交说明', type: 'textarea', required: false, owner: 'applicant' },
     ],
     timeRule: { recordFields: ['submittedAt', 'reviewedAt'] },
-    taskSummary: '提交入党志愿书扫描件并由支部核对。',
+    taskSummary: '申请人提交《入党志愿书》整本扫描件，支部和组织员核对。',
   },
   STEP_14: {
+    taskType: 'notice',
     actorType: 'reviewer',
     responsibleRoles: ['branchSecretary', 'organizer'],
     requiresApplicantAction: 0,
@@ -224,13 +236,16 @@ const STEP_DETAIL_OVERRIDES = {
       { key: 'branchMeetingMaterials', label: '支部大会材料', tag: 'branch-meeting', accept: ['pdf', 'image'], required: false },
     ],
     businessFields: [
-      { key: 'meetingAt', label: '会议时间', type: 'datetime', required: true, owner: 'reviewer' },
-      { key: 'meetingResult', label: '会议表决结果', type: 'textarea', required: true, owner: 'reviewer' },
+      { key: 'meetingAt', label: '支部大会时间', type: 'datetime', required: true, owner: 'reviewer' },
+      { key: 'committeeReportStatus', label: '支部委员会报告审查情况', type: 'textarea', required: true, owner: 'reviewer' },
+      { key: 'voteResult', label: '无记名投票表决结果', type: 'textarea', required: true, owner: 'reviewer' },
+      { key: 'branchMeetingDecision', label: '支部大会决议', type: 'select', required: true, owner: 'reviewer', options: ['同意接收为预备党员', '不同意接收为预备党员'] },
     ],
     timeRule: { recordFields: ['meetingAt', 'reviewedAt'] },
-    taskSummary: '记录支部大会讨论与表决情况，材料要求待后续细化。',
+    taskSummary: '支部大会讨论接收预备党员事项并通知申请人结果。',
   },
   STEP_15: {
+    taskType: 'notice',
     actorType: 'reviewer',
     responsibleRoles: ['secretary', 'deputySecretary', 'organizer'],
     requiresApplicantAction: 0,
@@ -240,6 +255,7 @@ const STEP_DETAIL_OVERRIDES = {
       { key: 'committeeTalkRecord', label: '党委谈话记录', tag: 'committee-talk', accept: ['pdf', 'image'], required: false },
     ],
     businessFields: [
+      { key: 'talkAssigneeName', label: '党委谈话人', type: 'text', required: true, owner: 'reviewer' },
       { key: 'talkAt', label: '谈话时间及地点', type: 'textarea', required: true, owner: 'reviewer' },
       { key: 'talkOpinion', label: '谈话意见', type: 'textarea', required: true, owner: 'reviewer' },
     ],
@@ -247,6 +263,7 @@ const STEP_DETAIL_OVERRIDES = {
     taskSummary: '上级党委派人同发展对象谈话并记录意见。',
   },
   STEP_16: {
+    taskType: 'notice',
     actorType: 'reviewer',
     responsibleRoles: ['secretary', 'deputySecretary', 'organizer'],
     requiresApplicantAction: 0,
@@ -255,12 +272,17 @@ const STEP_DETAIL_OVERRIDES = {
     materialSchema: [],
     businessFields: [
       { key: 'committeeMeetingAt', label: '党委会时间', type: 'datetime', required: true, owner: 'reviewer' },
-      { key: 'approvalOpinion', label: '审批意见', type: 'textarea', required: true, owner: 'reviewer' },
+      { key: 'committeeMeetingLocation', label: '党委会地点', type: 'text', required: false, owner: 'reviewer' },
+      { key: 'committeeAttendees', label: '参会人员', type: 'textarea', required: false, owner: 'reviewer' },
+      { key: 'approvalOpinion', label: '审批意见', type: 'select', required: true, owner: 'reviewer', options: ['同意接收为预备党员', '不同意接收为预备党员'] },
+      { key: 'approvalComment', label: '审批说明', type: 'textarea', required: true, owner: 'reviewer' },
+      { key: 'oathPlan', label: '宣誓时间地点通知', type: 'textarea', required: false, owner: 'reviewer' },
     ],
     timeRule: { recordFields: ['reviewedAt'] },
     taskSummary: '基层党委审批接收预备党员事项。',
   },
   STEP_17: {
+    taskType: 'notice',
     actorType: 'reviewer',
     responsibleRoles: ['organizer', 'branchSecretary'],
     requiresApplicantAction: 0,
@@ -275,6 +297,7 @@ const STEP_DETAIL_OVERRIDES = {
     taskSummary: '记录预备党员入党宣誓情况。',
   },
   STEP_18: {
+    taskType: 'notice',
     actorType: 'reviewer',
     responsibleRoles: ['organizer', 'branchSecretary'],
     requiresApplicantAction: 0,
@@ -289,22 +312,25 @@ const STEP_DETAIL_OVERRIDES = {
     taskSummary: '记录预备党员编入党支部和党小组情况。',
   },
   STEP_19: {
-    actorType: 'reviewer',
-    responsibleRoles: ['organizer', 'branchSecretary'],
-    requiresApplicantAction: 0,
+    taskType: 'submit',
+    actorType: 'collaborative',
+    responsibleRoles: ['applicant', 'organizer', 'branchSecretary'],
+    requiresApplicantAction: 1,
     requiresReviewerAction: 1,
     notificationTemplate: 'quarterly_cultivation',
     materialSchema: [
-      { key: 'quarterlyReview', label: '季度考察材料', tag: 'quarterly-review', accept: ['pdf', 'image'], required: false },
+      { key: 'quarterlyReview', label: '季度思想汇报/考察材料', tag: 'quarterly-review', accept: ['pdf', 'image'], required: true },
     ],
     businessFields: [
-      { key: 'reviewPeriod', label: '考察时间区间', type: 'text', required: true, owner: 'reviewer' },
-      { key: 'reviewContent', label: '教育考察内容', type: 'textarea', required: true, owner: 'reviewer' },
+      { key: 'reviewPeriod', label: '考察季度/时间区间', type: 'text', required: true, owner: 'applicant' },
+      { key: 'reviewContent', label: '本人季度报告摘要', type: 'textarea', required: true, owner: 'applicant' },
+      { key: 'cultivationOpinion', label: '教育考察意见', type: 'textarea', required: true, owner: 'reviewer' },
     ],
     timeRule: { recordFields: ['reviewedAt'] },
-    taskSummary: '维护预备党员教育考察记录。',
+    taskSummary: '预备党员按季度提交报告，支部或组织员完成教育考察确认。',
   },
   STEP_20: {
+    taskType: 'submit',
     actorType: 'collaborative',
     responsibleRoles: ['applicant', 'organizer', 'branchSecretary'],
     requiresApplicantAction: 1,
@@ -321,6 +347,7 @@ const STEP_DETAIL_OVERRIDES = {
     taskSummary: '提交转正申请并由支部核对。',
   },
   STEP_21: {
+    taskType: 'notice',
     actorType: 'reviewer',
     responsibleRoles: ['branchSecretary', 'organizer'],
     requiresApplicantAction: 0,
@@ -330,11 +357,13 @@ const STEP_DETAIL_OVERRIDES = {
     businessFields: [
       { key: 'regularizationMeetingAt', label: '支部大会时间', type: 'datetime', required: true, owner: 'reviewer' },
       { key: 'regularizationVoteResult', label: '转正表决结果', type: 'textarea', required: true, owner: 'reviewer' },
+      { key: 'regularizationBranchDecision', label: '支部大会决议', type: 'select', required: true, owner: 'reviewer', options: ['同意按期转正', '建议延长预备期', '建议取消预备党员资格'] },
     ],
     timeRule: { recordFields: ['meetingAt'] },
     taskSummary: '记录支部大会讨论转正情况。',
   },
   STEP_22: {
+    taskType: 'notice',
     actorType: 'reviewer',
     responsibleRoles: ['secretary', 'deputySecretary', 'organizer'],
     requiresApplicantAction: 0,
@@ -349,6 +378,7 @@ const STEP_DETAIL_OVERRIDES = {
     taskSummary: '基层党委审批预备党员转正事项。',
   },
   STEP_23: {
+    taskType: 'notice',
     actorType: 'reviewer',
     responsibleRoles: ['secretary', 'deputySecretary', 'organizer', 'orgDept'],
     requiresApplicantAction: 0,
@@ -360,9 +390,10 @@ const STEP_DETAIL_OVERRIDES = {
       { key: 'probationResultNote', label: '处理说明', type: 'textarea', required: true, owner: 'reviewer' },
     ],
     timeRule: { recordFields: ['reviewedAt'] },
-    taskSummary: '记录延长预备期或流程结项处理结果。',
+    taskSummary: '记录党委审批后的延长预备期、终止发展或正式党员转入处理。',
   },
   STEP_24: {
+    taskType: 'notice',
     actorType: 'reviewer',
     responsibleRoles: ['organizer', 'orgDept'],
     requiresApplicantAction: 0,
@@ -377,9 +408,10 @@ const STEP_DETAIL_OVERRIDES = {
       { key: 'archivedAt', label: '归档日期', type: 'date', required: true, owner: 'reviewer' },
     ],
     timeRule: { recordFields: ['archivedAt'] },
-    taskSummary: '完成材料归档登记。',
+    taskSummary: '组织员或组织部完成发展党员材料归档登记。',
   },
   STEP_25: {
+    taskType: 'notice',
     actorType: 'reviewer',
     responsibleRoles: ['organizer', 'orgDept'],
     requiresApplicantAction: 0,
@@ -391,7 +423,7 @@ const STEP_DETAIL_OVERRIDES = {
       { key: 'finalConfirmedAt', label: '确认日期', type: 'date', required: true, owner: 'reviewer' },
     ],
     timeRule: { recordFields: ['confirmedAt'] },
-    taskSummary: '确认发展党员流程最终状态。',
+    taskSummary: '确认发展党员流程最终状态并完成全流程留痕。',
   },
 
 };
@@ -403,6 +435,7 @@ function defaultStepDetail(stepCode, roleIds = []) {
   const reviewerRoles = roleIds.filter((roleId) => roleId !== 'applicant');
   const hasApplicant = roleIds.includes('applicant');
   return {
+    taskType: hasApplicant ? 'submit' : 'notice',
     actorType: reviewerRoles.length && hasApplicant ? 'collaborative' : hasApplicant ? 'applicant' : 'reviewer',
     responsibleRoles: roleIds,
     requiresApplicantAction: hasApplicant ? 1 : 0,

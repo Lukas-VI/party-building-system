@@ -226,7 +226,7 @@ function registerMobileRoutes(app) {
   app.post('/api/mobile/files/upload', requireAuth(), upload.single('file'), async (req, res) => {
     try {
       const { workflowId = '', stepCode = '', materialTag = '' } = req.body || {};
-      validateUploadedFile(req.file, ['pdf']);
+      validateUploadedFile(req.file, ['pdf', 'image']);
       let attachmentId = null;
       if (workflowId && stepCode) {
         const applicantId = resolveMobileWorkflowId(req.user, workflowId);

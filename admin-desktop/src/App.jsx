@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Button, Card, Input, MessagePlugin, Select, Space, Tag } from 'tdesign-react';
 import { desktopToMobileUrl, isMobileDevice, shouldSkipAutoRoute } from './deviceRoute';
 
-const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? 'https://havensky.cn/DJ_api' : '/DJ_api');
+const API_BASE = import.meta.env.VITE_API_BASE;
 const MENU_LABELS = {
   dashboard: '工作台',
   applicants: '申请人台账',
@@ -50,7 +50,7 @@ function App() {
   });
   const [activeView, setActiveView] = useState('dashboard');
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState({ orgId: '', branchId: '', stage: '', keyword: '' });
+  const [filters, setFilters] = useState({ orgId: '', branchId: '', stage: '', developmentStatus: '', keyword: '' });
   const [selectedApplicantId, setSelectedApplicantId] = useState('');
   const [overview, setOverview] = useState(null);
   const [applicants, setApplicants] = useState([]);
@@ -162,7 +162,7 @@ function App() {
   useEffect(() => {
     if (!user) return;
     refreshForView(activeView);
-  }, [user, activeView]);
+  }, [user, activeView, selectedApplicantId]);
 
   async function refreshForView(view) {
     setLoading(true);
@@ -181,8 +181,14 @@ function App() {
         setOrgs(orgRes);
         setBranches(branchRes);
       }
-      if (view === 'workflowDetail' && selectedApplicantId) {
-        const [detailRes, workflowRes] = await Promise.all([api(`/applicants/${selectedApplicantId}`), api(`/workflows/${selectedApplicantId}`)]);
+      if (view === 'workflowDetail') {
+        const applicantId = user.primaryRole === 'applicant' ? user.id : selectedApplicantId;
+        if (!applicantId) {
+          setApplicantDetail(null);
+          setWorkflow(null);
+          return;
+        }
+        const [detailRes, workflowRes] = await Promise.all([api(`/applicants/${applicantId}`), api(`/workflows/${applicantId}`)]);
         setApplicantDetail(detailRes);
         setWorkflow(workflowRes);
       }
@@ -264,13 +270,31 @@ function App() {
     MessagePlugin.success(nextMode === 'propaganda' ? '已切换到样式2' : '已切换到样式1');
   }
 
-  async function doReview(applicantId, stepCode, status) {
+  function defaultBusinessFieldValue(field) {
+    if (field.type === 'select') return field.options?.[0] || '同意';
+    if (field.type === 'date') return new Date().toISOString().slice(0, 10);
+    if (field.type === 'datetime') return new Date().toISOString().slice(0, 16).replace('T', ' ');
+    return '快捷审核确认';
+  }
+
+  function buildQuickReviewFormData(item) {
+    const businessFields = (item.businessFields || [])
+      .filter((field) => field.required && (!field.owner || field.owner === 'reviewer' || field.owner === 'both'))
+      .reduce((payload, field) => {
+        payload[field.key] = defaultBusinessFieldValue(field);
+        return payload;
+      }, {});
+    return { businessFields };
+  }
+
+  async function doReview(item, status) {
     try {
-      await api(`/workflows/${applicantId}/steps/${stepCode}/review`, {
+      await api(`/workflows/${item.applicantId}/steps/${item.stepCode}/review`, {
         method: 'POST',
         body: JSON.stringify({
           status,
           comment: status === 'approved' ? '后台审核通过' : '后台审核退回',
+          formData: status === 'approved' ? buildQuickReviewFormData(item) : {},
         }),
       });
       MessagePlugin.success(status === 'approved' ? '已通过' : '已退回');
@@ -508,16 +532,25 @@ function App() {
 
         {activeView === 'dashboard' && overview && (
           <div className="content-stack">
-            <div className="stats-grid">
-              <MetricCard title="申请人数" value={overview.totalApplicants} desc="当前权限范围内的申请人数量" onClick={() => setActiveView('applicants')} />
-              <MetricCard title="待注册审核" value={overview.pendingRegistrations} desc="首次注册待审核" onClick={() => setActiveView('reviews')} />
-              <MetricCard title="待流程审核" value={overview.pendingReviews} desc="流程节点待审批数量" onClick={() => setActiveView('reviews')} />
-              <MetricCard title="超期事项" value={overview.overdueItems} desc="超出配置截止时间的节点" />
-            </div>
-            <div className="split-grid">
-              <SimpleTableCard title="阶段分布" columns={['阶段', '人数']} rows={overview.stageDistribution.map((item) => [item.stage, item.count])} compact={isMobile} />
-              <SimpleTableCard title="单位统计" columns={['单位', '申请人数', '入门阶段', '重点审核']} rows={orgStats.map((item) => [item.orgName, item.applicants, item.pending, item.reviewing])} compact={isMobile} />
-            </div>
+            {user.primaryRole === 'applicant' ? (
+              <div className="stats-grid">
+                <MetricCard title="待审核流程" value={overview.pendingReviews} desc="本人流程中待审核节点" onClick={() => setActiveView('workflowDetail')} />
+                  <MetricCard title="超期预警" value={overview.overdueItems} desc="已超期且未完成的申请" />
+              </div>
+            ) : (
+              <>
+                <div className="stats-grid">
+                  <MetricCard title="申请人数" value={overview.totalApplicants} desc="当前权限范围内的申请人数量" onClick={() => setActiveView('applicants')} />
+                  <MetricCard title="注册待审核" value={overview.pendingRegistrations} desc="首次注册待审核" onClick={() => setActiveView('reviews')} />
+                  <MetricCard title="待审核流程" value={overview.pendingReviews} desc="当前角色可处理的流程节点" onClick={() => setActiveView('reviews')} />
+                  <MetricCard title="超期预警" value={overview.overdueItems} desc="已超期且未完成的申请数量" />
+                </div>
+                <div className="split-grid">
+                  <StageDistributionCard rows={overview.stageDistribution || []} compact={isMobile} />
+                  <SimpleTableCard title="单位统计" columns={['单位', '申请人数', '发展中人数', '正式党员人数']} rows={orgStats.map((item) => [item.orgName, item.applicants, item.developing, item.formalMembers])} compact={isMobile} />
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -528,11 +561,12 @@ function App() {
                 <Input value={filters.keyword} placeholder="姓名/学号/单位关键字" onChange={(value) => setFilters((prev) => ({ ...prev, keyword: value }))} />
                 <Select value={filters.orgId} onChange={(value) => setFilters((prev) => ({ ...prev, orgId: value || '' }))} options={orgs.map((item) => ({ label: item.name, value: item.id }))} clearable placeholder="单位" />
                 <Select value={filters.branchId} onChange={(value) => setFilters((prev) => ({ ...prev, branchId: value || '' }))} options={branches.map((item) => ({ label: item.name, value: item.id }))} clearable placeholder="支部" />
-                <Select value={filters.stage} onChange={(value) => setFilters((prev) => ({ ...prev, stage: value || '' }))} clearable placeholder="阶段" options={['入党申请人', '入党积极分子', '发展对象', '预备党员'].map((item) => ({ label: item, value: item }))} />
+                <Select value={filters.stage} onChange={(value) => setFilters((prev) => ({ ...prev, stage: value || '' }))} clearable placeholder="阶段" options={['入党申请人', '入党积极分子', '发展对象', '预备党员', '正式党员'].map((item) => ({ label: item, value: item }))} />
+                <Select value={filters.developmentStatus} onChange={(value) => setFilters((prev) => ({ ...prev, developmentStatus: value || '' }))} clearable placeholder="状态" options={['发展中', '已完成'].map((item) => ({ label: item, value: item }))} />
               </div>
               <Space style={{ marginTop: 16 }}>
                 <Button theme="danger" onClick={() => refreshForView('applicants')}>查询</Button>
-                <Button variant="outline" onClick={() => downloadFile('/export/applicants', '申请人台账.xlsx')}>下载台账</Button>
+                <Button variant="outline" onClick={() => downloadFile(`/export/applicants?${new URLSearchParams(filters).toString()}`, '申请人台账.xlsx')}>下载台账</Button>
               </Space>
             </Card>
             <Card title="申请人台账">
@@ -540,22 +574,28 @@ function App() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>姓名</th>
-                    <th>学号/工号</th>
                     <th>单位</th>
                     <th>支部</th>
-                    <th>当前阶段</th>
+                    <th>姓名</th>
+                    <th>学号/工号</th>
+                    <th>年级</th>
+                    <th>状态</th>
+                    <th>当前流程节点</th>
+                    <th>截止时间</th>
                     <th>操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {applicants.length ? applicants.map((item) => (
                     <tr key={item.id}>
-                      <td>{item.name}</td>
-                      <td>{item.username}</td>
                       <td>{item.orgName}</td>
                       <td>{item.branchName}</td>
-                      <td><Tag theme="danger" variant="light">{item.currentStage}</Tag></td>
+                      <td>{item.name}</td>
+                      <td>{item.username}</td>
+                      <td>{item.grade || '-'}</td>
+                      <td><Tag theme={item.developmentStatus === '已完成' ? 'success' : 'warning'} variant="light">{item.developmentStatus}</Tag></td>
+                      <td>{item.currentStepLabel || '流程已完成'}</td>
+                      <td>{item.currentStepDeadline || '-'}</td>
                       <td>
                         <Button
                           size="small"
@@ -572,7 +612,7 @@ function App() {
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan="6" className="table-empty">
+                      <td colSpan="9" className="table-empty">
                         当前没有申请人台账。首次注册待审核请到“审核审批”查看，预置人员总表请到“组织与角色”查看；注册审核通过后才会进入申请人台账。
                       </td>
                     </tr>
@@ -586,8 +626,8 @@ function App() {
 
         {activeView === 'workflowDetail' && (
           <div className="content-stack">
-            {!selectedApplicantId && <EmptyState text="请先在“申请人台账”中选择一名申请人。" />}
-            {selectedApplicantId && applicantDetail && workflow && (
+            {user.primaryRole !== 'applicant' && !selectedApplicantId && <EmptyState text="请先在“申请人台账”中选择一名申请人。" />}
+            {(user.primaryRole === 'applicant' || selectedApplicantId) && applicantDetail && workflow && (
               <>
                 <Card title="申请人信息">
                   <div className="detail-grid">
@@ -599,6 +639,7 @@ function App() {
                     <DetailItem label="联系电话" value={applicantDetail.phone} />
                   </div>
                 </Card>
+                <CurrentWorkflowStepCard step={getCurrentWorkflowStep(workflow)} />
                 <Card title="25 步流程记录">
                   <div className="table-scroll">
                   <table className="data-table">
@@ -606,6 +647,7 @@ function App() {
                       <tr>
                         <th>步骤</th>
                         <th>名称</th>
+                        <th>类型</th>
                         <th>阶段</th>
                         <th>状态</th>
                         <th>截止时间</th>
@@ -614,10 +656,11 @@ function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {workflow.steps.map((item) => (
-                        <tr key={item.stepCode}>
+                      {getWorkflowDisplaySteps(workflow).map((item) => (
+                        <tr key={item.stepCode} className={item.stepCode === getCurrentWorkflowStep(workflow)?.stepCode ? 'is-current-row' : ''}>
                           <td>{item.sortOrder}</td>
                           <td>{item.name}</td>
+                          <td><Tag theme={item.taskMeta?.taskType === 'submit' ? 'warning' : 'primary'} variant="light">{item.taskMeta?.taskType === 'submit' ? '提交类' : '通知类'}</Tag></td>
                           <td>{item.phase}</td>
                           <td><Tag theme={item.status === 'approved' ? 'success' : item.status === 'reviewing' ? 'warning' : 'default'}>{item.status}</Tag></td>
                           <td>{item.deadline}</td>
@@ -680,10 +723,12 @@ function App() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>申请人</th>
                     <th>单位</th>
                     <th>支部</th>
-                    <th>步骤</th>
+                    <th>姓名</th>
+                    <th>学号/工号</th>
+                    <th>步骤序号</th>
+                    <th>当前状态</th>
                     <th>截止时间</th>
                     <th>操作</th>
                   </tr>
@@ -691,25 +736,27 @@ function App() {
                 <tbody>
                   {workflowReviews.length ? workflowReviews.map((item) => (
                     <tr key={`${item.applicantId}-${item.stepCode}`}>
-                      <td>{item.applicantName}</td>
                       <td>{item.orgName}</td>
                       <td>{item.branchName}</td>
-                        <td>{item.stepName}</td>
-                        <td>{item.deadline}</td>
-                        <td>
-                          <Space>
-                            <Button size="small" variant="outline" onClick={() => {
-                              setSelectedApplicantId(item.applicantId);
-                              setActiveView('workflowDetail');
-                            }}>查看流程</Button>
-                            <Button size="small" theme="success" onClick={() => doReview(item.applicantId, item.stepCode, 'approved')}>通过</Button>
-                            <Button size="small" theme="danger" variant="outline" onClick={() => doReview(item.applicantId, item.stepCode, 'rejected')}>退回</Button>
+                      <td>{item.applicantName}</td>
+                      <td>{item.applicantUsername}</td>
+                      <td>第 {item.sortOrder} 步</td>
+                      <td>{item.sortOrder}-{item.stepName}</td>
+                      <td>{item.deadline || '-'}</td>
+                      <td>
+                        <Space>
+                          <Button size="small" variant="outline" onClick={() => {
+                            setSelectedApplicantId(item.applicantId);
+                            setActiveView('workflowDetail');
+                          }}>查看流程</Button>
+                            <Button size="small" theme="success" onClick={() => doReview(item, 'approved')}>通过</Button>
+                            <Button size="small" theme="danger" variant="outline" onClick={() => doReview(item, 'rejected')}>退回</Button>
                         </Space>
                       </td>
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan="6">当前没有待审核流程节点。</td>
+                      <td colSpan="8">当前没有待审核流程。</td>
                     </tr>
                   )}
                 </tbody>
@@ -877,11 +924,11 @@ function App() {
           <div className="content-stack">
             <div className="stats-grid">
               <MetricCard title="当前统计范围" value={user.orgName || '全校'} desc="受角色权限限制" />
-              <MetricCard title="流程节点待审" value={overview?.pendingReviews || 0} desc="跨单位待办汇总" />
+              <MetricCard title="待审核流程" value={overview?.pendingReviews || 0} desc="跨单位待办汇总" />
             </div>
             <div className="split-grid">
-              <SimpleTableCard title="按单位统计" columns={['单位', '申请人数', '入门阶段', '重点审核']} rows={orgStats.map((item) => [item.orgName, item.applicants, item.pending, item.reviewing])} compact={isMobile} />
-              <SimpleTableCard title="按支部统计" columns={['支部', '申请人数', '活跃流程数']} rows={branchStats.map((item) => [item.branchName, item.applicants, item.activeSteps])} compact={isMobile} />
+              <SimpleTableCard title="按单位统计" columns={['单位', '申请人数', '发展中人数', '正式党员人数']} rows={orgStats.map((item) => [item.orgName, item.applicants, item.developing, item.formalMembers])} compact={isMobile} />
+              <SimpleTableCard title="按支部统计" columns={['支部', '申请人数', '发展中人数', '正式党员人数']} rows={branchStats.map((item) => [item.branchName, item.applicants, item.developing, item.formalMembers])} compact={isMobile} />
             </div>
           </div>
         )}
@@ -1000,6 +1047,74 @@ function MetricCard({ title, value, desc, onClick }) {
   );
 }
 
+function StageDistributionCard({ rows, compact = false }) {
+  const [expandedStage, setExpandedStage] = useState('');
+  if (compact) {
+    return (
+      <Card title="阶段分布">
+        <div className="simple-list">
+          {rows.map((item) => (
+            <div className="simple-list-card" key={item.stage}>
+              <button type="button" className="inline-action" onClick={() => setExpandedStage(expandedStage === item.stage ? '' : item.stage)}>
+                {item.stage}：{item.count} 人
+              </button>
+              {expandedStage === item.stage && <StageMemberTable members={item.members || []} />}
+            </div>
+          ))}
+        </div>
+      </Card>
+    );
+  }
+  return (
+    <Card title="阶段分布">
+      <div className="table-scroll">
+        <table className="data-table">
+          <thead><tr><th>阶段</th><th>人数</th></tr></thead>
+          <tbody>
+            {rows.map((item) => (
+              <Fragment key={item.stage}>
+                <tr key={item.stage}>
+                  <td>
+                    <button type="button" className="inline-action" onClick={() => setExpandedStage(expandedStage === item.stage ? '' : item.stage)}>
+                      {item.stage}
+                    </button>
+                  </td>
+                  <td>{item.count}</td>
+                </tr>
+                {expandedStage === item.stage && (
+                  <tr key={`${item.stage}-members`}>
+                    <td colSpan="2"><StageMemberTable members={item.members || []} /></td>
+                  </tr>
+                )}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
+function StageMemberTable({ members }) {
+  return (
+    <table className="data-table nested-table">
+      <thead><tr><th>姓名</th><th>支部</th><th>年级</th><th>学号</th></tr></thead>
+      <tbody>
+        {members.length ? members.map((item) => (
+          <tr key={item.id}>
+            <td>{item.name}</td>
+            <td>{item.branchName}</td>
+            <td>{item.grade || '-'}</td>
+            <td>{item.username}</td>
+          </tr>
+        )) : (
+          <tr><td colSpan="4">暂无明细。</td></tr>
+        )}
+      </tbody>
+    </table>
+  );
+}
+
 function formatBusinessFields(step) {
   const fields = step.taskMeta?.businessFields || step.formSchema?.businessFields || [];
   const values = step.formData?.businessFields || {};
@@ -1011,6 +1126,59 @@ function formatBusinessFields(step) {
     .filter(Boolean)
     .join('；');
   return text || '-';
+}
+
+function getCurrentWorkflowStep(workflow) {
+  return workflow?.steps?.find((item) => ['pending', 'reviewing', 'rejected'].includes(item.status)) || null;
+}
+
+function getWorkflowDisplaySteps(workflow) {
+  const current = getCurrentWorkflowStep(workflow);
+  const timeValue = (item) => item.operatedAt || item.confirmedAt || '0000-00-00 00:00:00';
+  return [...(workflow?.steps || [])].sort((left, right) => {
+    if (left.stepCode === current?.stepCode) return -1;
+    if (right.stepCode === current?.stepCode) return 1;
+    const leftDone = left.status === 'approved';
+    const rightDone = right.status === 'approved';
+    if (leftDone !== rightDone) return leftDone ? 1 : -1;
+    return String(timeValue(right)).localeCompare(String(timeValue(left))) || Number(left.sortOrder || 0) - Number(right.sortOrder || 0);
+  });
+}
+
+function statusTagTheme(status) {
+  return {
+    approved: 'success',
+    reviewing: 'warning',
+    pending: 'primary',
+    rejected: 'danger',
+    terminated: 'danger',
+  }[status] || 'default';
+}
+
+function CurrentWorkflowStepCard({ step }) {
+  if (!step) return null;
+  return (
+    <Card title="当前执行步骤">
+      <div className="current-step-panel">
+        <div className="current-step-main">
+          <div className="current-step-order">第 {step.sortOrder} 步</div>
+          <div>
+            <div className="current-step-title">{step.name}</div>
+            <div className="current-step-subtitle">{step.phase}</div>
+          </div>
+          <Tag theme={statusTagTheme(step.status)} variant="light">
+            {step.statusText || step.status}
+          </Tag>
+        </div>
+        <div className="detail-grid current-step-grid">
+          <DetailItem label="截止时间" value={step.deadline || '-'} />
+          <DetailItem label="办理时间" value={step.operatedAt || '-'} />
+          <DetailItem label="办理人" value={step.lastOperatorName || '-'} />
+          <DetailItem label="业务记录" value={formatBusinessFields(step)} />
+        </div>
+      </div>
+    </Card>
+  );
 }
 
 function SimpleTableCard({ title, columns, rows, compact = false }) {
