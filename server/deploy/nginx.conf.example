@@ -1,6 +1,6 @@
 server {
     listen 80;
-    server_name admin.your-domain.com 192.168.31.135;
+     server_name admin.your-domain.com 192.168.66.228;
 
     location / {
         return 302 /web-admin/;

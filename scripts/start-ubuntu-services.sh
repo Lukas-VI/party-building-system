@@ -89,6 +89,12 @@ ensure_deps "${ROOT_DIR}/server"
 ensure_deps "${ROOT_DIR}/admin-desktop"
 ensure_deps "${ROOT_DIR}/admin-mobile"
 
+ # Bootstrap .env 文件：如果不存在则从生产示例复制，避免因缺少环境变量导致服务崩溃
+ if [ ! -f "${ROOT_DIR}/server/.env" ]; then
+   echo "[warn] server/.env 不存在，从 .env.production.example 复制（需手动填入真实凭据）"
+   cp "${ROOT_DIR}/server/.env.production.example" "${ROOT_DIR}/server/.env"
+ fi
+
 echo "[info] building admin-desktop"
 (cd "${ROOT_DIR}/admin-desktop" && npm run build)
 
