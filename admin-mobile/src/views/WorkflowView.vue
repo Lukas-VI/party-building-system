@@ -14,10 +14,10 @@ const allSteps = computed(() => workflow.value?.steps || []);
 const stepTime = (step) => step.operatedAt || step.confirmedAt || '';
 const completedSteps = computed(() => [...(workflow.value?.completedSteps || [])].sort((left, right) => String(stepTime(right)).localeCompare(String(stepTime(left)))));
 const unfinishedSteps = computed(() => allSteps.value
-  .filter((step) => step.status !== 'approved')
-  .sort((left, right) => {
-    if (left.stepCode === currentTask.value?.stepCode) return -1;
-    if (right.stepCode === currentTask.value?.stepCode) return 1;
+   .filter((step) => step.status !== 'approved' && step.stepCode !== currentTask.value?.stepCode)
+   .sort((left, right) => {
+     if (left.stepCode === currentTask.value?.stepCode) return -1;
+     if (right.stepCode === currentTask.value?.stepCode) return 1;
     return Number(left.sortOrder || 0) - Number(right.sortOrder || 0);
   }));
 
