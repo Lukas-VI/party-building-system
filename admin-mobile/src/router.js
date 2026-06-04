@@ -46,7 +46,7 @@ const routes = [
 ];
 
 const router = createRouter({
-  history: createWebHashHistory('/wx-app/'),
+  history: createWebHashHistory(import.meta.env.VITE_MOBILE_PATH || '/wx-app/'),
   routes,
 });
 

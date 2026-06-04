@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Button, Card, Input, MessagePlugin, Select, Space, Tag } from 'tdesign-react';
 import { desktopToMobileUrl, isMobileDevice, shouldSkipAutoRoute } from './deviceRoute';
 
-const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? 'https://havensky.cn/DJ_api' : '/DJ_api');
+const API_BASE = import.meta.env.VITE_API_BASE;
 const MENU_LABELS = {
   dashboard: '工作台',
   applicants: '申请人台账',

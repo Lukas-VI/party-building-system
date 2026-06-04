@@ -41,7 +41,7 @@ function registerWechatRoutes(app) {
       }
       const statePayload = Buffer.from(
         JSON.stringify({
-          redirectPath: req.query.redirectPath || '/wx-app/',
+          redirectPath: req.query.redirectPath || env.WECHAT_DEFAULT_REDIRECT_PATH,
           t: Date.now(),
         }),
         'utf8',
@@ -73,11 +73,11 @@ function registerWechatRoutes(app) {
       if (!response.ok || data.errcode) {
         return fail(res, 400, data.errmsg || '微信网页授权失败');
       }
-      let redirectPath = '/wx-app/';
+      let redirectPath = env.WECHAT_DEFAULT_REDIRECT_PATH;
       try {
         redirectPath = JSON.parse(Buffer.from(String(state), 'base64url').toString('utf8')).redirectPath || redirectPath;
       } catch (error) {
-        redirectPath = '/wx-app/';
+        redirectPath = env.WECHAT_DEFAULT_REDIRECT_PATH;
       }
       ok(res, {
         openid: data.openid,
