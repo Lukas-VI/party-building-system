@@ -2,8 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-HOST_NAME="${HOST_NAME:-192.168.31.135}"
-USER_NAME="${USER_NAME:-root}"
+ HOST_NAME="${HOST_NAME:-192.168.66.228}"
+ USER_NAME="${USER_NAME:-havensky}"
 KEY_PATH="${KEY_PATH:-$HOME/.ssh/codex_vm_ed25519}"
 REPO_PATH="${REPO_PATH:-/opt/party-building-mini-app}"
 BUNDLE_NAME="${BUNDLE_NAME:-party-building-sync.bundle}"

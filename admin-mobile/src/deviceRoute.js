@@ -21,13 +21,6 @@ export function isDesktopDevice() {
   return !uaMobile && window.innerWidth > MOBILE_BREAKPOINT;
 }
 
-// 
 export function mobileToDesktopUrl() {
-  if (typeof window === 'undefined') {
-    return import.meta.env.VITE_DESKTOP_PATH || '/admin-desktop/';
-  }
-  const url = new URL(window.location.href);
-  url.pathname = import.meta.env.VITE_DESKTOP_PATH || '/admin-desktop/';
-  url.hash = '';
-  return url.toString();
+  return import.meta.env.VITE_DESKTOP_ADMIN_URL || '/admin-desktop/';
 }

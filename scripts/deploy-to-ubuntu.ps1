@@ -68,3 +68,5 @@ ssh -i $KeyPath "$UserName@$HostName" "echo '$remoteScriptBase64' | base64 -d | 
 
 Remove-Item -LiteralPath $bundlePath -Force -ErrorAction SilentlyContinue
 Write-Host "[info] deploy finished"
+   [string]$HostName = "192.168.66.228",
+ if (-not $SkipVmStart -and $HostName -eq "192.168.66.228") {

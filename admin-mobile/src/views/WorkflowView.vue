@@ -14,12 +14,13 @@ const allSteps = computed(() => workflow.value?.steps || []);
 const stepTime = (step) => step.operatedAt || step.confirmedAt || '';
 const completedSteps = computed(() => [...(workflow.value?.completedSteps || [])].sort((left, right) => String(stepTime(right)).localeCompare(String(stepTime(left)))));
 const unfinishedSteps = computed(() => allSteps.value
-  .filter((step) => step.status !== 'approved')
-  .sort((left, right) => {
-    if (left.stepCode === currentTask.value?.stepCode) return -1;
-    if (right.stepCode === currentTask.value?.stepCode) return 1;
-    return Number(left.sortOrder || 0) - Number(right.sortOrder || 0);
-  }));
+   .filter((step) => step.status !== 'approved' && step.stepCode !== currentTask.value?.stepCode)
+    .sort((left, right) => {
+      const leftActive = ['pending','reviewing','rejected'].includes(left.status) ? 0 : 1;
+      const rightActive = ['pending','reviewing','rejected'].includes(right.status) ? 0 : 1;
+      if (leftActive !== rightActive) return leftActive - rightActive;
+      return Number(left.sortOrder || 0) - Number(right.sortOrder || 0);
+    }));
 
 function displayTime(value) {
   return value || '未设置';
@@ -82,7 +83,7 @@ onMounted(loadWorkflow);
     </section>
 
     <!-- 当前任务卡片 -->
-    <section class="section-card" v-if="currentTask">
+     <section class="section-card" v-if="currentTask && currentTask.status !== 'approved'">
       <!-- 卡片头部 -->
       <div class="section-card__hd">
         <!-- 卡片标题 -->

@@ -10,6 +10,19 @@
 当前开发联调环境的具体机器信息不在本文件中维护。
 如需查看，请查阅：
 - [开发调试记录](dev-notes.md)
+- [团队协作与测试服部署](team-collaboration-workflow.md)
+
+### 当前开发服务器凭据（仅供团队内部使用）
+| 项目 | 值 |
+|------|-----|
+| SSH 地址 | 192.168.66.228（easy-tier VPN） |
+| SSH 用户 | havensky |
+| MySQL Root 密码 | RootDev_2026! |
+| MySQL 数据库 | party_building_app |
+| MySQL 应用用户 | party_building_user |
+| MySQL 应用密码 | PartyBuilding_2026_Remote! |
+| 公网 API | http://39.105.127.142:1145/api/health |
+| 公网后台 | http://39.105.127.142:1919/web-admin/ |
 
 ## 2. 域名与 HTTPS
 - 微信服务号网页 App 和服务端必须使用已备案并配置 HTTPS 的域名
@@ -39,7 +52,7 @@ mysql -u root -p party_building_app < server/deploy/mysql-init.sql
 
 如需开发环境专用账号，建议：
 ```sql
-CREATE USER 'party_building_user'@'127.0.0.1' IDENTIFIED BY 'replace-me';
+CREATE USER 'party_building_user'@'127.0.0.1' IDENTIFIED BY 'PartyBuilding_2026_Remote!';
 GRANT ALL PRIVILEGES ON party_building_app.* TO 'party_building_user'@'127.0.0.1';
 FLUSH PRIVILEGES;
 ```

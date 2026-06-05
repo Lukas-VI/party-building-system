@@ -89,6 +89,22 @@ ensure_deps "${ROOT_DIR}/server"
 ensure_deps "${ROOT_DIR}/admin-desktop"
 ensure_deps "${ROOT_DIR}/admin-mobile"
 
+ # Bootstrap .env 文件：如果不存在则从生产示例复制，避免因缺少环境变量导致服务崩溃
+if [ ! -f "${ROOT_DIR}/server/.env" ]; then
+  echo "[warn] server/.env 不存在，从 .env.production.example 复制（需手动填入真实凭据）"
+  cp "${ROOT_DIR}/server/.env.production.example" "${ROOT_DIR}/server/.env"
+fi
+
+ # Bootstrap 前端 .env 文件（Vite 构建时需要 VITE_API_BASE 等环境变量）
+ if [ ! -f "${ROOT_DIR}/admin-desktop/.env" ]; then
+   echo "[warn] admin-desktop/.env 不存在，从 .env.example 复制"
+   cp "${ROOT_DIR}/admin-desktop/.env.example" "${ROOT_DIR}/admin-desktop/.env"
+ fi
+ if [ ! -f "${ROOT_DIR}/admin-mobile/.env" ]; then
+   echo "[warn] admin-mobile/.env 不存在，从 .env.example 复制"
+   cp "${ROOT_DIR}/admin-mobile/.env.example" "${ROOT_DIR}/admin-mobile/.env"
+ fi
+
 echo "[info] building admin-desktop"
 (cd "${ROOT_DIR}/admin-desktop" && npm run build)
 

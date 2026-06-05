@@ -16,7 +16,8 @@ function parseOrigins(raw) {
 function resolvePublicBaseUrl() {
   if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL;
   if (process.env.NODE_ENV === 'production') {
-    throw new Error('生产环境必须配置 PUBLIC_BASE_URL，用于生成可访问的附件 URL');
+     console.warn('[warn] PUBLIC_BASE_URL 未配置，附件链接可能无法访问。请在 server/.env 中设置 PUBLIC_BASE_URL');
+     return 'http://127.0.0.1:3000';
   }
   return 'http://127.0.0.1:3000';
 }
