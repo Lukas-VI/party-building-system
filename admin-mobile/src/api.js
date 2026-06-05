@@ -79,6 +79,10 @@ export function fetchPublicBootstrap() {
   return http.get('/public/bootstrap');
 }
 
+export function fetchCurrentUser() {
+  return http.get('/auth/me');
+}
+
 export function fetchRegistrationRequests(status = 'pending') {
   return http.get('/auth/registration-requests', {
     params: { status },

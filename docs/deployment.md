@@ -118,6 +118,15 @@ node scripts/serve-admin-frontends.mjs
 - `WECHAT_SERVICE_REDIRECT_URI`：服务号网页授权回调地址
 - `WECHAT_SESSION_SECRET`：微信 session_key 加密密钥
 
+### 微信服务号网页授权配置
+
+访问 `https://havensky.cn/wx-app/` 并点击微信授权时，如果出现 `redirect_url域名与后台配置不一致，错误码:10003`，优先检查公众号后台的“网页授权域名”，不是“JS接口安全域名”。
+
+- 公众号后台“网页授权域名”填写：`havensky.cn`
+- 不要填写协议、路径或端口，例如不要填 `https://havensky.cn/DJ_api/wechat/oauth/callback`
+- 服务端环境变量填写完整回调地址：`WECHAT_SERVICE_REDIRECT_URI=https://havensky.cn/DJ_api/wechat/oauth/callback`
+- 如果微信要求校验文件，把 `MP_verify_*.txt` 放到站点根目录，确保 `https://havensky.cn/MP_verify_*.txt` 可以直接访问
+- 当前公开反代关系为 `/DJ_api/ -> /api/`，所以后端真实路由 `/api/wechat/oauth/callback` 在公网对应 `/DJ_api/wechat/oauth/callback`
 ## 9. 开发环境修复命令
 重置演示/开发管理员账号：
 ```bash

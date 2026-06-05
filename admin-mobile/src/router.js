@@ -4,7 +4,7 @@ import { isLoggedIn } from './session';
 /**
  * 服务号网页 App 路由入口。
  *
- * 当前沿用稳定的 Vue Router + Hash History 方案，是为了：
+ * 当前沿用稳定的 Vue Router + Hash History 方案：
  * - 适配微信内 H5 和简单反代部署
  * - 避免把业务路径规则散落到多个组件中
  *
@@ -25,6 +25,12 @@ const routes = [
     name: 'register',
     component: () => import('./views/RegisterView.vue'),
     meta: { title: '首次注册' },
+  },
+  {
+    path: '/wechat/callback',
+    name: 'wechat-callback',
+    component: () => import('./views/WechatCallbackView.vue'),
+    meta: { title: '微信授权' },
   },
   {
     path: '/',
@@ -52,16 +58,16 @@ const router = createRouter({
 
 /**
  * 这里集中做登录态和角色入口校验。
- * 角色差异优先通过路由守卫和统一 tabs 控制，不要在每个页面里重复拦截。
+ * 角色差异优先通过路由守卫和统一 tabs 控制，避免在每个页面里重复拦截。
  */
 router.beforeEach((to) => {
+  if (to.path === '/wechat/callback') return true;
   const publicPages = ['/login', '/register'];
   if (!publicPages.includes(to.path) && !isLoggedIn.value) return '/login';
   if (publicPages.includes(to.path) && isLoggedIn.value) return '/workbench';
   return true;
 });
 
-// 文档标题在路由层统一设置，避免各页面重复维护相同站点名。
 router.afterEach((to) => {
   document.title = `${to.meta.title || '服务号工作台'} - 党员发展管理系统`;
 });

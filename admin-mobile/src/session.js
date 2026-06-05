@@ -21,6 +21,13 @@ export const sessionState = reactive({
 
 export const isLoggedIn = computed(() => Boolean(sessionState.token && sessionState.user));
 
+export function setSessionToken(token) {
+  sessionState.token = token;
+  sessionState.user = null;
+  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.removeItem(USER_KEY);
+}
+
 export function setSession(token, user) {
   sessionState.token = token;
   sessionState.user = user;
@@ -43,7 +50,7 @@ export function hasPermission(user, permissionId) {
   return Boolean(user?.permissions?.some((item) => item.id === permissionId));
 }
 
-export function roleTabs(user) {
+export function roleTabs() {
   return [
     { name: 'workbench', label: '首页', icon: 'wap-home-o' },
     { name: 'messages', label: '消息', icon: 'bell' },

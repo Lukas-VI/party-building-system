@@ -1,11 +1,12 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { showSuccessToast } from 'vant';
+import { useRoute, useRouter } from 'vue-router';
+import { showFailToast, showSuccessToast } from 'vant';
 import { fetchPublicBootstrap, loginByPassword, startWechatOauth } from '../api';
 import { isDesktopDevice, mobileToDesktopUrl, shouldSkipAutoRoute } from '../deviceRoute';
 import { setSession } from '../session';
 
+const route = useRoute();
 const router = useRouter();
 const loading = ref(false);
 const oauthLoading = ref(false);
@@ -47,8 +48,21 @@ async function loadBootstrap() {
   bootstrap.value = await fetchPublicBootstrap();
 }
 
+function showWechatOauthMessage() {
+  const status = String(route.query.wechat || '');
+  const messages = {
+    unbound: '当前微信尚未绑定系统账号，请先用账号密码登录后到“我的”页面绑定微信',
+    inactive: '绑定账号未启用，请联系管理员',
+    failed: '微信授权失败，请重试',
+    'missing-code': '微信授权缺少 code，请重试',
+    'missing-openid': '微信授权未返回 openid，请重试',
+  };
+  if (messages[status]) showFailToast(messages[status]);
+}
+
 onMounted(() => {
   loadBootstrap();
+  showWechatOauthMessage();
   if (shouldSkipAutoRoute()) return;
   if (!isDesktopDevice()) return;
   window.location.replace(mobileToDesktopUrl());
@@ -83,13 +97,13 @@ onMounted(() => {
           <span>首次使用？</span>
           <router-link to="/register">立即注册</router-link>
         </div>
-        <div class="section-card__desc" v-if="bootstrap.defaultPasswordHint" style="padding-top: 8px;">
+        <div v-if="bootstrap.defaultPasswordHint" class="section-card__desc" style="padding-top: 8px;">
           {{ bootstrap.defaultPasswordHint }}
         </div>
       </div>
     </section>
 
-    <section class="section-card" v-if="bootstrap.loginHints?.length">
+    <section v-if="bootstrap.loginHints?.length" class="section-card">
       <div class="section-card__hd">
         <div class="section-card__title">快速填充账号</div>
         <div class="section-card__desc">点击可快速填充账号。</div>
