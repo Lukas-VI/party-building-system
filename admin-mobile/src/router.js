@@ -27,6 +27,18 @@ const routes = [
     meta: { title: '首次注册' },
   },
   {
+    path: '/wechat-callback',
+    name: 'wechat-callback',
+    component: () => import('./views/WechatCallbackView.vue'),
+    meta: { title: '微信授权登录' },
+  },
+  {
+    path: '/wechat-bind',
+    name: 'wechat-bind',
+    component: () => import('./views/WechatBindView.vue'),
+    meta: { title: '绑定微信账号' },
+  },
+  {
     path: '/',
     component: () => import('./layout/MobileLayout.vue'),
     children: [
@@ -55,7 +67,7 @@ const router = createRouter({
  * 角色差异优先通过路由守卫和统一 tabs 控制，不要在每个页面里重复拦截。
  */
 router.beforeEach((to) => {
-  const publicPages = ['/login', '/register'];
+  const publicPages = ['/login', '/register', '/wechat-callback', '/wechat-bind'];
   if (!publicPages.includes(to.path) && !isLoggedIn.value) return '/login';
   if (publicPages.includes(to.path) && isLoggedIn.value) return '/workbench';
   return true;

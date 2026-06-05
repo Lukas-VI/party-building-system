@@ -145,7 +145,7 @@ CREATE TABLE IF NOT EXISTS wechat_bindings (
   user_id VARCHAR(64) NOT NULL,
   openid VARCHAR(128) NOT NULL,
   unionid VARCHAR(128) NULL,
-  session_key_encrypted LONGTEXT NOT NULL,
+  session_key_encrypted LONGTEXT NULL,
   nickname VARCHAR(255) NULL,
   avatar_url VARCHAR(512) NULL,
   status VARCHAR(32) NOT NULL DEFAULT 'active',

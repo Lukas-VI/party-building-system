@@ -162,3 +162,17 @@ export function startWechatOauth(redirectPath = '/wx-app/') {
     params: { redirectPath },
   });
 }
+
+// 微信 OAuth 登录：用 code 换取 token，或返回 openid 要求绑定
+export function completeWechatOauthLogin(payload) {
+  return http.post('/wechat/oauth/login', payload, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+// 微信 OAuth 绑定：将 openid 绑定到已有账号
+export function bindWechatOauth(payload) {
+  return http.post('/wechat/oauth/bind', payload, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
