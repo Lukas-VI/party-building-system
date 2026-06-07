@@ -21,6 +21,7 @@ docs/*.pdf
 docs/assets/.$*.bkp
 docs/assets/*.drawio.png
 docs/assets/report-*.png
+MP_verify_*.txt
 .codex/
 admin-mobile/src/stories/
 docs/党员材料整理规范/
