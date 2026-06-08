@@ -1,6 +1,19 @@
 import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { extname, join, normalize, resolve } from 'node:path';
+import { basename, extname, join, normalize, resolve } from 'node:path';
+
+// 从 server/.env 读取单个变量，避免引入额外依赖
+function readEnvVar(varName) {
+  try {
+    const envPath = resolve(process.cwd(), 'server', '.env');
+    if (!existsSync(envPath)) return '';
+    const content = readFileSync(envPath, 'utf8');
+    const match = content.match(new RegExp(`^${varName}=(.+)$`, 'm'));
+    return match ? match[1].replace(/^["']|["']$/g, '') : '';
+  } catch {
+    return '';
+  }
+}
 
 /**
  * 前端统一网关。
@@ -71,9 +84,25 @@ function resolveAsset(distDir, basePath, requestPath) {
   return filePath;
 }
 
+// 微信网页授权域名验证文件路径，由环境变量控制
+const verifyFilepath = readEnvVar('WECHAT_VERIFY_FILEPATH');
+const verifyFilename = verifyFilepath ? basename(verifyFilepath) : '';
+
 createServer((req, res) => {
   const requestUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const requestPath = requestUrl.pathname;
+
+  // 微信域名验证文件 — 在 /admin-desktop/ 和 /wx-app/ 下均可访问
+  if (verifyFilename && requestPath.endsWith(`/${verifyFilename}`)) {
+    if (existsSync(verifyFilepath)) {
+      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+      createReadStream(verifyFilepath).pipe(res);
+    } else {
+      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Not Found');
+    }
+    return;
+  }
 
   if (requestPath === '/web-admin' || requestPath === '/web-admin/') {
     const target = isMobileDevice(req.headers['user-agent'] || '') ? '/wx-app/' : '/admin-desktop/';
