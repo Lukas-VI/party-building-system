@@ -182,3 +182,4 @@ function registerWechatRoutes(app) {
 }
 
 module.exports = { registerWechatRoutes };
+         '&response_type=code&scope=snsapi_userinfo' +
