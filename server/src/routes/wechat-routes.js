@@ -42,11 +42,12 @@ function registerWechatRoutes(app) {
   });
 
   app.get('/api/wechat/oauth/start', async (req, res) => {
-    try {
-      if (!env.WECHAT_SERVICE_APP_ID || !env.WECHAT_SERVICE_REDIRECT_URI) {
-        return fail(res, 501, '微信服务号网页授权配置未完成');
-      }
-      const statePayload = Buffer.from(
+     try {
+       if (!env.WECHAT_SERVICE_APP_ID || !env.WECHAT_SERVICE_REDIRECT_URI) {
+         return fail(res, 501, '微信服务号网页授权配置未完成');
+       }
+       const scope = req.query.scope || 'snsapi_userinfo';
+       const statePayload = Buffer.from(
         JSON.stringify({
           redirectPath: req.query.redirectPath || env.WECHAT_DEFAULT_REDIRECT_PATH,
           t: Date.now(),
@@ -54,10 +55,10 @@ function registerWechatRoutes(app) {
         'utf8',
       ).toString('base64url');
       const authorizeUrl =
-        `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${encodeURIComponent(env.WECHAT_SERVICE_APP_ID)}` +
-        `&redirect_uri=${encodeURIComponent(env.WECHAT_SERVICE_REDIRECT_URI)}` +
-        '&response_type=code&scope=snsapi_userinfo' +
-        `&state=${encodeURIComponent(statePayload)}#wechat_redirect`;
+         `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${encodeURIComponent(env.WECHAT_SERVICE_APP_ID)}` +
+         `&redirect_uri=${encodeURIComponent(env.WECHAT_SERVICE_REDIRECT_URI)}` +
+         `&response_type=code&scope=${encodeURIComponent(scope)}` +
+         `&state=${encodeURIComponent(statePayload)}#wechat_redirect`;
       ok(res, { authorizeUrl });
     } catch (error) {
       fail(res, error.status || 500, error.message);

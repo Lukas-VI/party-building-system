@@ -158,10 +158,11 @@ export function fetchWechatBindStatus() {
 }
 
 export function startWechatOauth(redirectPath = '/wx-app/') {
-  return http.get('/wechat/oauth/start', {
-    params: { redirectPath },
-  });
-}
+ export function startWechatOauth(redirectPath = '/wx-app/', scope = 'snsapi_userinfo') {
+   return http.get('/wechat/oauth/start', {
+     params: { redirectPath, scope },
+   });
+ }
 
 // 微信 OAuth 登录：用 code 换取 token，或返回 openid 要求绑定
 export function completeWechatOauthLogin(payload) {

@@ -17,7 +17,10 @@ const form = reactive({
 
 const inWechat = computed(() => /micromessenger/i.test(window.navigator.userAgent || ''));
 
-async function submit() {
+ // 无感登录：在微信内首次打开时，自动用 snsapi_base 尝试登录
+ const silentOauthKey = 'dj_silent_oauth';
+
+ async function submit() {
   loading.value = true;
   try {
     const result = await loginByPassword(form);
@@ -48,8 +51,19 @@ async function loadBootstrap() {
 }
 
 onMounted(() => {
-  loadBootstrap();
-  if (shouldSkipAutoRoute()) return;
+   // 无感登录：微信内 && 非 OAuth 回调
+   if (inWechat.value && !new URLSearchParams(window.location.search).has('code')) {
+     const alreadyTried = sessionStorage.getItem(silentOauthKey);
+     if (!alreadyTried) {
+       sessionStorage.setItem(silentOauthKey, '1');
+       startWechatOauth('/wx-app/', 'snsapi_base').then(result => {
+         window.location.href = result.authorizeUrl;
+       }).catch(() => {});
+       return;
+     }
+   }
+   loadBootstrap();
+   if (shouldSkipAutoRoute()) return;
   if (!isDesktopDevice()) return;
   window.location.replace(mobileToDesktopUrl());
 });
