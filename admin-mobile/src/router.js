@@ -71,11 +71,14 @@ router.beforeEach((to) => {
    const urlParams = new URLSearchParams(window.location.search);
    const oauthCode = urlParams.get('code');
    const oauthState = urlParams.get('state');
-   if (oauthCode && to.path !== '/wechat-callback') {
+    if (oauthCode && to.path !== '/wechat-callback' && to.path !== '/wechat-bind' && to.path !== '/login') {
      const params = new URLSearchParams();
      params.set('code', oauthCode);
      if (oauthState) params.set('state', oauthState);
-     return `/wechat-callback?${params.toString()}`;
+      // 清理 search 中的 code/state，用 history.replaceState 避免重复触发
+      const cleanUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState(null, '', cleanUrl);
+      return { path: '/wechat-callback', query: { code: oauthCode, state: oauthState } };
    }
 
   const publicPages = ['/login', '/register', '/wechat-callback', '/wechat-bind'];
