@@ -3,7 +3,6 @@ const { env } = require('../env');
 const { query, first } = require('../db');
 const { now } = require('../lib/utils');
 
-// --- Existing ---
 async function getWechatBindingByUserId(userId) {
   return first(
     `SELECT
@@ -22,14 +21,24 @@ async function getWechatBindingByUserId(userId) {
  );
 }
 
- // 查任意状态的 binding（含 inactive）
- async function getWechatBindingByUserIdAny(userId) {
-   return first(
-     `SELECT id, user_id AS userId, openid, unionid, status FROM wechat_bindings WHERE user_id = :userId`,
-     { userId },
-   );
- }
-// --- New: Look up binding by openid ---
+async function getWechatBindingByUserIdAny(userId) {
+  return first(
+    `SELECT
+        id,
+        user_id AS userId,
+        openid,
+        unionid,
+        nickname,
+        avatar_url AS avatarUrl,
+        status,
+        bound_at AS boundAt,
+        last_login_at AS lastLoginAt
+     FROM wechat_bindings
+     WHERE user_id = :userId`,
+    { userId },
+  );
+}
+
 async function getWechatBindingByOpenid(openid) {
   return first(
     `SELECT
@@ -48,7 +57,24 @@ async function getWechatBindingByOpenid(openid) {
   );
 }
 
-// --- New: AES-256-GCM encryption helper ---
+async function getWechatBindingByOpenidAny(openid) {
+  return first(
+    `SELECT
+        id,
+        user_id AS userId,
+        openid,
+        unionid,
+        nickname,
+        avatar_url AS avatarUrl,
+        status,
+        bound_at AS boundAt,
+        last_login_at AS lastLoginAt
+     FROM wechat_bindings
+     WHERE openid = :openid`,
+    { openid },
+  );
+}
+
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
 const TAG_LENGTH = 16;
@@ -63,7 +89,6 @@ function encryptSensitive(plaintext) {
   return [iv.toString('base64url'), tag.toString('base64url'), encrypted.toString('base64url')].join('.');
 }
 
-// --- New: Create a WeChat binding ---
 async function createWechatBinding(userId, openid, unionid, sessionKey, nickname, avatar) {
   const encrypted = encryptSensitive(sessionKey || null);
   await query(
@@ -82,7 +107,56 @@ async function createWechatBinding(userId, openid, unionid, sessionKey, nickname
   );
 }
 
-// --- New: Update last login timestamp ---
+function conflict(message) {
+  const error = new Error(message);
+  error.status = 409;
+  return error;
+}
+
+async function bindWechatUser(userId, openid, unionid, sessionKey = null, nickname = null, avatar = null) {
+  const [openidBinding, userBinding] = await Promise.all([
+    getWechatBindingByOpenidAny(openid),
+    getWechatBindingByUserIdAny(userId),
+  ]);
+
+  if (openidBinding && openidBinding.userId !== userId) {
+    throw conflict('该微信已绑定其他账号');
+  }
+
+  if (userBinding && userBinding.status === 'active' && userBinding.openid !== openid) {
+    throw conflict('该账号已绑定微信');
+  }
+
+  if (userBinding) {
+    const encrypted = encryptSensitive(sessionKey || null);
+    await query(
+      `UPDATE wechat_bindings
+       SET openid = :openid,
+           unionid = :unionid,
+           session_key_encrypted = :sessionKeyEncrypted,
+           nickname = :nickname,
+           avatar_url = :avatarUrl,
+           status = 'active',
+           bound_at = :boundAt,
+           last_login_at = :boundAt
+       WHERE id = :id`,
+      {
+        id: userBinding.id,
+        openid,
+        unionid: unionid || null,
+        sessionKeyEncrypted: encrypted,
+        nickname: nickname || null,
+        avatarUrl: avatar || null,
+        boundAt: now(),
+      },
+    );
+    return getWechatBindingByUserId(userId);
+  }
+
+  await createWechatBinding(userId, openid, unionid, sessionKey, nickname, avatar);
+  return getWechatBindingByUserId(userId);
+}
+
 async function updateWechatLoginTime(bindingId) {
   await query(
     `UPDATE wechat_bindings
@@ -94,8 +168,10 @@ async function updateWechatLoginTime(bindingId) {
 
 module.exports = {
   getWechatBindingByUserId,
-   getWechatBindingByUserIdAny,
+  getWechatBindingByUserIdAny,
   getWechatBindingByOpenid,
+  getWechatBindingByOpenidAny,
   createWechatBinding,
+  bindWechatUser,
   updateWechatLoginTime,
 };

@@ -6,9 +6,8 @@ const { requireAuth } = require('../services/permission-service');
 const { signToken, getUserWithAuth } = require('../services/auth-service');
 const {
   getWechatBindingByUserId,
-   getWechatBindingByUserIdAny,
   getWechatBindingByOpenid,
-  createWechatBinding,
+  bindWechatUser,
   updateWechatLoginTime,
 } = require('../services/wechat-service');
 
@@ -154,15 +153,6 @@ function registerWechatRoutes(app) {
         return fail(res, 403, '账号未激活');
       }
 
-      const existingBinding = await getWechatBindingByOpenid(openid);
-      if (existingBinding) {
-        return fail(res, 409, '该微信已绑定其他账号');
-      }
-      const userBinding = await getWechatBindingByUserId(userRow.id);
-      if (userBinding) {
-        return fail(res, 409, '该账号已绑定微信');
-      }
-
       if (needsPasswordRehash(userRow.passwordHash)) {
         await query(
           'UPDATE users SET password_hash = :passwordHash WHERE id = :userId',
@@ -170,7 +160,7 @@ function registerWechatRoutes(app) {
         );
       }
 
-      await createWechatBinding(userRow.id, openid, unionid || null, null, null, null);
+      await bindWechatUser(userRow.id, openid, unionid || null);
       await logAudit('wechat_bindings', openid, 'bind_wechat', userRow.id, { username });
 
       const user = await getUserWithAuth(userRow.id);
@@ -181,35 +171,21 @@ function registerWechatRoutes(app) {
       fail(res, error.status || 500, error.message);
     }
   });
-}
 
-   // 已登录用户自动绑定微信（不需账密，使用当前 JWT）
-   app.post('/api/wechat/oauth/bind-authed', requireAuth(), async (req, res) => {
-     try {
-       const { openid, unionid } = req.body || {};
-       if (!openid) return fail(res, 400, '缺少微信 openid');
-       // 检查此 openid 是否已绑定其他用户
-       const existingBinding = await getWechatBindingByOpenid(openid);
-       if (existingBinding && existingBinding.userId !== req.user.id) {
-         return fail(res, 409, '该微信已绑定其他账号');
-       }
-       // 检查当前用户是否已有 binding（含 inactive 状态）
-        const userBinding = await getWechatBindingByUserIdAny(req.user.id);
-       if (userBinding) {
-         // 已有记录：重新激活并更新 openid
-         await query(
-           `UPDATE wechat_bindings SET openid = :openid, unionid = :unionid, status = 'active', bound_at = :now WHERE id = :id`,
-           { id: userBinding.id, openid, unionid: unionid || null, now: new Date().toISOString() },
-         );
-       } else {
-         // 新记录
-         await createWechatBinding(req.user.id, openid, unionid || null, null, null, null);
-       }
-       await logAudit('wechat_bindings', openid, 'bind_wechat_authed', req.user.id, {});
-       ok(res, true, '微信绑定成功');
-     } catch (error) {
-       fail(res, error.status || 500, error.message);
-     }
-   });
+
+  // 已登录用户自动绑定微信（不需账密，使用当前 JWT）
+  app.post('/api/wechat/oauth/bind-authed', requireAuth(), async (req, res) => {
+    try {
+      const { openid, unionid } = req.body || {};
+      if (!openid) return fail(res, 400, '缺少微信 openid');
+
+      await bindWechatUser(req.user.id, openid, unionid || null);
+      await logAudit('wechat_bindings', openid, 'bind_wechat_authed', req.user.id, {});
+      ok(res, true, '微信绑定成功');
+    } catch (error) {
+      fail(res, error.status || 500, error.message);
+    }
+  });
+}
 
 module.exports = { registerWechatRoutes };
