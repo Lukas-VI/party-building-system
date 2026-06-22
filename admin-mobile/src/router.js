@@ -67,9 +67,21 @@ const router = createRouter({
  * 角色差异优先通过路由守卫和统一 tabs 控制，不要在每个页面里重复拦截。
  */
 router.beforeEach((to) => {
+   // 微信 OAuth 回调：参数可能在 window.location.search（哈希之前），需转发到 hash 路由
+   const urlParams = new URLSearchParams(window.location.search);
+   const oauthCode = urlParams.get('code');
+   const oauthState = urlParams.get('state');
+   if (oauthCode && to.path !== '/wechat-callback') {
+     const params = new URLSearchParams();
+     params.set('code', oauthCode);
+     if (oauthState) params.set('state', oauthState);
+     return `/wechat-callback?${params.toString()}`;
+   }
+
   const publicPages = ['/login', '/register', '/wechat-callback', '/wechat-bind'];
   if (!publicPages.includes(to.path) && !isLoggedIn.value) return '/login';
-  if (publicPages.includes(to.path) && isLoggedIn.value) return '/workbench';
+   // 微信 OAuth 回调中有 code 参数时允许访问（即使已登录）
+   if (publicPages.includes(to.path) && isLoggedIn.value && to.path !== '/wechat-callback') return '/workbench';
   return true;
 });
 
