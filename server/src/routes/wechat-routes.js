@@ -2,8 +2,9 @@ const { env } = require('../env');
 const { query, first } = require('../db');
 const { ok, fail } = require('../lib/http');
 const { logAudit } = require('../services/audit-service');
-const { requireAuth } = require('../services/permission-service');
+const { requireAuth, requirePermission } = require('../services/permission-service');
 const { signToken, getUserWithAuth } = require('../services/auth-service');
+const { sendWechatBindSuccessTemplate } = require('../services/wechat-template-service');
 const {
   getWechatBindingByUserId,
   getWechatBindingByOpenid,
@@ -162,11 +163,17 @@ function registerWechatRoutes(app) {
 
       await bindWechatUser(userRow.id, openid, unionid || null);
       await logAudit('wechat_bindings', openid, 'bind_wechat', userRow.id, { username });
+      let templateMessage = null;
+      try {
+        templateMessage = await sendWechatBindSuccessTemplate(userRow.id);
+      } catch (error) {
+        console.warn('[wechat] bind success template failed:', error.message);
+      }
 
       const user = await getUserWithAuth(userRow.id);
       const token = signToken(user);
       const expiresAt = new Date(Date.now() + 7 * 86400000).toISOString();
-      ok(res, { token, expiresAt, user }, '微信绑定成功');
+      ok(res, { token, expiresAt, user, templateMessage }, '微信绑定成功');
     } catch (error) {
       fail(res, error.status || 500, error.message);
     }
@@ -181,7 +188,24 @@ function registerWechatRoutes(app) {
 
       await bindWechatUser(req.user.id, openid, unionid || null);
       await logAudit('wechat_bindings', openid, 'bind_wechat_authed', req.user.id, {});
-      ok(res, true, '微信绑定成功');
+      let templateMessage = null;
+      try {
+        templateMessage = await sendWechatBindSuccessTemplate(req.user.id);
+      } catch (error) {
+        console.warn('[wechat] bind success template failed:', error.message);
+      }
+      ok(res, { templateMessage }, '微信绑定成功');
+    } catch (error) {
+      fail(res, error.status || 500, error.message);
+    }
+  });
+
+  app.post('/api/wechat/template-test/bind-success', requireAuth(), requirePermission('manage_orgs'), async (req, res) => {
+    try {
+      const targetUserId = req.body?.userId || req.user.id;
+      const result = await sendWechatBindSuccessTemplate(targetUserId);
+      await logAudit('wechat_bindings', targetUserId, 'send_bind_success_template', req.user.id, result);
+      ok(res, result, '微信模板消息已发送');
     } catch (error) {
       fail(res, error.status || 500, error.message);
     }
