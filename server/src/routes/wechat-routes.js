@@ -55,7 +55,7 @@ function registerWechatRoutes(app) {
       const authorizeUrl =
         `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${encodeURIComponent(env.WECHAT_SERVICE_APP_ID)}` +
         `&redirect_uri=${encodeURIComponent(env.WECHAT_SERVICE_REDIRECT_URI)}` +
-        '&response_type=code&scope=snsapi_base' +
+        '&response_type=code&scope=snsapi_userinfo' +
         `&state=${encodeURIComponent(statePayload)}#wechat_redirect`;
       ok(res, { authorizeUrl });
     } catch (error) {
@@ -182,4 +182,3 @@ function registerWechatRoutes(app) {
 }
 
 module.exports = { registerWechatRoutes };
-         '&response_type=code&scope=snsapi_userinfo' +
