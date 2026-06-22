@@ -173,6 +173,10 @@ export function completeWechatOauthLogin(payload) {
 // 微信 OAuth 绑定：将 openid 绑定到已有账号
 export function bindWechatOauth(payload) {
   return http.post('/wechat/oauth/bind', payload, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' }
+// 微信解绑
+export function unbindWechat() {
+  return http.post('/wechat/unbind');
+},
   });
 }

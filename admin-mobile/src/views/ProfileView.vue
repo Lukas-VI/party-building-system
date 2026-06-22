@@ -1,14 +1,15 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { showConfirmDialog } from 'vant';
+import { showConfirmDialog, showFailToast, showSuccessToast } from 'vant';
 import { DESKTOP_ADMIN_URL } from '../config';
-import { fetchMobileProfile, fetchWechatBindStatus, startWechatOauth } from '../api';
+import { fetchMobileProfile, fetchWechatBindStatus, startWechatOauth, unbindWechat } from '../api';
 import { clearSession, primaryRoleLabel, sessionState } from '../session';
 
 const router = useRouter();
 const loading = ref(false);
 const oauthLoading = ref(false);
+const unbindLoading = ref(false);
 const profile = ref(null);
 const binding = ref({ bound: false, binding: null });
 
@@ -27,9 +28,9 @@ const quickEntries = computed(() => [
   },
   {
     key: 'bind',
-    title: '微信绑定',
-    desc: binding.value.bound ? '已完成绑定，可重新发起网页授权' : '未绑定，可发起微信网页授权',
-    action: beginWechatOauth,
+    title: binding.value.bound ? '微信解绑' : '微信绑定',
+    desc: binding.value.bound ? '已绑定，点击解除微信关联' : '未绑定，可发起微信网页授权',
+    action: binding.value.bound ? handleUnbind : beginWechatOauth,
   },
   {
     key: 'desktop',
@@ -78,6 +79,23 @@ async function beginWechatOauth() {
   }
 }
 
+
+async function handleUnbind() {
+  await showConfirmDialog({
+    title: '解绑微信',
+    message: '解除微信绑定后，将无法使用微信一键登录。确认解除？'
+  });
+  unbindLoading.value = true;
+  try {
+    await unbindWechat();
+    binding.value = { bound: false, binding: null };
+    showSuccessToast('微信已解绑');
+  } catch (error) {
+    showFailToast(error.message || '解绑失败');
+  } finally {
+    unbindLoading.value = false;
+  }
+}
 onMounted(loadProfileSummary);
 </script>
 
