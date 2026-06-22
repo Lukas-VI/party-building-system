@@ -2,8 +2,10 @@
  import { onMounted, onUnmounted, ref } from 'vue';
  import { useRouter, useRoute } from 'vue-router';
 import { showFailToast } from 'vant';
-import { completeWechatOauthLogin } from '../api';
-import { setSession } from '../session';
+ import { showSuccessToast } from 'vant';
+ import { completeWechatOauthLogin } from '../api';
+ import { autoBindWechat } from '../api';
+ import { isLoggedIn, setSession } from '../session';
 
 const router = useRouter();
 const route = useRoute();
@@ -39,7 +41,20 @@ const errorMessage = ref('');
     }
 
     if (result.needBind) {
-      const params = new URLSearchParams();
+       // 已登录用户：直接自动绑定，不需要手动输入账密
+       if (isLoggedIn.value) {
+         try {
+           await autoBindWechat({ openid: result.openid, unionid: result.unionid });
+           showSuccessToast('微信绑定成功');
+           router.replace('/workbench');
+         } catch (error) {
+           if (!error.toastShown) showFailToast(error.message || '自动绑定失败');
+           setTimeout(() => router.replace('/login'), 2000);
+         }
+         return;
+       }
+       // 未登录用户：走原来的手动绑定流程
+       const params = new URLSearchParams();
       params.set('openid', result.openid);
       if (result.unionid) params.set('unionid', result.unionid);
       router.replace(`/wechat-bind?${params.toString()}`);

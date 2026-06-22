@@ -180,3 +180,9 @@ export function unbindWechat() {
 },
   });
 }
+// 已登录用户自动绑定微信（不需账密，使用当前 JWT）
+export function autoBindWechat(payload) {
+  return http.post('/wechat/oauth/bind-authed', payload, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
