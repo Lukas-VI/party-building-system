@@ -18,10 +18,17 @@ async function getWechatBindingByUserId(userId) {
         last_login_at AS lastLoginAt
      FROM wechat_bindings
      WHERE user_id = :userId AND status = 'active'`,
-    { userId },
-  );
+   { userId },
+ );
 }
 
+ // 查任意状态的 binding（含 inactive）
+ async function getWechatBindingByUserIdAny(userId) {
+   return first(
+     `SELECT id, user_id AS userId, openid, unionid, status FROM wechat_bindings WHERE user_id = :userId`,
+     { userId },
+   );
+ }
 // --- New: Look up binding by openid ---
 async function getWechatBindingByOpenid(openid) {
   return first(
@@ -87,6 +94,7 @@ async function updateWechatLoginTime(bindingId) {
 
 module.exports = {
   getWechatBindingByUserId,
+   getWechatBindingByUserIdAny,
   getWechatBindingByOpenid,
   createWechatBinding,
   updateWechatLoginTime,
