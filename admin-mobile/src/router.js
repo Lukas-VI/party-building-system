@@ -84,7 +84,8 @@ router.beforeEach((to) => {
   const publicPages = ['/login', '/register', '/wechat-callback', '/wechat-bind'];
   if (!publicPages.includes(to.path) && !isLoggedIn.value) return '/login';
    // 微信 OAuth 回调中有 code 参数时允许访问（即使已登录）
-   if (publicPages.includes(to.path) && isLoggedIn.value && to.path !== '/wechat-callback') return '/workbench';
+    // 微信 OAuth 绑定流程也允许已登录用户访问
+    if (publicPages.includes(to.path) && isLoggedIn.value && to.path !== '/wechat-callback' && to.path !== '/wechat-bind') return '/workbench';
   return true;
 });
 
