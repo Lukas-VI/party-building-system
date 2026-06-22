@@ -135,32 +135,7 @@ function registerWechatRoutes(app) {
 
   // ── 微信绑定已有账号 ──
   app.post('/api/wechat/oauth/bind', async (req, res) => {
- 
-   // ── 已登录用户自动绑定微信（不需账密）──
-   app.post('/api/wechat/oauth/bind-authed', requireAuth(), async (req, res) => {
-     try {
-       const { openid, unionid } = req.body || {};
-       if (!openid) return fail(res, 400, '缺少微信 openid');
- 
-       const existingBinding = await getWechatBindingByOpenid(openid);
-       if (existingBinding) {
-         return fail(res, 409, '该微信已绑定其他账号');
-       }
-       const userBinding = await getWechatBindingByUserId(req.user.id);
-       if (userBinding) {
-         return fail(res, 409, '该账号已绑定微信');
-       }
- 
-       await createWechatBinding(req.user.id, openid, unionid || null, null, null, null);
-       await logAudit('wechat_bindings', openid, 'bind_wechat_authed', req.user.id, {});
- 
-       ok(res, true, '微信绑定成功');
-     } catch (error) {
-       fail(res, error.status || 500, error.message);
-     }
-   });
- 
-   try {
+    try {
       const { openid, unionid, username, password } = req.body || {};
       if (!openid) return fail(res, 400, '缺少微信 openid');
       if (!username || !password) return fail(res, 400, '请输入账号和密码');
@@ -200,30 +175,6 @@ function registerWechatRoutes(app) {
       const token = signToken(user);
       const expiresAt = new Date(Date.now() + 7 * 86400000).toISOString();
       ok(res, { token, expiresAt, user }, '微信绑定成功');
-    } catch (error) {
-      fail(res, error.status || 500, error.message);
-    }
-  });
-
-  // 已登录用户自动绑定微信（不需账密，使用当前 JWT）
-  app.post('/api/wechat/oauth/bind-authed', requireAuth(), async (req, res) => {
-    try {
-      const { openid, unionid } = req.body || {};
-      if (!openid) return fail(res, 400, '缺少微信 openid');
-
-      const existingBinding = await getWechatBindingByOpenid(openid);
-      if (existingBinding) {
-        return fail(res, 409, '该微信已绑定其他账号');
-      }
-      const userBinding = await getWechatBindingByUserId(req.user.id);
-      if (userBinding) {
-        return fail(res, 409, '该账号已绑定微信');
-      }
-
-      await createWechatBinding(req.user.id, openid, unionid || null, null, null, null);
-      await logAudit('wechat_bindings', openid, 'bind_wechat_authed', req.user.id, {});
-
-      ok(res, true, '微信绑定成功');
     } catch (error) {
       fail(res, error.status || 500, error.message);
     }
