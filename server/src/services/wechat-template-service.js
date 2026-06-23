@@ -111,8 +111,8 @@ async function sendWechatBindSuccessTemplate(userId) {
     url: 'https://havensky.cn/wx-app/#/profile',
     data: buildTemplateData({
       first: '用户账号绑定成功通知',
-      keyword1: binding.username,
-      keyword2: binding.boundAt || now(),
+      character_string1: binding.username,
+      time2: binding.boundAt || now(),
       remark: '可在服务号工作台「我的」中查看或解绑微信。',
     }),
   });
