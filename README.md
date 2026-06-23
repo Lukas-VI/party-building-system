@@ -117,6 +117,7 @@ npm run dev:1919
 
 详细步骤见：
 - [部署文档](docs/deployment.md)
+- [微信服务号 API 代理部署](docs/wechat-proxy-deployment.md)
 - [团队协作与测试服部署流程](docs/team-collaboration-workflow.md)
 - [项目总览](docs/project-overview.md)
 - [全程记实表整理与研发参考](docs/electronic-dossier.md)

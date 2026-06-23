@@ -6,6 +6,7 @@ admin-desktop/dist/
 admin-mobile/node_modules/
 admin-mobile/dist/
 server/node_modules/
+wechat-proxy/node_modules/
 server/data/*.sqlite*
 server/uploads/*
 !server/uploads/.gitkeep

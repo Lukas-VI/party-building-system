@@ -43,9 +43,38 @@ function buildTemplateData(fields) {
   );
 }
 
+function resolveWechatProxyEndpoint(pathname) {
+  const baseUrl = env.WECHAT_PROXY_URL.endsWith('/') ? env.WECHAT_PROXY_URL : `${env.WECHAT_PROXY_URL}/`;
+  return new URL(pathname, baseUrl).toString();
+}
+
 async function sendWechatTemplateMessage({ openid, templateId, url = '', data }) {
   if (!openid) throw errorWithStatus('缺少微信 openid', 400);
   if (!templateId) throw errorWithStatus('缺少微信模板 ID', 400);
+
+  const payload = {
+    touser: openid,
+    template_id: templateId,
+    url,
+    data,
+  };
+
+  if (env.WECHAT_PROXY_URL) {
+    if (!env.WECHAT_PROXY_TOKEN) throw errorWithStatus('微信代理 token 未配置', 501);
+    const response = await fetch(resolveWechatProxyEndpoint('template/send'), {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.WECHAT_PROXY_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    const proxyResult = await response.json();
+    if (!response.ok || proxyResult.code !== 0) {
+      throw errorWithStatus(proxyResult.message || '微信代理发送失败', response.status || 502);
+    }
+    return proxyResult.data;
+  }
 
   const accessToken = await getWechatAccessToken();
   const response = await fetch(
@@ -53,12 +82,7 @@ async function sendWechatTemplateMessage({ openid, templateId, url = '', data })
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        touser: openid,
-        template_id: templateId,
-        url,
-        data,
-      }),
+      body: JSON.stringify(payload),
     },
   );
   const result = await response.json();
