@@ -4,7 +4,11 @@ const { ok, fail } = require('../lib/http');
 const { logAudit } = require('../services/audit-service');
 const { requireAuth, requirePermission } = require('../services/permission-service');
 const { signToken, getUserWithAuth } = require('../services/auth-service');
-const { sendWechatBindSuccessTemplate } = require('../services/wechat-template-service');
+const {
+  getActiveWechatBindingForTemplate,
+  sendWechatBindSuccessTemplate,
+  sendWechatUnbindSuccessTemplate,
+} = require('../services/wechat-template-service');
 const {
   getWechatBindingByUserId,
   getWechatBindingByOpenid,
@@ -28,6 +32,8 @@ function registerWechatRoutes(app) {
 
   app.post('/api/wechat/unbind', requireAuth(), async (req, res) => {
     try {
+      const binding = await getActiveWechatBindingForTemplate(req.user.id);
+      const unboundAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
       await query(
         `UPDATE wechat_bindings
          SET status = 'inactive'
@@ -35,7 +41,15 @@ function registerWechatRoutes(app) {
         { userId: req.user.id },
       );
       await logAudit('wechat_bindings', req.user.id, 'unbind_wechat', req.user.id, {});
-      ok(res, true, '微信账号已解绑');
+      let templateMessage = null;
+      if (binding) {
+        try {
+          templateMessage = await sendWechatUnbindSuccessTemplate(binding, unboundAt);
+        } catch (error) {
+          console.warn('[wechat] unbind success template failed:', error.message);
+        }
+      }
+      ok(res, { templateMessage }, '微信账号已解绑');
     } catch (error) {
       fail(res, 500, error.message);
     }
@@ -205,6 +219,19 @@ function registerWechatRoutes(app) {
       const targetUserId = req.body?.userId || req.user.id;
       const result = await sendWechatBindSuccessTemplate(targetUserId);
       await logAudit('wechat_bindings', targetUserId, 'send_bind_success_template', req.user.id, result);
+      ok(res, result, '微信模板消息已发送');
+    } catch (error) {
+      fail(res, error.status || 500, error.message);
+    }
+  });
+
+  app.post('/api/wechat/template-test/unbind-success', requireAuth(), requirePermission('manage_orgs'), async (req, res) => {
+    try {
+      const targetUserId = req.body?.userId || req.user.id;
+      const binding = await getActiveWechatBindingForTemplate(targetUserId);
+      if (!binding) return fail(res, 404, '该用户未绑定微信');
+      const result = await sendWechatUnbindSuccessTemplate(binding);
+      await logAudit('wechat_bindings', targetUserId, 'send_unbind_success_template', req.user.id, result);
       ok(res, result, '微信模板消息已发送');
     } catch (error) {
       fail(res, error.status || 500, error.message);

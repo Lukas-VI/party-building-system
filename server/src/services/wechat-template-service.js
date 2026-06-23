@@ -92,8 +92,8 @@ async function sendWechatTemplateMessage({ openid, templateId, url = '', data })
   return result;
 }
 
-async function sendWechatBindSuccessTemplate(userId) {
-  const binding = await first(
+async function getActiveWechatBindingForTemplate(userId) {
+  return first(
     `SELECT
         wb.openid,
         wb.bound_at AS boundAt,
@@ -103,6 +103,10 @@ async function sendWechatBindSuccessTemplate(userId) {
      WHERE wb.user_id = :userId AND wb.status = 'active'`,
     { userId },
   );
+}
+
+async function sendWechatBindSuccessTemplate(userId) {
+  const binding = await getActiveWechatBindingForTemplate(userId);
   if (!binding) throw errorWithStatus('该用户未绑定微信', 404);
 
   return sendWechatTemplateMessage({
@@ -118,8 +122,27 @@ async function sendWechatBindSuccessTemplate(userId) {
   });
 }
 
+async function sendWechatUnbindSuccessTemplate(binding, unboundAt = now()) {
+  if (!binding?.openid) throw errorWithStatus('缺少微信 openid', 400);
+  if (!binding?.username) throw errorWithStatus('缺少用户账号', 400);
+
+  return sendWechatTemplateMessage({
+    openid: binding.openid,
+    templateId: env.WECHAT_UNBIND_SUCCESS_TEMPLATE_ID,
+    url: 'https://havensky.cn/wx-app/#/profile',
+    data: buildTemplateData({
+      first: '用户解绑成功通知',
+      character_string1: binding.username,
+      time2: unboundAt,
+      remark: '如非本人操作，请及时联系管理员。',
+    }),
+  });
+}
+
 module.exports = {
   getWechatAccessToken,
   sendWechatTemplateMessage,
   sendWechatBindSuccessTemplate,
+  sendWechatUnbindSuccessTemplate,
+  getActiveWechatBindingForTemplate,
 };
