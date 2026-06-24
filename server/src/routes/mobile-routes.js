@@ -7,7 +7,7 @@ const { getProfileViewByUser, upsertUserProfile } = require('../services/profile
 const { getWorkflowByApplicantId, isApplicantActor, isReviewerActor, assertWorkflowActor, submitWorkflowTask, reviewWorkflowTask, resetWorkflowTaskStatus } = require('../services/workflow-service');
 const { listMobileTodos, buildMobileWorkflow, buildMobileWorkbench, resolveMobileWorkflowId } = require('../services/mobile-workbench-service');
 const { listNotifications, getNotificationForUser, markNotificationRead, createNotification, notificationRecipientsForStep } = require('../services/notification-service');
-const { fileUrl, normalizeOriginalName, acceptedTypesForMaterial, validateUploadedFile } = require('../services/file-service');
+const { fileUrl, normalizeOriginalName, acceptedTypesForMaterial, removeStoredFile, validateUploadedFile } = require('../services/file-service');
 const { upload } = require('../upload-middleware');
 
 function registerMobileRoutes(app) {
@@ -264,6 +264,35 @@ function registerMobileRoutes(app) {
         materialTag,
         storageName: req.file.filename,
       });
+    } catch (error) {
+      fail(res, error.status || 500, error.message);
+    }
+  });
+
+  app.delete('/api/mobile/files/:attachmentId', requireAuth(), async (req, res) => {
+    try {
+      const attachment = await first(
+        `SELECT
+            a.id,
+            a.file_url AS fileUrl,
+            a.file_name AS fileName,
+            i.applicant_id AS applicantId,
+            r.step_code AS stepCode
+         FROM attachments a
+         INNER JOIN workflow_step_records r ON r.id = a.step_record_id
+         INNER JOIN workflow_instances i ON i.id = r.instance_id
+         WHERE a.id = :attachmentId`,
+        { attachmentId: req.params.attachmentId },
+      );
+      if (!attachment) return fail(res, 404, '未找到材料文件');
+      await assertCanAccessApplicant(req.user, attachment.applicantId);
+      const workflow = await getWorkflowByApplicantId(attachment.applicantId);
+      const step = workflow.steps.find((item) => item.stepCode === attachment.stepCode);
+      assertWorkflowActor(req.user, attachment.applicantId, workflow, step, isReviewerActor(req.user, step) ? 'review' : 'submit');
+      await query('DELETE FROM attachments WHERE id = :attachmentId', { attachmentId: attachment.id });
+      await removeStoredFile(attachment.fileUrl);
+      await logAudit('attachments', attachment.id, 'delete_mobile_attachment', req.user.id, { fileName: attachment.fileName, stepCode: attachment.stepCode });
+      ok(res, true, '材料已删除');
     } catch (error) {
       fail(res, error.status || 500, error.message);
     }

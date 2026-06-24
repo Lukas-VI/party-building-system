@@ -19,7 +19,7 @@ const STEP_DETAIL_OVERRIDES = {
       { key: 'applicationLetter', label: '入党申请书', tag: 'application', accept: ['pdf'], required: true },
     ],
     businessFields: [
-      { key: 'applicationSubmittedAt', label: '申请书提交时间', type: 'datetime', required: true, owner: 'applicant', placeholder: '例如 2026-05-01 09:00' },
+      { key: 'applicationSubmittedAt', label: '申请书提交日期', type: 'date', required: true, owner: 'applicant', placeholder: '例如 2026-05-01' },
       { key: 'applicationText', label: '申请说明/正文摘要', type: 'textarea', required: true, owner: 'applicant', placeholder: '请概述本人提交入党申请书的主要内容' },
     ],
     timeRule: { keepOnly: ['submittedAt'], allowManualEdit: false },
@@ -219,7 +219,7 @@ const STEP_DETAIL_OVERRIDES = {
       { key: 'volunteerFormPdf', label: '入党志愿书扫描件', tag: 'volunteer-form', accept: ['pdf'], required: true },
     ],
     businessFields: [
-      { key: 'volunteerFormSubmittedAt', label: '志愿书提交时间', type: 'datetime', required: true, owner: 'applicant' },
+      { key: 'volunteerFormSubmittedAt', label: '志愿书提交日期', type: 'date', required: true, owner: 'applicant' },
       { key: 'volunteerFormNote', label: '提交说明', type: 'textarea', required: false, owner: 'applicant' },
     ],
     timeRule: { recordFields: ['submittedAt', 'reviewedAt'] },
@@ -340,7 +340,7 @@ const STEP_DETAIL_OVERRIDES = {
       { key: 'regularizationApplication', label: '转正申请书扫描件', tag: 'regularization-application', accept: ['pdf'], required: true },
     ],
     businessFields: [
-      { key: 'regularizationSubmittedAt', label: '转正申请提交时间', type: 'datetime', required: true, owner: 'applicant' },
+      { key: 'regularizationSubmittedAt', label: '转正申请提交日期', type: 'date', required: true, owner: 'applicant' },
       { key: 'regularizationSummary', label: '转正申请说明', type: 'textarea', required: true, owner: 'applicant' },
     ],
     timeRule: { recordFields: ['submittedAt', 'reviewedAt'] },

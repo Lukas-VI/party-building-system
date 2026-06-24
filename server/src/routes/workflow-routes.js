@@ -6,7 +6,7 @@ const { requireAuth, requirePermission } = require('../services/permission-servi
 const { canAccessApplicant } = require('../services/applicant-service');
 const { getWorkflowByApplicantId, submitWorkflowTask, reviewWorkflowTask, resetWorkflowTaskStatus, assertWorkflowActor, isReviewerActor } = require('../services/workflow-service');
 const { getWorkflowSettings, updateWorkflowSettings } = require('../services/settings-service');
-const { fileUrl, normalizeOriginalName, acceptedTypesForMaterial, validateUploadedFile } = require('../services/file-service');
+const { fileUrl, normalizeOriginalName, acceptedTypesForMaterial, removeStoredFile, validateUploadedFile } = require('../services/file-service');
 const { upload } = require('../upload-middleware');
 
 function registerWorkflowRoutes(app) {
@@ -75,6 +75,7 @@ function registerWorkflowRoutes(app) {
         await query(
           `SELECT step_code AS stepCode, sort_order AS sortOrder, name, phase, start_at AS startAt, end_at AS endAt
            FROM workflow_step_definitions
+           WHERE step_code <> 'STEP_04'
            ORDER BY sort_order ASC`,
         ),
       );
@@ -133,6 +134,36 @@ function registerWorkflowRoutes(app) {
         materialTag,
         storageName: req.file.filename,
       });
+    } catch (error) {
+      fail(res, error.status || 500, error.message);
+    }
+  });
+
+  app.delete('/api/files/:attachmentId', requireAuth(), async (req, res) => {
+    try {
+      const attachment = await query(
+        `SELECT
+            a.id,
+            a.file_url AS fileUrl,
+            a.file_name AS fileName,
+            i.applicant_id AS applicantId,
+            r.step_code AS stepCode
+         FROM attachments a
+         INNER JOIN workflow_step_records r ON r.id = a.step_record_id
+         INNER JOIN workflow_instances i ON i.id = r.instance_id
+         WHERE a.id = :attachmentId`,
+        { attachmentId: req.params.attachmentId },
+      );
+      const row = attachment[0];
+      if (!row) return fail(res, 404, '未找到材料文件');
+      if (!(await canAccessApplicant(req.user, row.applicantId))) return fail(res, 403, '无权删除该流程材料');
+      const workflow = await getWorkflowByApplicantId(row.applicantId);
+      const step = workflow.steps.find((item) => item.stepCode === row.stepCode);
+      assertWorkflowActor(req.user, row.applicantId, workflow, step, isReviewerActor(req.user, step) ? 'review' : 'submit');
+      await query('DELETE FROM attachments WHERE id = :attachmentId', { attachmentId: row.id });
+      await removeStoredFile(row.fileUrl);
+      await logAudit('attachments', row.id, 'delete_attachment', req.user.id, { fileName: row.fileName, stepCode: row.stepCode });
+      ok(res, true, '材料已删除');
     } catch (error) {
       fail(res, error.status || 500, error.message);
     }

@@ -1,4 +1,5 @@
 const path = require('node:path');
+const fs = require('node:fs/promises');
 const { env } = require('../env');
 const { query } = require('../db');
 const { errorWithStatus } = require('../lib/utils');
@@ -76,6 +77,27 @@ async function validateRequiredMaterials(step) {
   }
 }
 
+function storageNameFromUrl(url) {
+  try {
+    return path.basename(new URL(url).pathname);
+  } catch (error) {
+    return path.basename(String(url || ''));
+  }
+}
+
+async function removeStoredFile(fileUrlValue) {
+  const storageName = storageNameFromUrl(fileUrlValue);
+  if (!storageName) return;
+  const uploadDir = path.resolve(env.UPLOAD_DIR);
+  const target = path.resolve(uploadDir, storageName);
+  if (!target.startsWith(`${uploadDir}${path.sep}`)) return;
+  try {
+    await fs.unlink(target);
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+}
+
 module.exports = {
   configuredMaterialSchema,
   fileUrl,
@@ -83,4 +105,5 @@ module.exports = {
   acceptedTypesForMaterial,
   validateUploadedFile,
   validateRequiredMaterials,
+  removeStoredFile,
 };

@@ -152,6 +152,10 @@ export function uploadMobileFile(formData) {
   });
 }
 
+export function deleteMobileFile(attachmentId) {
+  return http.delete(`/mobile/files/${attachmentId}`);
+}
+
 // 微信绑定与网页授权保持单独分组，避免和业务流程接口混杂
 export function fetchWechatBindStatus() {
   return http.get('/wechat/bind/status');

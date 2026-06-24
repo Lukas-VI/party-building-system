@@ -38,7 +38,15 @@ function createApp() {
     }),
   );
   app.use(express.json({ limit: '5mb' }));
-  app.use('/uploads', express.static(env.UPLOAD_DIR));
+  app.use('/uploads', express.static(env.UPLOAD_DIR, {
+    setHeaders(res, filePath) {
+      if (filePath.toLowerCase().endsWith('.pdf')) {
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+      }
+    },
+  }));
 
   registerHealthRoutes(app);
   registerPublicRoutes(app);

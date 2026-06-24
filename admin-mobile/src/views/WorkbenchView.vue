@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { fetchWorkbench, markMessageRead } from '../api';
 import { sessionState, workbenchActions } from '../session';
@@ -7,6 +7,7 @@ import { sessionState, workbenchActions } from '../session';
 const router = useRouter();
 const loading = ref(false);
 const workbench = ref(null);
+let refreshTimer = null;
 
 const actions = computed(() => workbenchActions(sessionState.user));
 const previewMessages = computed(() => workbench.value?.messages || []);
@@ -98,7 +99,14 @@ async function openMessage(item) {
   }
 }
 
-onMounted(loadData);
+onMounted(() => {
+  loadData();
+  refreshTimer = window.setInterval(loadData, 15000);
+});
+
+onBeforeUnmount(() => {
+  if (refreshTimer) window.clearInterval(refreshTimer);
+});
 </script>
 
 <template>
@@ -156,7 +164,6 @@ onMounted(loadData);
               </div>
               <span class="due-pill" :class="{ 'is-overdue': item.isOverdue }">{{ item.remainingLabel || '待办理' }}</span>
             </div>
-            <div class="workflow-card__body" v-if="item.blessingText">{{ item.blessingText }}</div>
             <div class="workflow-card__foot">
               <span v-if="item.uploadRequired">含材料事项</span>
             </div>

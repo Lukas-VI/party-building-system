@@ -29,6 +29,7 @@ async function pendingReviewCount(user) {
      INNER JOIN workflow_step_definitions d ON d.step_code = r.step_code
      INNER JOIN users u ON u.id = i.applicant_id
      WHERE r.status IN ('pending', 'reviewing')
+       AND r.step_code <> 'STEP_04'
      ${scope.sql}`,
     scope.params,
   );
@@ -57,6 +58,7 @@ function registerStatsRoutes(app) {
          INNER JOIN workflow_instances i ON i.id = r.instance_id
          INNER JOIN users u ON u.id = i.applicant_id
          WHERE r.status IN ('pending', 'reviewing', 'rejected')
+           AND r.step_code <> 'STEP_04'
            AND r.deadline IS NOT NULL
            AND r.deadline < CURDATE()
            ${scope.sql}`,
@@ -102,10 +104,11 @@ function registerStatsRoutes(app) {
       const map = new Map();
       applicants.forEach((item) => {
         const key = item.orgName || '未分配单位';
-        const row = map.get(key) || { orgName: key, applicants: 0, developing: 0, formalMembers: 0 };
+        const row = map.get(key) || { orgName: key, applicants: 0, developing: 0, formalMembers: 0, developmentRate: '0%' };
         row.applicants += 1;
         if (item.currentStage === '正式党员') row.formalMembers += 1;
         else row.developing += 1;
+        row.developmentRate = row.applicants ? `${Math.round((row.developing / row.applicants) * 100)}%` : '0%';
         map.set(key, row);
       });
       ok(res, Array.from(map.values()));
@@ -120,10 +123,11 @@ function registerStatsRoutes(app) {
       const map = new Map();
       applicants.forEach((item) => {
         const key = item.branchName || '未分配支部';
-        const row = map.get(key) || { branchName: key, applicants: 0, developing: 0, formalMembers: 0 };
+        const row = map.get(key) || { branchName: key, applicants: 0, developing: 0, formalMembers: 0, developmentRate: '0%' };
         row.applicants += 1;
         if (item.currentStage === '正式党员') row.formalMembers += 1;
         else row.developing += 1;
+        row.developmentRate = row.applicants ? `${Math.round((row.developing / row.applicants) * 100)}%` : '0%';
         map.set(key, row);
       });
       ok(res, Array.from(map.values()));

@@ -1,7 +1,7 @@
 const { query, first } = require('../db');
 const { getStepDetail } = require('../workflow-config');
 const { now, parseJson, errorWithStatus } = require('../lib/utils');
-const { ALLOWED_REVIEW_STATUSES, MVP_MAX_STEP_ORDER } = require('../lib/constants');
+const { ALLOWED_REVIEW_STATUSES, EXCLUDED_WORKFLOW_STEP_CODES, MVP_MAX_STEP_ORDER } = require('../lib/constants');
 const { assertCanAccessApplicant } = require('./permission-service');
 const { ensureAdultApplicant } = require('./registration-service');
 const { getWorkflowSettings } = require('./settings-service');
@@ -36,6 +36,7 @@ function stepOrder(stepCode) {
 }
 
 function isMvpStep(step) {
+  if (EXCLUDED_WORKFLOW_STEP_CODES.has(step.stepCode)) return false;
   return Number(step.sortOrder || stepOrder(step.stepCode) || 0) <= MVP_MAX_STEP_ORDER;
 }
 
@@ -178,7 +179,7 @@ async function getWorkflowByApplicantId(applicantId) {
   );
   return {
     instance,
-    steps: steps.map((item) => ({
+    steps: steps.filter((item) => !EXCLUDED_WORKFLOW_STEP_CODES.has(item.stepCode)).map((item) => ({
       ...item,
       allowedRoles: parseJson(item.allowedRolesJson, []),
       formSchema: parseJson(item.formSchemaJson, {}),

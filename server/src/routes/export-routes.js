@@ -51,12 +51,18 @@ function registerExportRoutes(app) {
       const branchMap = new Map();
       applicants.forEach((item) => {
         const orgKey = item.orgName || '未分配单位';
-        const orgRow = orgMap.get(orgKey) || { orgName: orgKey, applicants: 0 };
+        const orgRow = orgMap.get(orgKey) || { orgName: orgKey, applicants: 0, developing: 0, formalMembers: 0, developmentRate: '0%' };
         orgRow.applicants += 1;
+        if (item.currentStage === '正式党员') orgRow.formalMembers += 1;
+        else orgRow.developing += 1;
+        orgRow.developmentRate = orgRow.applicants ? `${Math.round((orgRow.developing / orgRow.applicants) * 100)}%` : '0%';
         orgMap.set(orgKey, orgRow);
         const branchKey = item.branchName || '未分配支部';
-        const branchRow = branchMap.get(branchKey) || { branchName: branchKey, applicants: 0 };
+        const branchRow = branchMap.get(branchKey) || { branchName: branchKey, applicants: 0, developing: 0, formalMembers: 0, developmentRate: '0%' };
         branchRow.applicants += 1;
+        if (item.currentStage === '正式党员') branchRow.formalMembers += 1;
+        else branchRow.developing += 1;
+        branchRow.developmentRate = branchRow.applicants ? `${Math.round((branchRow.developing / branchRow.applicants) * 100)}%` : '0%';
         branchMap.set(branchKey, branchRow);
       });
       const buffer = workbookBuffer([

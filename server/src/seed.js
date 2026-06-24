@@ -216,6 +216,41 @@ async function ensureWorkflowRecordTaskDefaults() {
 }
 
 /**
+ * Bypass the removed qualification confirmation step for existing workflows.
+ */
+async function ensureQualificationStepBypassed() {
+  if (!(await tableExists('workflow_step_records'))) return;
+  await raw(`
+    UPDATE workflow_step_records step5
+    INNER JOIN workflow_step_records step4
+      ON step4.instance_id = step5.instance_id
+     AND step4.step_code = 'STEP_04'
+    INNER JOIN workflow_step_records step3
+      ON step3.instance_id = step5.instance_id
+     AND step3.step_code = 'STEP_03'
+    SET step5.status = 'pending',
+        step5.task_status = 'open'
+    WHERE step5.step_code = 'STEP_05'
+      AND step5.status = 'locked'
+      AND step3.status = 'approved'
+      AND step4.status IN ('pending', 'reviewing', 'rejected', 'locked');
+  `);
+  await raw(`
+    UPDATE workflow_step_records
+    SET status = 'approved',
+        task_status = 'done',
+        review_comment = CASE
+          WHEN review_comment IS NULL OR review_comment = '' THEN '系统迁移：跳过冗余流程资格确认节点'
+          ELSE review_comment
+        END,
+        operated_at = COALESCE(operated_at, NOW()),
+        confirmed_at = COALESCE(confirmed_at, NOW())
+    WHERE step_code = 'STEP_04'
+      AND status <> 'approved';
+  `);
+}
+
+/**
  * Insert initial workflow notifications only when the notification table is empty.
  */
 async function ensureNotificationSeeds() {
@@ -290,6 +325,7 @@ async function ensureSeedData() {
     await ensureUserProfiles();
     await ensureWorkflowDefinitionDetails();
     await ensureWorkflowRecordTaskDefaults();
+    await ensureQualificationStepBypassed();
     await ensureNotificationSeeds();
     await ensureRegistrationCandidateSeed();
     return;
@@ -557,6 +593,7 @@ async function ensureSeedData() {
 
   await ensureNotificationSeeds();
   await ensureRegistrationCandidateSeed();
+  await ensureQualificationStepBypassed();
 }
 
 /**

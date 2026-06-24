@@ -1,8 +1,8 @@
 <script setup>
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { showFailToast, showSuccessToast } from 'vant';
-import { fetchMobileWorkflow, markMessageRead, requestMobileTaskChange, resetMobileTaskStatus, rescheduleMobileTask, reviewMobileTask, submitMobileTask, uploadMobileFile } from '../api';
+import { showConfirmDialog, showFailToast, showSuccessToast } from 'vant';
+import { deleteMobileFile, fetchMobileWorkflow, markMessageRead, requestMobileTaskChange, resetMobileTaskStatus, rescheduleMobileTask, reviewMobileTask, submitMobileTask, uploadMobileFile } from '../api';
 import { sessionState } from '../session';
 
 const route = useRoute();
@@ -13,6 +13,8 @@ const workflow = ref(null);
 const materialUploads = ref([]);
 const operationSection = ref(null);
 const previewFile = ref(null);
+const showRescheduleForm = ref(false);
+let refreshTimer = null;
 const form = reactive({
   summary: '',
   note: '',
@@ -29,6 +31,8 @@ const stepCode = computed(() => route.params.stepCode);
 const currentTask = computed(() => (workflow.value?.steps || []).find((item) => item.stepCode === stepCode.value));
 const canSubmitTask = computed(() => Boolean(currentTask.value?.canSubmit));
 const canReviewTask = computed(() => Boolean(currentTask.value?.canReview));
+const approveButtonText = computed(() => (currentTask.value?.taskType === 'notice' ? '确认同意' : '确认通过'));
+const rejectButtonText = computed(() => (currentTask.value?.taskType === 'notice' ? '确认不同意' : '不通过退回'));
 const canRequestChange = computed(() => Boolean(
   currentTask.value
     && !canSubmitTask.value
@@ -173,7 +177,7 @@ async function approveTask(status) {
         businessFields: buildBusinessPayload(),
       },
     });
-    showSuccessToast(status === 'approved' ? '已审核通过' : '已退回补充');
+    showSuccessToast(status === 'approved' ? approveButtonText.value.replace(/^确认/, '已') : rejectButtonText.value.replace(/^确认/, '已'));
     await loadWorkflow();
   } finally {
     submitting.value = false;
@@ -185,7 +189,7 @@ async function requestReschedule() {
   submitting.value = true;
   try {
     await rescheduleMobileTask(workflow.value.workflowId, currentTask.value.taskId, {
-      scheduledAt: form.scheduledAt,
+      scheduledAt: String(form.scheduledAt || '').replace('T', ' '),
       location: form.location,
       reason: form.reason,
     });
@@ -208,6 +212,18 @@ async function handleUpload(fileWrapper, material) {
   const result = await uploadMobileFile(formData);
   materialUploads.value.push(result);
   showSuccessToast('材料上传成功');
+}
+
+async function deleteAttachment(item) {
+  if (!item?.id) return;
+  await showConfirmDialog({
+    title: '删除材料',
+    message: `确认删除“${item.fileName}”吗？删除后可重新上传。`,
+  });
+  await deleteMobileFile(item.id);
+  materialUploads.value = materialUploads.value.filter((upload) => upload.id !== item.id);
+  if (previewFile.value?.id === item.id) previewFile.value = null;
+  showSuccessToast('材料已删除');
 }
 
 function attachmentsByTag(tag) {
@@ -272,7 +288,14 @@ function validateRequiredMaterials() {
   return missing ? `请上传${missing.label}` : '';
 }
 
-onMounted(loadWorkflow);
+onMounted(() => {
+  loadWorkflow();
+  refreshTimer = window.setInterval(loadWorkflow, 15000);
+});
+
+onBeforeUnmount(() => {
+  if (refreshTimer) window.clearInterval(refreshTimer);
+});
 </script>
 
 <template>
@@ -306,7 +329,6 @@ onMounted(loadWorkflow);
             <span class="due-pill" :class="{ 'is-overdue': currentTask.isOverdue }">{{ currentTask.remainingLabel }}</span>
           </div>
           <div class="status-card__summary">{{ currentTask.summary }}</div>
-          <div class="workflow-card__body" v-if="currentTask.blessingText">{{ currentTask.blessingText }}</div>
           <div class="workflow-card__foot">
             <span>{{ currentTask.taskTypeLabel }}</span>
             <span v-if="currentTask.uploadRequired">含材料事项</span>
@@ -362,6 +384,7 @@ onMounted(loadWorkflow);
               <span>{{ item.fileName }}</span>
               <button class="text-link text-link--button" type="button" @click="previewAttachment(item)">预览</button>
               <a class="text-link" :href="item.fileUrl" target="_blank" rel="noreferrer">下载</a>
+              <button v-if="canSubmitTask || canReviewTask" class="text-link text-link--button text-link--danger" type="button" @click="deleteAttachment(item)">删除</button>
             </div>
           </div>
           <div class="pdf-preview-card" v-if="previewFile?.materialTag === material.tag">
@@ -412,17 +435,24 @@ onMounted(loadWorkflow);
 
         <template v-if="currentTask.canReschedule">
           <div class="field-block">
-            <div class="field-label">申请改期时间</div>
-            <van-field v-model="form.scheduledAt" placeholder="例如 2026-05-01 14:30" />
+            <button class="fold-toggle" type="button" @click="showRescheduleForm = !showRescheduleForm">
+              {{ showRescheduleForm ? '收起改期申请' : '展开改期申请' }}
+            </button>
           </div>
-          <div class="field-block">
-            <div class="field-label">地点</div>
-            <van-field v-model="form.location" placeholder="请输入谈话地点" />
-          </div>
-          <div class="field-block">
-            <div class="field-label">改期原因</div>
-            <van-field v-model="form.reason" rows="2" autosize type="textarea" placeholder="请说明时间冲突或改期原因" />
-          </div>
+          <template v-if="showRescheduleForm">
+            <div class="field-block">
+              <div class="field-label">申请改期时间</div>
+              <van-field v-model="form.scheduledAt" type="datetime-local" placeholder="请选择改期时间" />
+            </div>
+            <div class="field-block">
+              <div class="field-label">地点</div>
+              <van-field v-model="form.location" placeholder="请输入谈话地点" />
+            </div>
+            <div class="field-block">
+              <div class="field-label">改期原因</div>
+              <van-field v-model="form.reason" rows="2" autosize type="textarea" placeholder="请说明时间冲突或改期原因" />
+            </div>
+          </template>
         </template>
 
         <div class="field-block" v-if="canReviewTask">
@@ -432,9 +462,9 @@ onMounted(loadWorkflow);
 
         <div class="section-actions">
           <van-button v-if="canSubmitTask" type="danger" :loading="submitting" @click="submitTask">确认提交</van-button>
-          <van-button v-if="canReviewTask" type="danger" plain :loading="submitting" @click="approveTask('approved')">确认通过</van-button>
-          <van-button v-if="canReviewTask" plain :loading="submitting" @click="approveTask('rejected')">不通过退回</van-button>
-          <van-button v-if="currentTask.canReschedule" plain type="warning" :loading="submitting" @click="requestReschedule">提交改期申请</van-button>
+          <van-button v-if="canReviewTask" type="danger" plain :loading="submitting" @click="approveTask('approved')">{{ approveButtonText }}</van-button>
+          <van-button v-if="canReviewTask" plain :loading="submitting" @click="approveTask('rejected')">{{ rejectButtonText }}</van-button>
+          <van-button v-if="currentTask.canReschedule && showRescheduleForm" plain type="warning" :loading="submitting" @click="requestReschedule">提交改期申请</van-button>
         </div>
       </div>
       <div class="section-card__bd" v-else>

@@ -91,6 +91,17 @@ textarea:focus-visible {
   padding: 12px 14px calc(88px + env(safe-area-inset-bottom));
 }
 
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
 .section-card {
   /* 底部外边距 */
   margin-bottom: 14px;
@@ -104,6 +115,18 @@ textarea:focus-visible {
   box-shadow: var(--shadow-card);
   /* 溢出可见 */
   overflow: visible;
+  animation: card-enter 0.22s ease both;
+}
+
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .section-card__hd {
@@ -243,6 +266,11 @@ textarea:focus-visible {
 
 .workflow-card {
   min-height: 158px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.workflow-card:active {
+  transform: scale(0.99);
 }
 
 .workflow-card--static,
@@ -583,6 +611,18 @@ textarea:focus-visible {
   text-align: center;
 }
 
+.top-banner__back {
+  position: absolute;
+  left: 14px;
+  bottom: 13px;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 0;
+}
+
 .top-banner__title {
   font-size: 19px;
   font-weight: 800;
@@ -668,6 +708,22 @@ textarea:focus-visible {
   margin-top: 12px;
 }
 
+.fold-toggle {
+  width: 100%;
+  border: 1px dashed rgba(143, 21, 21, 0.32);
+  border-radius: 12px;
+  background: rgba(255, 247, 237, 0.72);
+  color: var(--accent-strong);
+  font-size: 14px;
+  font-weight: 800;
+  padding: 11px 12px;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.fold-toggle:active {
+  transform: scale(0.99);
+}
+
 .section-actions {
   display: flex;
   flex-wrap: wrap;
@@ -747,6 +803,10 @@ textarea:focus-visible {
   background: transparent;
   padding: 0;
   font: inherit;
+}
+
+.text-link--danger {
+  color: #c2410c;
 }
 
 .material-uploader {

@@ -1,13 +1,16 @@
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { fetchMessages } from '../api';
 import { isDesktopDevice, mobileToDesktopUrl, shouldSkipAutoRoute } from '../deviceRoute';
 import { roleTabs, sessionState } from '../session';
 
 const route = useRoute();
 const router = useRouter();
+const unreadCount = ref(0);
 
 const tabs = computed(() => roleTabs(sessionState.user));
+const showBack = computed(() => !tabs.value.some((item) => item.name === route.name));
 const active = computed({
   get() {
     return tabs.value.some((item) => item.name === route.name) ? route.name : 'workbench';
@@ -34,25 +37,42 @@ const tabIcons = {
   },
 };
 
+async function refreshUnreadCount() {
+  if (!sessionState.token) return;
+  try {
+    const messages = await fetchMessages();
+    unreadCount.value = messages.filter((item) => item.status === 'unread').length;
+  } catch (error) {
+    void error;
+  }
+}
+
 onMounted(() => {
   if (shouldSkipAutoRoute()) return;
   if (!isDesktopDevice()) return;
   window.location.replace(mobileToDesktopUrl());
 });
+
+watch(() => route.fullPath, refreshUnreadCount, { immediate: true });
 </script>
 
 <template>
   <div class="page-shell">
     <header class="top-banner">
+      <button v-if="showBack" class="top-banner__back" type="button" @click="router.back()">&lt; 返回</button>
       <div class="top-banner__title">{{ headerTitle }}</div>
     </header>
 
     <main class="page-body">
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <transition name="page-fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
     </main>
 
     <van-tabbar v-model="active" route fixed placeholder active-color="#8f1515" inactive-color="#6e5547" :safe-area-inset-bottom="true">
-      <van-tabbar-item v-for="tab in tabs" :key="tab.name" :name="tab.name" :to="{ name: tab.name }">
+      <van-tabbar-item v-for="tab in tabs" :key="tab.name" :name="tab.name" :to="{ name: tab.name }" :dot="tab.name === 'messages' && unreadCount > 0">
         <template #icon="{ active }">
           <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path

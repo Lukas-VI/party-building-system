@@ -556,7 +556,7 @@ function App() {
                 </div>
                 <div className="split-grid">
                   <StageDistributionCard rows={overview.stageDistribution || []} compact={isMobile} />
-                  <SimpleTableCard title="单位统计" columns={['单位', '申请人数', '发展中人数', '正式党员人数']} rows={orgStats.map((item) => [item.orgName, item.applicants, item.developing, item.formalMembers])} compact={isMobile} />
+                  <SimpleTableCard title="单位统计" columns={['单位', '申请人数', '发展中人数', '正式党员人数', '发展比例']} rows={orgStats.map((item) => [item.orgName, item.applicants, item.developing, item.formalMembers, item.developmentRate || '0%'])} compact={isMobile} />
                 </div>
               </>
             )}
@@ -758,8 +758,8 @@ function App() {
                             setSelectedApplicantId(item.applicantId);
                             setActiveView('workflowDetail');
                           }}>查看流程</Button>
-                            <Button size="small" theme="success" onClick={() => doReview(item, 'approved')}>通过</Button>
-                            <Button size="small" theme="danger" variant="outline" onClick={() => doReview(item, 'rejected')}>退回</Button>
+                            <Button size="small" theme="success" onClick={() => doReview(item, 'approved')}>{item.taskType === 'notice' ? '确认同意' : '确认通过'}</Button>
+                            <Button size="small" theme="danger" variant="outline" onClick={() => doReview(item, 'rejected')}>{item.taskType === 'notice' ? '确认不同意' : '不通过退回'}</Button>
                         </Space>
                       </td>
                     </tr>
@@ -936,8 +936,8 @@ function App() {
               <MetricCard title="待审核流程" value={overview?.pendingReviews || 0} desc="跨单位待办汇总" />
             </div>
             <div className="split-grid">
-              <SimpleTableCard title="按单位统计" columns={['单位', '申请人数', '发展中人数', '正式党员人数']} rows={orgStats.map((item) => [item.orgName, item.applicants, item.developing, item.formalMembers])} compact={isMobile} />
-              <SimpleTableCard title="按支部统计" columns={['支部', '申请人数', '发展中人数', '正式党员人数']} rows={branchStats.map((item) => [item.branchName, item.applicants, item.developing, item.formalMembers])} compact={isMobile} />
+              <SimpleTableCard title="按单位统计" columns={['单位', '申请人数', '发展中人数', '正式党员人数', '发展比例']} rows={orgStats.map((item) => [item.orgName, item.applicants, item.developing, item.formalMembers, item.developmentRate || '0%'])} compact={isMobile} />
+              <SimpleTableCard title="按支部统计" columns={['支部', '申请人数', '发展中人数', '正式党员人数', '发展比例']} rows={branchStats.map((item) => [item.branchName, item.applicants, item.developing, item.formalMembers, item.developmentRate || '0%'])} compact={isMobile} />
             </div>
           </div>
         )}

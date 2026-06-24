@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { fetchMobileWorkflow } from '../api';
 
@@ -7,6 +7,8 @@ const route = useRoute();
 const router = useRouter();
 const loading = ref(false);
 const workflow = ref(null);
+const showCompletedSteps = ref(false);
+let refreshTimer = null;
 
 const workflowId = computed(() => route.params.workflowId || 'me');
 const currentTask = computed(() => workflow.value?.currentStep || null);
@@ -45,7 +47,14 @@ function openStep(task) {
   });
 }
 
-onMounted(loadWorkflow);
+onMounted(() => {
+  loadWorkflow();
+  refreshTimer = window.setInterval(loadWorkflow, 15000);
+});
+
+onBeforeUnmount(() => {
+  if (refreshTimer) window.clearInterval(refreshTimer);
+});
 </script>
 
 <template>
@@ -83,7 +92,7 @@ onMounted(loadWorkflow);
     </section>
 
     <!-- 当前任务卡片 -->
-     <section class="section-card" v-if="currentTask && currentTask.status !== 'approved'">
+    <section class="section-card" v-if="currentTask && currentTask.status !== 'approved'">
       <!-- 卡片头部 -->
       <div class="section-card__hd">
         <!-- 卡片标题 -->
@@ -112,12 +121,18 @@ onMounted(loadWorkflow);
             <span class="due-pill" :class="{ 'is-overdue': currentTask.isOverdue }">{{ currentTask.remainingLabel }}</span>
  
           </div>
-          <div class="workflow-card__body" v-if="currentTask.blessingText">{{ currentTask.blessingText }}</div>
           <div class="workflow-card__foot">
             <span>{{ currentTask.taskTypeLabel }}</span>
             <span v-if="currentTask.uploadRequired">含材料事项</span>
           </div>
         </button>
+      </div>
+    </section>
+
+    <section class="section-card" v-else-if="workflow && !unfinishedSteps.length">
+      <div class="section-card__hd">
+        <div class="section-card__title">流程已全部完成</div>
+        <div class="section-card__desc">当前没有未完成、进行中或未开放节点。</div>
       </div>
     </section>
 
@@ -155,7 +170,6 @@ onMounted(loadWorkflow);
               <span class="due-pill" :class="{ 'is-overdue': item.isOverdue }">{{ item.remainingLabel }}</span>
 
             </div>
-            <div class="workflow-card__body" v-if="item.blessingText">{{ item.blessingText }}</div>
             <div class="workflow-card__foot">
               <span>{{ item.taskTypeLabel }}</span>
               <span v-if="item.uploadRequired">含材料事项</span>
@@ -164,10 +178,12 @@ onMounted(loadWorkflow);
         </div>
         <!-- 分割线 -->
         <div class="formal-divider" v-if="completedSteps.length"></div>
-        <!-- 已完成步骤标题 -->
-        <div class="section-card__title section-card__title--sub" v-if="completedSteps.length">已完成步骤</div>
+        <!-- 已完成步骤折叠入口 -->
+        <button class="fold-toggle" v-if="completedSteps.length" type="button" @click="showCompletedSteps = !showCompletedSteps">
+          {{ showCompletedSteps ? '收起已完成步骤' : `展开已完成步骤（${completedSteps.length}）` }}
+        </button>
         <!-- 已完成步骤列表 -->
-        <div class="step-list" v-if="completedSteps.length">
+        <div class="step-list" v-if="completedSteps.length && showCompletedSteps">
           <!-- 已完成步骤按钮 -->
           <button class="workflow-card status-card" :class="item.reviewClassName" v-for="item in completedSteps" :key="item.stepCode" type="button" @click="openStep(item)">
             <van-icon :name="item.reviewIcon" class="status-card__mark" />
@@ -188,7 +204,6 @@ onMounted(loadWorkflow);
               <span class="due-pill">{{ item.remainingLabel }}</span>
 
             </div>
-            <div class="workflow-card__body" v-if="item.blessingText">{{ item.blessingText }}</div>
             <div class="workflow-card__foot">
               <span>{{ item.taskTypeLabel }}</span>
               <span v-if="item.uploadRequired">含材料事项</span>

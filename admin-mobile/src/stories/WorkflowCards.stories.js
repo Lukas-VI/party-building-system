@@ -35,7 +35,6 @@ const states = [
     reviewIcon: 'passed',
     reviewLabel: '已通过',
     reviewClassName: 'is-approved',
-    blessingText: '该节点已完成，请继续关注后续流程通知。',
   },
   {
     ...baseStep,
@@ -70,7 +69,6 @@ function cardTemplate() {
         </div>
         <span class="due-pill" :class="{ 'is-overdue': item.isOverdue }">{{ item.remainingLabel }}</span>
       </div>
-      <div class="workflow-card__body" v-if="item.blessingText">{{ item.blessingText }}</div>
       <div class="workflow-card__foot">
         <span v-if="item.uploadRequired">含材料事项</span>
       </div>
