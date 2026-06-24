@@ -32,6 +32,12 @@
   --accent: #9c1010;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 body {
   margin: 0;
   background: #f4f0eb;
@@ -44,13 +50,17 @@ body {
 .admin-shell {
   display: grid;
   grid-template-columns: 290px minmax(0, 1fr);
-  min-height: 100vh;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
   background: var(--bg-main);
   color: var(--text-main);
 }
 
 .admin-sidebar {
   padding: 24px 20px;
+  height: 100vh;
+  overflow-y: auto;
   background: var(--sidebar-bg);
   color: #fff;
   display: flex;
@@ -141,6 +151,9 @@ body {
 
 .admin-main {
   padding: 24px;
+  height: 100vh;
+  min-width: 0;
+  overflow-y: auto;
 }
 
 .content-header {
@@ -297,6 +310,22 @@ body {
 .detail-value {
   margin-top: 6px;
   font-weight: 700;
+  color: var(--text-main);
+}
+
+.applicant-detail-grid .detail-value {
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.applicant-detail-grid .detail-item:first-child .detail-value {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.review-applicant-name {
+  font-size: 16px;
+  font-weight: 800;
   color: var(--text-main);
 }
 
@@ -548,11 +577,16 @@ body {
 @media (max-width: 860px) {
   .admin-shell {
     display: block;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
 
   .admin-sidebar {
     z-index: 20;
     padding: 14px 12px;
+    height: auto;
+    overflow: visible;
     gap: 12px;
     box-shadow: none;
   }
@@ -600,6 +634,8 @@ body {
 
   .admin-main {
     padding: 14px;
+    height: auto;
+    overflow: visible;
   }
 
   .content-header {

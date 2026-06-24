@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const crypto = require('node:crypto');
 const XLSX = require('xlsx');
-const { query, first } = require('../db');
+const { getPool, query, first } = require('../db');
 const { ok, fail } = require('../lib/http');
 const { now } = require('../lib/utils');
 const { HIGH_PRIVILEGE_ROLES } = require('../lib/constants');
@@ -178,7 +178,9 @@ function registerOrgRoutes(app) {
             u.branch_id AS branchId,
             o.name AS orgName,
             b.name AS branchName,
-            GROUP_CONCAT(r.label ORDER BY r.label SEPARATOR ' / ') AS roleLabels
+            GROUP_CONCAT(r.id ORDER BY ur.id SEPARATOR ',') AS roleIds,
+            SUBSTRING_INDEX(GROUP_CONCAT(r.id ORDER BY ur.id SEPARATOR ','), ',', 1) AS roleId,
+            GROUP_CONCAT(r.label ORDER BY ur.id SEPARATOR ' / ') AS roleLabels
          FROM users u
          LEFT JOIN org_units o ON o.id = u.org_id
          LEFT JOIN branches b ON b.id = u.branch_id
@@ -252,26 +254,37 @@ function registerOrgRoutes(app) {
       if (req.body?.branchId && !branch) return fail(res, 400, '未找到所选支部');
       if (branch && org && branch.orgId !== org.id) return fail(res, 400, '支部不属于所选单位');
       if (roleId && HIGH_PRIVILEGE_ROLES.has(roleId) && req.user.primaryRole !== 'superAdmin') return fail(res, 403, '无权分配高权限角色');
-      await query(
-        `UPDATE users
-         SET name = :name,
-             status = :status,
-             org_id = :orgId,
-             branch_id = :branchId
-         WHERE id = :id`,
-        {
-          id: req.params.id,
-          name,
-          status,
-          orgId: org?.id || branch?.orgId || null,
-          branchId: branch?.id || null,
-        },
-      );
-      if (roleId) {
-        const currentRole = await first('SELECT id FROM user_roles WHERE user_id = :userId AND role_id = :roleId', { userId: req.params.id, roleId });
-        if (!currentRole) await query('INSERT INTO user_roles (user_id, role_id) VALUES (:userId, :roleId)', { userId: req.params.id, roleId });
+      const existingRoles = await query('SELECT role_id AS roleId FROM user_roles WHERE user_id = :userId', { userId: req.params.id });
+      const touchesHighPrivilege = existingRoles.some((item) => HIGH_PRIVILEGE_ROLES.has(item.roleId)) || (roleId && HIGH_PRIVILEGE_ROLES.has(roleId));
+      if (touchesHighPrivilege && req.user.primaryRole !== 'superAdmin') return fail(res, 403, '无权调整高权限角色');
+      const connection = await getPool().getConnection();
+      try {
+        await connection.beginTransaction();
+        await connection.execute(
+          `UPDATE users
+           SET name = :name,
+               status = :status,
+               org_id = :orgId,
+               branch_id = :branchId
+           WHERE id = :id`,
+          {
+            id: req.params.id,
+            name,
+            status,
+            orgId: org?.id || branch?.orgId || null,
+            branchId: branch?.id || null,
+          },
+        );
+        await connection.execute('DELETE FROM user_roles WHERE user_id = :userId', { userId: req.params.id });
+        if (roleId) await connection.execute('INSERT INTO user_roles (user_id, role_id) VALUES (:userId, :roleId)', { userId: req.params.id, roleId });
+        await connection.commit();
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
       }
-      await logAudit('users', req.params.id, 'update_staff', req.user.id, { name, status, roleId });
+      await logAudit('users', req.params.id, 'update_staff', req.user.id, { name, status, roleId, previousRoleIds: existingRoles.map((item) => item.roleId) });
       ok(res, true, '人员已保存');
     } catch (error) {
       fail(res, 500, error.message);

@@ -379,7 +379,7 @@ function App() {
       orgId: row.orgId || '',
       branchId: row.branchId || '',
       status: row.status || 'inactive',
-      roleId: 'applicant',
+      roleId: row.roleId || '',
     });
   }
 
@@ -639,7 +639,7 @@ function App() {
             {(user.primaryRole === 'applicant' || selectedApplicantId) && applicantDetail && workflow && (
               <>
                 <Card title="申请人信息">
-                  <div className="detail-grid">
+                  <div className="detail-grid applicant-detail-grid">
                     <DetailItem label="姓名" value={applicantDetail.name} />
                     <DetailItem label="学号/工号" value={applicantDetail.username} />
                     <DetailItem label="单位" value={applicantDetail.orgName} />
@@ -747,7 +747,7 @@ function App() {
                     <tr key={`${item.applicantId}-${item.stepCode}`}>
                       <td>{item.orgName}</td>
                       <td>{item.branchName}</td>
-                      <td>{item.applicantName}</td>
+                      <td><strong className="review-applicant-name">{item.applicantName}</strong></td>
                       <td>{item.applicantUsername}</td>
                       <td>第 {item.sortOrder} 步</td>
                       <td>{item.sortOrder}-{item.stepName}</td>
