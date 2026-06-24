@@ -27,6 +27,15 @@ const STAFF_STATUS_OPTIONS = [
   { label: '待审核', value: 'pending' },
   { label: '已激活', value: 'active' },
 ];
+const ACTIVE_WORKFLOW_STATUSES = new Set(['pending', 'reviewing', 'rejected']);
+const WORKFLOW_STATUS_PRIORITY = {
+  reviewing: 0,
+  pending: 1,
+  rejected: 2,
+  locked: 3,
+  approved: 4,
+  terminated: 5,
+};
 const EMPTY_STAFF_FORM = {
   id: '',
   username: '',
@@ -662,7 +671,7 @@ function App() {
                           <td>{item.name}</td>
                           <td><Tag theme={item.taskMeta?.taskType === 'submit' ? 'warning' : 'primary'} variant="light">{item.taskMeta?.taskType === 'submit' ? '提交类' : '通知类'}</Tag></td>
                           <td>{item.phase}</td>
-                          <td><Tag theme={item.status === 'approved' ? 'success' : item.status === 'reviewing' ? 'warning' : 'default'}>{item.status}</Tag></td>
+                          <td><Tag theme={statusTagTheme(item.status)} variant="light">{item.statusText || item.status}</Tag></td>
                           <td>{item.deadline}</td>
                           <td>{item.operatedAt || '-'}</td>
                           <td>{formatBusinessFields(item)}</td>
@@ -1129,7 +1138,7 @@ function formatBusinessFields(step) {
 }
 
 function getCurrentWorkflowStep(workflow) {
-  return workflow?.steps?.find((item) => ['pending', 'reviewing', 'rejected'].includes(item.status)) || null;
+  return workflow?.steps?.find((item) => ACTIVE_WORKFLOW_STATUSES.has(item.status)) || null;
 }
 
 function getWorkflowDisplaySteps(workflow) {
@@ -1138,9 +1147,9 @@ function getWorkflowDisplaySteps(workflow) {
   return [...(workflow?.steps || [])].sort((left, right) => {
     if (left.stepCode === current?.stepCode) return -1;
     if (right.stepCode === current?.stepCode) return 1;
-    const leftDone = left.status === 'approved';
-    const rightDone = right.status === 'approved';
-    if (leftDone !== rightDone) return leftDone ? 1 : -1;
+    const leftPriority = WORKFLOW_STATUS_PRIORITY[left.status] ?? 3;
+    const rightPriority = WORKFLOW_STATUS_PRIORITY[right.status] ?? 3;
+    if (leftPriority !== rightPriority) return leftPriority - rightPriority;
     return String(timeValue(right)).localeCompare(String(timeValue(left))) || Number(left.sortOrder || 0) - Number(right.sortOrder || 0);
   });
 }

@@ -29,7 +29,7 @@ export default defineConfig(({ command, mode }) => {
           target: apiProxyTarget,
           changeOrigin: true,
         },
-        '/DJ_api': {
+        '/DJ-api': {
           target: djApiProxyTarget,
           changeOrigin: true,
           secure: false,
