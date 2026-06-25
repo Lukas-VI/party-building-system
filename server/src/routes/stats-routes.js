@@ -29,7 +29,6 @@ async function pendingReviewCount(user) {
      INNER JOIN workflow_step_definitions d ON d.step_code = r.step_code
      INNER JOIN users u ON u.id = i.applicant_id
      WHERE r.status IN ('pending', 'reviewing')
-       AND r.step_code <> 'STEP_04'
      ${scope.sql}`,
     scope.params,
   );
@@ -58,7 +57,6 @@ function registerStatsRoutes(app) {
          INNER JOIN workflow_instances i ON i.id = r.instance_id
          INNER JOIN users u ON u.id = i.applicant_id
          WHERE r.status IN ('pending', 'reviewing', 'rejected')
-           AND r.step_code <> 'STEP_04'
            AND r.deadline IS NOT NULL
            AND r.deadline < CURDATE()
            ${scope.sql}`,

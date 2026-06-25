@@ -75,7 +75,6 @@ function registerWorkflowRoutes(app) {
         await query(
           `SELECT step_code AS stepCode, sort_order AS sortOrder, name, phase, start_at AS startAt, end_at AS endAt
            FROM workflow_step_definitions
-           WHERE step_code <> 'STEP_04'
            ORDER BY sort_order ASC`,
         ),
       );

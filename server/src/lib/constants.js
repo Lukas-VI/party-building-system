@@ -1,5 +1,5 @@
-const MVP_MAX_STEP_ORDER = 25;
-const EXCLUDED_WORKFLOW_STEP_CODES = new Set(['STEP_04']);
+const MVP_MAX_STEP_ORDER = 21;
+const EXCLUDED_WORKFLOW_STEP_CODES = new Set();
 const HIGH_PRIVILEGE_ROLES = new Set(['superAdmin', 'orgDept']);
 const ALLOWED_REVIEW_STATUSES = new Set(['approved', 'rejected']);
 const FILE_ACCEPT_RULES = {

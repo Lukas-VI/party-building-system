@@ -32,7 +32,6 @@ function registerReviewRoutes(app) {
            LEFT JOIN org_units o ON o.id = u.org_id
            LEFT JOIN branches b ON b.id = u.branch_id
            WHERE r.status IN ('pending', 'reviewing')
-             AND r.step_code <> 'STEP_04'
            ${scope.sql}
            ORDER BY r.deadline ASC, d.sort_order ASC`,
         scope.params,

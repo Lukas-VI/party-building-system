@@ -7,7 +7,7 @@
  * 3. 本配置参考 docs/党员发展流程说明.md、docs/4月20会议纪要.md、docs/electronic-dossier.md 和 docs/project-overview.md。
  * 4. 服务端接口和移动端页面都应优先读取这里，而不是各自复制一套条件分支。
  */
-const STEP_DETAIL_OVERRIDES = {
+const LEGACY_STEP_DETAIL_OVERRIDES = {
   STEP_01: {
     taskType: 'submit',
     actorType: 'collaborative',
@@ -427,6 +427,37 @@ const STEP_DETAIL_OVERRIDES = {
   },
 
 };
+
+const WORKFLOW_STEP_DETAIL_MAP = {
+  STEP_01: 'STEP_01',
+  STEP_02: 'STEP_02',
+  STEP_03: 'STEP_03',
+  STEP_04: 'STEP_05',
+  STEP_05: 'STEP_06',
+  STEP_06: 'STEP_07',
+  STEP_07: 'STEP_08',
+  STEP_08: 'STEP_09',
+  STEP_09: 'STEP_10',
+  STEP_10: 'STEP_11',
+  STEP_11: 'STEP_12',
+  STEP_12: 'STEP_13',
+  STEP_13: 'STEP_14',
+  STEP_14: 'STEP_15',
+  STEP_15: 'STEP_16',
+  STEP_16: 'STEP_17',
+  STEP_17: 'STEP_18',
+  STEP_18: 'STEP_19',
+  STEP_19: 'STEP_20',
+  STEP_20: 'STEP_21',
+  STEP_21: 'STEP_22',
+};
+
+const STEP_DETAIL_OVERRIDES = Object.fromEntries(
+  Object.entries(WORKFLOW_STEP_DETAIL_MAP).map(([stepCode, legacyStepCode]) => [
+    stepCode,
+    LEGACY_STEP_DETAIL_OVERRIDES[legacyStepCode],
+  ]),
+);
 
 /**
  * Build fallback workflow metadata for steps without explicit overrides.

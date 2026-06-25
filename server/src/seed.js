@@ -51,6 +51,20 @@ function profileJsonForUser(user, roleId) {
   };
 }
 
+const WORKFLOW_STEP_NAMES = [
+  '递交入党申请书', '党组织派人谈话', '确定入党积极分子', '指定培养联系人', '培养教育考察',
+  '确定发展对象', '确定入党介绍人', '政治审查', '短期集中培训', '支部委员会审查',
+  '上级党委预审', '填写入党志愿书', '支部大会讨论', '上级党委派人谈话', '上级党委审批',
+  '预备党员入党宣誓', '编入党支部和党小组', '继续教育考察', '提出转正申请', '支部大会讨论转正',
+  '上级党委审批转正',
+];
+
+function workflowPhaseByOrder(sortOrder) {
+  if (sortOrder <= 9) return '培养考察';
+  if (sortOrder <= 17) return '接收预备党员';
+  return '预备党员转正';
+}
+
 /**
  * Run one deployment SQL file during database bootstrap.
  */
@@ -172,11 +186,16 @@ async function ensureWorkflowDefinitionDetails() {
      FROM workflow_step_definitions`,
   );
   for (const definition of definitions) {
+    const sortOrder = Number(String(definition.stepCode || '').replace('STEP_', ''));
+    if (!Number.isInteger(sortOrder) || sortOrder < 1 || sortOrder > WORKFLOW_STEP_NAMES.length) continue;
     const roleIds = JSON.parse(definition.allowedRolesJson || '[]');
     const detail = getStepDetail(definition.stepCode, roleIds);
     await query(
       `UPDATE workflow_step_definitions
-       SET actor_type = :actorType,
+       SET sort_order = :sortOrder,
+           name = :name,
+           phase = :phase,
+           actor_type = :actorType,
            responsible_roles_json = :responsibleRolesJson,
            requires_applicant_action = :requiresApplicantAction,
            requires_reviewer_action = :requiresReviewerAction,
@@ -186,6 +205,9 @@ async function ensureWorkflowDefinitionDetails() {
        WHERE step_code = :stepCode`,
       {
         stepCode: definition.stepCode,
+        sortOrder,
+        name: WORKFLOW_STEP_NAMES[sortOrder - 1],
+        phase: workflowPhaseByOrder(sortOrder),
         actorType: detail.actorType,
         responsibleRolesJson: JSON.stringify(detail.responsibleRoles || []),
         requiresApplicantAction: detail.requiresApplicantAction ? 1 : 0,
@@ -216,38 +238,33 @@ async function ensureWorkflowRecordTaskDefaults() {
 }
 
 /**
- * Bypass the removed qualification confirmation step for existing workflows.
+ * Align existing 25-step data to the refactored 21-step workflow.
  */
-async function ensureQualificationStepBypassed() {
-  if (!(await tableExists('workflow_step_records'))) return;
-  await raw(`
-    UPDATE workflow_step_records step5
-    INNER JOIN workflow_step_records step4
-      ON step4.instance_id = step5.instance_id
-     AND step4.step_code = 'STEP_04'
-    INNER JOIN workflow_step_records step3
-      ON step3.instance_id = step5.instance_id
-     AND step3.step_code = 'STEP_03'
-    SET step5.status = 'pending',
-        step5.task_status = 'open'
-    WHERE step5.step_code = 'STEP_05'
-      AND step5.status = 'locked'
-      AND step3.status = 'approved'
-      AND step4.status IN ('pending', 'reviewing', 'rejected', 'locked');
-  `);
-  await raw(`
-    UPDATE workflow_step_records
-    SET status = 'approved',
-        task_status = 'done',
-        review_comment = CASE
-          WHEN review_comment IS NULL OR review_comment = '' THEN '系统迁移：跳过冗余流程资格确认节点'
-          ELSE review_comment
-        END,
-        operated_at = COALESCE(operated_at, NOW()),
-        confirmed_at = COALESCE(confirmed_at, NOW())
-    WHERE step_code = 'STEP_04'
-      AND status <> 'approved';
-  `);
+async function ensureRefactoredWorkflowSteps() {
+  if (!(await tableExists('workflow_step_records')) || !(await tableExists('workflow_step_definitions'))) return;
+  const legacyStep = await first(
+    `SELECT name
+     FROM workflow_step_definitions
+     WHERE step_code = 'STEP_04'`,
+  );
+  if (legacyStep?.name !== '流程资格确认') return;
+
+  await query('DELETE FROM workflow_step_records WHERE step_code = :stepCode', { stepCode: 'STEP_04' });
+  await query('DELETE FROM workflow_step_definitions WHERE step_code = :stepCode', { stepCode: 'STEP_04' });
+  for (let index = 5; index <= 22; index += 1) {
+    const oldCode = `STEP_${String(index).padStart(2, '0')}`;
+    const tempCode = `TMP_${String(index).padStart(2, '0')}`;
+    await query('UPDATE workflow_step_records SET step_code = :tempCode WHERE step_code = :oldCode', { oldCode, tempCode });
+    await query('UPDATE workflow_step_definitions SET step_code = :tempCode WHERE step_code = :oldCode', { oldCode, tempCode });
+  }
+  for (let index = 5; index <= 22; index += 1) {
+    const tempCode = `TMP_${String(index).padStart(2, '0')}`;
+    const newCode = `STEP_${String(index - 1).padStart(2, '0')}`;
+    await query('UPDATE workflow_step_records SET step_code = :newCode WHERE step_code = :tempCode', { tempCode, newCode });
+    await query('UPDATE workflow_step_definitions SET step_code = :newCode WHERE step_code = :tempCode', { tempCode, newCode });
+  }
+  await query("DELETE FROM workflow_step_records WHERE step_code IN ('STEP_22', 'STEP_23', 'STEP_24', 'STEP_25')");
+  await query("DELETE FROM workflow_step_definitions WHERE step_code IN ('STEP_22', 'STEP_23', 'STEP_24', 'STEP_25')");
 }
 
 /**
@@ -261,7 +278,7 @@ async function ensureNotificationSeeds() {
   const rows = [
     ['u-applicant-001', 'workflow_notice', '已进入入党积极分子培养阶段', '请按要求完善培养考察相关信息，并留意后续谈话通知。', 'STEP_03', 'workflow', 'wf-u-applicant-001'],
     ['u-branch-001', 'review_notice', '支部存在待确认谈话安排', '请确认谈话时间，如需变更请在系统内发起调整。', 'STEP_02', 'workflow', 'wf-u-applicant-001'],
-    ['u-organizer-001', 'material_notice', '政审材料待审核', '申请人已提交政审材料，请尽快完成初审并填写审核意见。', 'STEP_09', 'workflow', 'wf-u-applicant-002'],
+    ['u-organizer-001', 'material_notice', '政审材料待审核', '申请人已提交政审材料，请尽快完成初审并填写审核意见。', 'STEP_08', 'workflow', 'wf-u-applicant-002'],
   ];
   for (const [userId, type, title, content, stepCode, targetType, targetId] of rows) {
     await query(
@@ -323,9 +340,9 @@ async function ensureSeedData() {
   const role = await first('SELECT id FROM roles LIMIT 1');
   if (role) {
     await ensureUserProfiles();
+    await ensureRefactoredWorkflowSteps();
     await ensureWorkflowDefinitionDetails();
     await ensureWorkflowRecordTaskDefaults();
-    await ensureQualificationStepBypassed();
     await ensureNotificationSeeds();
     await ensureRegistrationCandidateSeed();
     return;
@@ -509,15 +526,12 @@ async function ensureSeedData() {
       ('REG-DEMO-001', 'u-applicant-005', 'Name', '410102200505054321', '2023202', 'pending', '2026-04-17 09:30:00', NULL)`
   );
 
-  const stepNames = [
-    '递交入党申请书', '党组织派人谈话', '确定入党积极分子', '流程资格确认', '指定培养联系人',
-    '培养教育考察', '确定发展对象', '确定入党介绍人', '政治审查', '短期集中培训',
-    '支部委员会审查', '上级党委预审', '填写入党志愿书', '支部大会讨论', '上级党委派人谈话',
-    '上级党委审批', '预备党员入党宣誓', '编入党支部和党小组', '继续教育考察', '提出转正申请',
-    '支部大会讨论转正', '上级党委审批转正', '延长预备期或结项', '材料归档', '正式党员结果确认'
-  ];
+  const stepNames = WORKFLOW_STEP_NAMES;
 
   for (let index = 0; index < stepNames.length; index += 1) {
+    const sortOrder = index + 1;
+    const stepCode = `STEP_${String(sortOrder).padStart(2, '0')}`;
+    const roleIds = sortOrder <= 9 ? ['applicant', 'organizer', 'branchSecretary'] : ['organizer', 'secretary', 'orgDept'];
     await query(
       `INSERT INTO workflow_step_definitions
         (step_code, sort_order, name, phase, allowed_roles_json, form_schema_json, start_at, end_at,
@@ -527,21 +541,20 @@ async function ensureSeedData() {
          :actorType, :responsibleRolesJson, :requiresApplicantAction, :requiresReviewerAction,
          :notificationTemplate, :materialSchemaJson, :timeRuleJson)`,
       {
-        stepCode: `STEP_${String(index + 1).padStart(2, '0')}`,
-        sortOrder: index + 1,
+        stepCode,
+        sortOrder,
         name: stepNames[index],
-        phase: index < 10 ? '培养考察' : index < 18 ? '接收预备党员' : '预备党员转正',
-        allowedRolesJson: JSON.stringify(index < 10 ? ['applicant', 'organizer', 'branchSecretary'] : ['organizer', 'secretary', 'orgDept']),
+        phase: workflowPhaseByOrder(sortOrder),
+        allowedRolesJson: JSON.stringify(roleIds),
         formSchemaJson: JSON.stringify({
           fields: ['summary', 'note'],
           attachment: index === 0 || index === 8,
-          businessFields: getStepDetail(`STEP_${String(index + 1).padStart(2, '0')}`, index < 10 ? ['applicant', 'organizer', 'branchSecretary'] : ['organizer', 'secretary', 'orgDept']).businessFields || [],
+          businessFields: getStepDetail(stepCode, roleIds).businessFields || [],
         }),
         startAt: '2026-04-01',
-        endAt: index < 10 ? '2026-05-31' : '2026-07-31',
+        endAt: sortOrder <= 9 ? '2026-05-31' : '2026-07-31',
         ...(() => {
-          const roleIds = index < 10 ? ['applicant', 'organizer', 'branchSecretary'] : ['organizer', 'secretary', 'orgDept'];
-          const detail = getStepDetail(`STEP_${String(index + 1).padStart(2, '0')}`, roleIds);
+          const detail = getStepDetail(stepCode, roleIds);
           return {
             actorType: detail.actorType,
             responsibleRolesJson: JSON.stringify(detail.responsibleRoles || []),
@@ -593,7 +606,9 @@ async function ensureSeedData() {
 
   await ensureNotificationSeeds();
   await ensureRegistrationCandidateSeed();
-  await ensureQualificationStepBypassed();
+  await ensureRefactoredWorkflowSteps();
+  await ensureWorkflowDefinitionDetails();
+  await ensureWorkflowRecordTaskDefaults();
 }
 
 /**

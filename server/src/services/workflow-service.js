@@ -201,10 +201,9 @@ async function advanceAfterReview(workflow, step, nextStatus, formData = {}) {
   if (nextStatus === 'approved') {
     const nextStage = {
       STEP_03: '入党积极分子',
-      STEP_07: '发展对象',
-      STEP_16: '预备党员',
-      STEP_22: formData?.businessFields?.regularizationApprovalResult === '按期转正' ? '正式党员' : undefined,
-      STEP_25: formData?.businessFields?.finalMemberStatus === '正式党员' ? '正式党员' : undefined,
+      STEP_06: '发展对象',
+      STEP_15: '预备党员',
+      STEP_21: formData?.businessFields?.regularizationApprovalResult === '按期转正' ? '正式党员' : undefined,
     }[step.stepCode];
     if (nextStage && applicantId) {
       await query(
@@ -259,9 +258,9 @@ function resolveReviewOutcome(step, requestedStatus, formData = {}) {
   if (requestedStatus !== 'approved') return requestedStatus;
   const fields = formData.businessFields || {};
   if (step.stepCode === 'STEP_03' && fields.activistDecision === '暂不确定') return 'pending';
-  if (step.stepCode === 'STEP_09' && fields.politicalReviewResult === '不合格') return 'pending';
-  if (step.stepCode === 'STEP_11' && String(fields.branchReviewResult || '').startsWith('不合格')) return 'pending';
-  if (step.stepCode === 'STEP_12' && fields.committeePreReviewResult === '不同意发展') return 'pending';
+  if (step.stepCode === 'STEP_08' && fields.politicalReviewResult === '不合格') return 'pending';
+  if (step.stepCode === 'STEP_10' && String(fields.branchReviewResult || '').startsWith('不合格')) return 'pending';
+  if (step.stepCode === 'STEP_11' && fields.committeePreReviewResult === '不同意发展') return 'pending';
   return requestedStatus;
 }
 
