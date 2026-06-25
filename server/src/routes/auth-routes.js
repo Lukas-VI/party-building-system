@@ -7,6 +7,7 @@ const { logAudit } = require('../services/audit-service');
 const { requireAuth, requirePermission } = require('../services/permission-service');
 const { listRegistrationRequests } = require('../services/applicant-service');
 const { ageFromIdNo, approveRegistrationRequest } = require('../services/registration-service');
+const { sendWechatRegistrationApprovalReminder } = require('../services/wechat-template-service');
 
 function registerAuthRoutes(app) {
 
@@ -54,7 +55,7 @@ function registerAuthRoutes(app) {
       if (age < 18) return fail(res, 400, '未满18周岁，不能提交入党申请');
 
       const user = await first(
-        'SELECT id, name, status FROM users WHERE username = :employeeNo',
+        'SELECT id, name, status, org_id AS orgId, branch_id AS branchId FROM users WHERE username = :employeeNo',
         { employeeNo: normalizedEmployeeNo },
       );
       if (!user) return fail(res, 400, '后台未找到预置人员信息');
@@ -71,6 +72,7 @@ function registerAuthRoutes(app) {
       );
       if (pendingRequest) return fail(res, 400, '已有待审核注册申请，请勿重复提交');
 
+      const createdAt = now();
       await query(
         `INSERT INTO registration_requests (request_no, user_id, name, id_no, employee_no, status, created_at)
          VALUES (:requestNo, :userId, :name, :idNo, :employeeNo, 'pending', :createdAt)`,
@@ -80,7 +82,7 @@ function registerAuthRoutes(app) {
           name: normalizedName,
           idNo: normalizedIdNo,
           employeeNo: normalizedEmployeeNo,
-          createdAt: now(),
+          createdAt,
         },
       );
       await query('UPDATE users SET password_hash = :passwordHash WHERE id = :userId', {
@@ -91,7 +93,18 @@ function registerAuthRoutes(app) {
         employeeNo: normalizedEmployeeNo,
         age,
       });
-      ok(res, true, '注册信息已提交，等待审核');
+      let templateMessage = null;
+      try {
+        templateMessage = await sendWechatRegistrationApprovalReminder({
+          name: normalizedName,
+          submittedAt: createdAt,
+          orgId: user.orgId,
+          branchId: user.branchId,
+        });
+      } catch (error) {
+        console.warn('[wechat] registration approval reminder failed:', error.message);
+      }
+      ok(res, { templateMessage }, '注册信息已提交，等待审核');
     } catch (error) {
       fail(res, 500, error.message);
     }

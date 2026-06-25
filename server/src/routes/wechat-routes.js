@@ -1,6 +1,7 @@
 const { env } = require('../env');
 const { query, first } = require('../db');
 const { ok, fail } = require('../lib/http');
+const { now } = require('../lib/utils');
 const { logAudit } = require('../services/audit-service');
 const { requireAuth, requirePermission } = require('../services/permission-service');
 const { signToken, getUserWithAuth } = require('../services/auth-service');
@@ -8,6 +9,7 @@ const {
   getActiveWechatBindingForTemplate,
   sendWechatBindSuccessTemplate,
   sendWechatUnbindSuccessTemplate,
+  sendWechatRegistrationApprovalReminder,
 } = require('../services/wechat-template-service');
 const {
   getWechatBindingByUserId,
@@ -233,6 +235,17 @@ function registerWechatRoutes(app) {
       const result = await sendWechatUnbindSuccessTemplate(binding);
       await logAudit('wechat_bindings', targetUserId, 'send_unbind_success_template', req.user.id, result);
       ok(res, result, '微信模板消息已发送');
+    } catch (error) {
+      fail(res, error.status || 500, error.message);
+    }
+  });
+
+  app.post('/api/wechat/template-test/registration-approval', requireAuth(), requirePermission('manage_orgs'), async (req, res) => {
+    try {
+      const { name = '测试用户', submittedAt = now(), orgId = req.user.orgId || null, branchId = req.user.branchId || null } = req.body || {};
+      const result = await sendWechatRegistrationApprovalReminder({ name, submittedAt, orgId, branchId });
+      await logAudit('wechat_bindings', name, 'send_registration_approval_template', req.user.id, result);
+      ok(res, result, '注册审批提醒模板已发送');
     } catch (error) {
       fail(res, error.status || 500, error.message);
     }

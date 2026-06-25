@@ -1,5 +1,5 @@
 const { env } = require('../env');
-const { first } = require('../db');
+const { first, query } = require('../db');
 const { now, errorWithStatus } = require('../lib/utils');
 
 let cachedAccessToken = null;
@@ -139,10 +139,65 @@ async function sendWechatUnbindSuccessTemplate(binding, unboundAt = now()) {
   });
 }
 
+async function listRegistrationApprovalReminderTargets({ orgId, branchId } = {}) {
+  return query(
+    `SELECT DISTINCT
+        wb.openid,
+        u.id AS userId,
+        u.username,
+        u.org_id AS orgId,
+        u.branch_id AS branchId
+     FROM users u
+     INNER JOIN user_roles ur ON ur.user_id = u.id
+     INNER JOIN roles r ON r.id = ur.role_id
+     INNER JOIN role_permissions rp ON rp.role_id = r.id AND rp.permission_id = 'approve_registration'
+     INNER JOIN wechat_bindings wb ON wb.user_id = u.id AND wb.status = 'active'
+     WHERE u.status = 'active'
+       AND (
+         r.scope_level = 'all'
+         OR (r.scope_level = 'org' AND u.org_id = :orgId)
+         OR (r.scope_level = 'branch' AND u.branch_id = :branchId)
+       )`,
+    { orgId: orgId || null, branchId: branchId || null },
+  );
+}
+
+async function sendWechatRegistrationApprovalReminder({ name, submittedAt = now(), orgId = null, branchId = null } = {}) {
+  if (!name) throw errorWithStatus('缺少注册申请人姓名', 400);
+  const targets = await listRegistrationApprovalReminderTargets({ orgId, branchId });
+  if (!targets.length) return { sent: 0, failed: 0, targets: [] };
+
+  const results = await Promise.allSettled(
+    targets.map((target) => sendWechatTemplateMessage({
+      openid: target.openid,
+      templateId: env.WECHAT_REGISTRATION_APPROVAL_TEMPLATE_ID,
+      url: 'https://havensky.cn/admin-desktop/',
+      data: buildTemplateData({
+        first: '用户注册审批提醒',
+        thing2: name,
+        time3: submittedAt,
+        remark: '请进入后台“审核审批”处理注册申请。',
+      }),
+    })),
+  );
+
+  return {
+    sent: results.filter((item) => item.status === 'fulfilled').length,
+    failed: results.filter((item) => item.status === 'rejected').length,
+    targets: targets.map((target, index) => ({
+      userId: target.userId,
+      username: target.username,
+      ok: results[index].status === 'fulfilled',
+      error: results[index].status === 'rejected' ? results[index].reason?.message : undefined,
+    })),
+  };
+}
+
 module.exports = {
   getWechatAccessToken,
   sendWechatTemplateMessage,
   sendWechatBindSuccessTemplate,
   sendWechatUnbindSuccessTemplate,
+  sendWechatRegistrationApprovalReminder,
   getActiveWechatBindingForTemplate,
 };
