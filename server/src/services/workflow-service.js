@@ -319,49 +319,57 @@ function validateRequiredBusinessFields(step, formData, action) {
 }
 
 async function notifyWorkflowSubmission(user, applicantId, step) {
-  const { notificationRecipientsForStep, createNotification } = require('./notification-service');
+  const { notificationRecipientsForStep, createWorkflowNotification } = require('./notification-service');
   const recipients = await notificationRecipientsForStep(step, applicantId, [user.id]);
+  const results = [];
   for (const userId of recipients) {
-    await createNotification(
+    results.push(await createWorkflowNotification({
       userId,
-      'task_submitted',
-      `${step.name}待处理`,
-      `${user.name}已提交“${step.name}”，请按流程要求及时处理。`,
-      step.stepCode,
-      'workflow',
-      applicantId,
-    );
+      type: 'task_submitted',
+      title: `${step.name}待处理`,
+      content: `${user.name}已提交“${step.name}”，请按流程要求及时处理。`,
+      relatedStepCode: step.stepCode,
+      relatedTargetId: applicantId,
+      stepName: step.name,
+      senderName: user.name,
+    }));
   }
+  return results;
 }
 
 async function notifyWorkflowReview(user, applicantId, workflow, step, nextStatus) {
-  const { notificationRecipientsForStep, createNotification } = require('./notification-service');
-  await createNotification(
-    applicantId,
-    'task_reviewed',
-    `${step.name}${nextStatus === 'approved' ? '已通过' : '不通过'}`,
-    nextStatus === 'approved' ? `“${step.name}”已审核通过，请关注下一步通知。` : `“${step.name}”已退回，请根据意见补充材料。`,
-    step.stepCode,
-    'workflow',
-    applicantId,
-  );
-  if (nextStatus !== 'approved') return;
+  const { notificationRecipientsForStep, createWorkflowNotification } = require('./notification-service');
+  const results = [
+    await createWorkflowNotification({
+      userId: applicantId,
+      type: 'task_reviewed',
+      title: `${step.name}${nextStatus === 'approved' ? '已通过' : '不通过'}`,
+      content: nextStatus === 'approved' ? `“${step.name}”已审核通过，请关注下一步通知。` : `“${step.name}”已退回，请根据意见补充材料。`,
+      relatedStepCode: step.stepCode,
+      relatedTargetId: applicantId,
+      stepName: step.name,
+      senderName: user.name,
+    }),
+  ];
+  if (nextStatus !== 'approved') return results;
   const nextStep = workflow.steps
     .filter((item) => isMvpStep(item) && Number(item.sortOrder || 0) > Number(step.sortOrder || 0))
     .sort((left, right) => Number(left.sortOrder || 0) - Number(right.sortOrder || 0))[0];
-  if (!nextStep) return;
+  if (!nextStep) return results;
   const recipients = await notificationRecipientsForStep(nextStep, applicantId, [user.id, applicantId]);
   for (const userId of recipients) {
-    await createNotification(
+    results.push(await createWorkflowNotification({
       userId,
-      'next_step_opened',
-      `${nextStep.name}已开放`,
-      `上一节点“${step.name}”已通过，请按要求办理“${nextStep.name}”。`,
-      nextStep.stepCode,
-      'workflow',
-      applicantId,
-    );
+      type: 'next_step_opened',
+      title: `${nextStep.name}已开放`,
+      content: `上一节点“${step.name}”已通过，请按要求办理“${nextStep.name}”。`,
+      relatedStepCode: nextStep.stepCode,
+      relatedTargetId: applicantId,
+      stepName: nextStep.name,
+      senderName: user.name,
+    }));
   }
+  return results;
 }
 
 async function submitWorkflowTask(user, applicantId, stepCode, payload = {}, auditAction = 'submit_step') {
@@ -395,8 +403,8 @@ async function submitWorkflowTask(user, applicantId, stepCode, payload = {}, aud
     },
   );
   await logAudit('workflow_step_records', step.id, auditAction, user.id, payload || {});
-  await notifyWorkflowSubmission(user, applicantId, step);
-  return { applicantId, stepCode: step.stepCode, status: 'reviewing' };
+  const notificationResults = await notifyWorkflowSubmission(user, applicantId, step);
+  return { applicantId, stepCode: step.stepCode, status: 'reviewing', notificationResults };
 }
 
 async function reviewWorkflowTask(user, applicantId, stepCode, payload = {}, auditAction = 'review_step') {
@@ -439,8 +447,8 @@ async function reviewWorkflowTask(user, applicantId, stepCode, payload = {}, aud
   );
   await advanceAfterReview(workflow, step, nextStatus, mergedFormData);
   await logAudit('workflow_step_records', step.id, auditAction, user.id, payload || {});
-  await notifyWorkflowReview(user, applicantId, workflow, step, nextStatus);
-  return { applicantId, stepCode: step.stepCode, status: nextStatus };
+  const notificationResults = await notifyWorkflowReview(user, applicantId, workflow, step, nextStatus);
+  return { applicantId, stepCode: step.stepCode, status: nextStatus, notificationResults };
 }
 
 async function resetWorkflowTaskStatus(user, applicantId, stepCode, payload = {}) {

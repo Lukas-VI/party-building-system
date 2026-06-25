@@ -5,6 +5,30 @@ const { now, errorWithStatus } = require('../lib/utils');
 let cachedAccessToken = null;
 let cachedAccessTokenExpiresAt = 0;
 
+const WORKFLOW_TEMPLATE_STEP_LABELS = {
+  STEP_01: '递交入党申请书',
+  STEP_02: '党组织派人谈话',
+  STEP_03: '确定入党积极分子',
+  STEP_04: '指定培养联系人',
+  STEP_05: '培养教育考察',
+  STEP_06: '确定发展对象',
+  STEP_07: '确定入党介绍人',
+  STEP_08: '进行政治审查',
+  STEP_09: '开展短期集中培训',
+  STEP_10: '支部委员会审查',
+  STEP_11: '上级党委预审',
+  STEP_12: '填写《入党志愿书》',
+  STEP_13: '支部大会讨论-预备',
+  STEP_14: '上级党委派人谈话',
+  STEP_15: '上级党委审批-预备',
+  STEP_16: '预备党员入党宣誓',
+  STEP_17: '编入党支部和党小组',
+  STEP_18: '继续教育考察',
+  STEP_19: '提出转正申请',
+  STEP_20: '支部大会讨论-转正',
+  STEP_21: '上级党委审批-转正',
+};
+
 function assertWechatServiceConfigured() {
   if (!env.WECHAT_SERVICE_APP_ID || !env.WECHAT_SERVICE_APP_SECRET) {
     throw errorWithStatus('微信服务号配置未完成', 501);
@@ -193,11 +217,33 @@ async function sendWechatRegistrationApprovalReminder({ name, submittedAt = now(
   };
 }
 
+async function sendWechatWorkflowApprovalTemplate({ userId, stepCode, stepName, senderName, sentAt = now(), notificationId = null } = {}) {
+  if (!userId) throw errorWithStatus('缺少接收用户', 400);
+  if (!stepCode) throw errorWithStatus('缺少流程节点', 400);
+  const binding = await getActiveWechatBindingForTemplate(userId);
+  if (!binding) return { skipped: true, reason: '该用户未绑定微信' };
+
+  return sendWechatTemplateMessage({
+    openid: binding.openid,
+    templateId: env.WECHAT_WORKFLOW_APPROVAL_TEMPLATE_ID,
+    url: `https://havensky.cn/wx-app/#/messages${notificationId ? `?notificationId=${encodeURIComponent(notificationId)}` : ''}`,
+    data: buildTemplateData({
+      first: '单据审批通知',
+      const4: WORKFLOW_TEMPLATE_STEP_LABELS[stepCode] || stepName || stepCode,
+      thing6: senderName || '系统通知',
+      time5: sentAt,
+      remark: '点击进入系统消息中心查看详情。',
+    }),
+  });
+}
+
 module.exports = {
   getWechatAccessToken,
   sendWechatTemplateMessage,
   sendWechatBindSuccessTemplate,
   sendWechatUnbindSuccessTemplate,
   sendWechatRegistrationApprovalReminder,
+  sendWechatWorkflowApprovalTemplate,
+  WORKFLOW_TEMPLATE_STEP_LABELS,
   getActiveWechatBindingForTemplate,
 };

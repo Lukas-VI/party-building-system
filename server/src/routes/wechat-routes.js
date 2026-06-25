@@ -5,6 +5,7 @@ const { now } = require('../lib/utils');
 const { logAudit } = require('../services/audit-service');
 const { requireAuth, requirePermission } = require('../services/permission-service');
 const { signToken, getUserWithAuth } = require('../services/auth-service');
+const { createWorkflowNotification } = require('../services/notification-service');
 const {
   getActiveWechatBindingForTemplate,
   sendWechatBindSuccessTemplate,
@@ -246,6 +247,32 @@ function registerWechatRoutes(app) {
       const result = await sendWechatRegistrationApprovalReminder({ name, submittedAt, orgId, branchId });
       await logAudit('wechat_bindings', name, 'send_registration_approval_template', req.user.id, result);
       ok(res, result, '注册审批提醒模板已发送');
+    } catch (error) {
+      fail(res, error.status || 500, error.message);
+    }
+  });
+
+  app.post('/api/wechat/template-test/workflow-approval', requireAuth(), requirePermission('manage_orgs'), async (req, res) => {
+    try {
+      const {
+        userId = req.user.id,
+        applicantId = req.user.id,
+        stepCode = 'STEP_01',
+        stepName = '递交入党申请书',
+        senderName = req.user.name || '系统通知',
+      } = req.body || {};
+      const result = await createWorkflowNotification({
+        userId,
+        type: 'workflow_approval_test',
+        title: `${stepName}审批通知测试`,
+        content: `${senderName}发起了“${stepName}”审批通知测试。`,
+        relatedStepCode: stepCode,
+        relatedTargetId: applicantId,
+        stepName,
+        senderName,
+      });
+      await logAudit('wechat_bindings', userId, 'send_workflow_approval_template', req.user.id, result);
+      ok(res, result, '节点审批通知模板已发送');
     } catch (error) {
       fail(res, error.status || 500, error.message);
     }

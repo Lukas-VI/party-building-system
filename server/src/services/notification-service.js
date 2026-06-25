@@ -1,5 +1,6 @@
 const { query, first } = require('../db');
 const { now, parseJson, errorWithStatus } = require('../lib/utils');
+const { sendWechatWorkflowApprovalTemplate } = require('./wechat-template-service');
 
 function configuredResponsibleRoles(step) {
   if (step.taskMeta?.responsibleRoles?.length) return step.taskMeta.responsibleRoles;
@@ -100,6 +101,40 @@ async function createNotification(userId, type, title, content, relatedStepCode 
   return inserted.insertId || null;
 }
 
+async function createWorkflowNotification({
+  userId,
+  type,
+  title,
+  content,
+  relatedStepCode,
+  relatedTargetId,
+  stepName,
+  senderName,
+} = {}) {
+  const notificationId = await createNotification(
+    userId,
+    type,
+    title,
+    content,
+    relatedStepCode,
+    'workflow',
+    relatedTargetId,
+  );
+  let templateMessage = null;
+  try {
+    templateMessage = await sendWechatWorkflowApprovalTemplate({
+      userId,
+      stepCode: relatedStepCode,
+      stepName,
+      senderName,
+      notificationId,
+    });
+  } catch (error) {
+    console.warn('[wechat] workflow approval template failed:', error.message);
+  }
+  return { notificationId, templateMessage };
+}
+
 async function getUserScopeById(userId) {
   return first(
     `SELECT id, org_id AS orgId, branch_id AS branchId
@@ -146,6 +181,7 @@ module.exports = {
   getNotificationForUser,
   markNotificationRead,
   createNotification,
+  createWorkflowNotification,
   getUserScopeById,
   roleMatchesApplicantScope,
   notificationRecipientsForStep,
