@@ -831,6 +831,25 @@ textarea:focus-visible {
   background: #f4efe8;
 }
 
+.pdf-preview-pages {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.file-preview-image {
+  display: block;
+  width: 100%;
+  border-radius: 12px;
+  background: #f4efe8;
+  box-shadow: inset 0 0 0 1px rgba(143, 21, 21, 0.08);
+}
+
+.preview-actions {
+  padding-top: 10px;
+  text-align: right;
+}
+
 .message-item {
   width: 100%;
   border: 0;

@@ -72,7 +72,7 @@ async function handleLogout() {
 async function beginWechatOauth() {
   oauthLoading.value = true;
   try {
-    const result = await startWechatOauth('/wx-app/#/profile');
+    const result = await startWechatOauth('/wx-app/#/profile', 'snsapi_userinfo');
     window.location.href = result.authorizeUrl;
   } finally {
     oauthLoading.value = false;

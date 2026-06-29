@@ -167,6 +167,7 @@ async function ensureAdditiveMigrations() {
   `);
 
   await raw(`ALTER TABLE wechat_bindings MODIFY COLUMN session_key_encrypted LONGTEXT NULL`);
+  await raw(`DELETE FROM wechat_bindings WHERE status <> 'active'`);
 
   await query(
     `INSERT INTO system_settings

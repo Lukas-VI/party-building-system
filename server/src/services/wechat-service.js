@@ -115,8 +115,8 @@ function conflict(message) {
 
 async function bindWechatUser(userId, openid, unionid, sessionKey = null, nickname = null, avatar = null) {
   const [openidBinding, userBinding] = await Promise.all([
-    getWechatBindingByOpenidAny(openid),
-    getWechatBindingByUserIdAny(userId),
+    getWechatBindingByOpenid(openid),
+    getWechatBindingByUserId(userId),
   ]);
 
   if (openidBinding && openidBinding.userId !== userId) {
@@ -127,7 +127,14 @@ async function bindWechatUser(userId, openid, unionid, sessionKey = null, nickna
     throw conflict('该账号已绑定微信');
   }
 
-  if (userBinding) {
+  await query(
+    `DELETE FROM wechat_bindings
+     WHERE status <> 'active' AND (user_id = :userId OR openid = :openid)`,
+    { userId, openid },
+  );
+
+  const bindingToUpdate = userBinding || (openidBinding?.userId === userId ? openidBinding : null);
+  if (bindingToUpdate) {
     const encrypted = encryptSensitive(sessionKey || null);
     await query(
       `UPDATE wechat_bindings
@@ -141,7 +148,7 @@ async function bindWechatUser(userId, openid, unionid, sessionKey = null, nickna
            last_login_at = :boundAt
        WHERE id = :id`,
       {
-        id: userBinding.id,
+        id: bindingToUpdate.id,
         openid,
         unionid: unionid || null,
         sessionKeyEncrypted: encrypted,

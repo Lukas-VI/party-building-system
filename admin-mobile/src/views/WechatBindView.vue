@@ -11,6 +11,8 @@ const loading = ref(false);
 
 const openid = route.query.openid || '';
 const unionid = route.query.unionid || '';
+const nickname = route.query.nickname || '';
+const avatar = route.query.avatar || '';
 
 const form = reactive({
   username: '',
@@ -37,6 +39,8 @@ async function submit() {
     const result = await bindWechatOauth({
       openid,
       unionid,
+      nickname,
+      avatar,
       username: form.username.trim(),
       password: form.password,
     });

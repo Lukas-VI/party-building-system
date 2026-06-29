@@ -35,7 +35,7 @@ const inWechat = computed(() => /micromessenger/i.test(window.navigator.userAgen
 async function startWechatLogin() {
   oauthLoading.value = true;
   try {
-    const result = await startWechatOauth('/wx-app/');
+    const result = await startWechatOauth('/wx-app/', 'snsapi_userinfo');
     window.location.href = result.authorizeUrl;
   } finally {
     oauthLoading.value = false;

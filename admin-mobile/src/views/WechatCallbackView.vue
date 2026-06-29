@@ -42,7 +42,12 @@ const errorMessage = ref('');
     if (result.needBind) {
        if (isLoggedIn.value) {
          try {
-           await autoBindWechat({ openid: result.openid, unionid: result.unionid });
+           await autoBindWechat({
+             openid: result.openid,
+             unionid: result.unionid,
+             nickname: result.nickname,
+             avatar: result.avatar,
+           });
            showSuccessToast('微信绑定成功');
            router.replace('/workbench');
          } catch (err) {
@@ -51,9 +56,11 @@ const errorMessage = ref('');
          }
          return;
        }
-       const params = new URLSearchParams();
+      const params = new URLSearchParams();
       params.set('openid', result.openid);
       if (result.unionid) params.set('unionid', result.unionid);
+      if (result.nickname) params.set('nickname', result.nickname);
+      if (result.avatar) params.set('avatar', result.avatar);
       router.replace(`/wechat-bind?${params.toString()}`);
        return;
      }

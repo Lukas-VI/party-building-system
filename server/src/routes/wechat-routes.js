@@ -38,8 +38,7 @@ function registerWechatRoutes(app) {
       const binding = await getActiveWechatBindingForTemplate(req.user.id);
       const unboundAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
       await query(
-        `UPDATE wechat_bindings
-         SET status = 'inactive'
+        `DELETE FROM wechat_bindings
          WHERE user_id = :userId AND status = 'active'`,
         { userId: req.user.id },
       );
@@ -82,6 +81,39 @@ function registerWechatRoutes(app) {
     }
   });
 
+  async function fetchWechatOauthToken(code) {
+    const tokenUrl =
+      `https://api.weixin.qq.com/sns/oauth2/access_token?appid=${encodeURIComponent(env.WECHAT_SERVICE_APP_ID)}` +
+      `&secret=${encodeURIComponent(env.WECHAT_SERVICE_APP_SECRET)}` +
+      `&code=${encodeURIComponent(code)}&grant_type=authorization_code`;
+    const response = await fetch(tokenUrl);
+    const data = await response.json();
+    if (!response.ok || data.errcode) {
+      const error = new Error(data.errmsg || '微信网页授权失败');
+      error.status = 400;
+      throw error;
+    }
+    return data;
+  }
+
+  async function fetchWechatOauthProfile(tokenData) {
+    if (!String(tokenData.scope || '').split(',').includes('snsapi_userinfo')) return {};
+    const response = await fetch(
+      `https://api.weixin.qq.com/sns/userinfo?access_token=${encodeURIComponent(tokenData.access_token)}` +
+      `&openid=${encodeURIComponent(tokenData.openid)}&lang=zh_CN`,
+    );
+    const profile = await response.json();
+    if (!response.ok || profile.errcode) {
+      console.warn('[wechat] oauth userinfo failed:', profile.errmsg || response.statusText);
+      return {};
+    }
+    return {
+      nickname: profile.nickname || '',
+      avatar: profile.headimgurl || '',
+      unionid: profile.unionid || tokenData.unionid || '',
+    };
+  }
+
   app.get('/api/wechat/oauth/callback', async (req, res) => {
     try {
       if (!env.WECHAT_SERVICE_APP_ID || !env.WECHAT_SERVICE_APP_SECRET) {
@@ -89,15 +121,8 @@ function registerWechatRoutes(app) {
       }
       const { code, state = '' } = req.query || {};
       if (!code) return fail(res, 400, '缺少微信授权 code');
-      const tokenUrl =
-        `https://api.weixin.qq.com/sns/oauth2/access_token?appid=${encodeURIComponent(env.WECHAT_SERVICE_APP_ID)}` +
-        `&secret=${encodeURIComponent(env.WECHAT_SERVICE_APP_SECRET)}` +
-        `&code=${encodeURIComponent(code)}&grant_type=authorization_code`;
-      const response = await fetch(tokenUrl);
-      const data = await response.json();
-      if (!response.ok || data.errcode) {
-        return fail(res, 400, data.errmsg || '微信网页授权失败');
-      }
+      const data = await fetchWechatOauthToken(code);
+      const profile = await fetchWechatOauthProfile(data);
       let redirectPath = env.WECHAT_DEFAULT_REDIRECT_PATH;
       try {
         redirectPath = JSON.parse(Buffer.from(String(state), 'base64url').toString('utf8')).redirectPath || redirectPath;
@@ -106,7 +131,9 @@ function registerWechatRoutes(app) {
       }
       ok(res, {
         openid: data.openid,
-        unionid: data.unionid || '',
+        unionid: profile.unionid || data.unionid || '',
+        nickname: profile.nickname || '',
+        avatar: profile.avatar || '',
         redirectPath,
       });
     } catch (error) {
@@ -123,17 +150,11 @@ function registerWechatRoutes(app) {
       const { code, state = '' } = req.body || {};
       if (!code) return fail(res, 400, '缺少微信授权 code');
 
-      const tokenUrl =
-        `https://api.weixin.qq.com/sns/oauth2/access_token?appid=${encodeURIComponent(env.WECHAT_SERVICE_APP_ID)}` +
-        `&secret=${encodeURIComponent(env.WECHAT_SERVICE_APP_SECRET)}` +
-        `&code=${encodeURIComponent(code)}&grant_type=authorization_code`;
-      const response = await fetch(tokenUrl);
-      const data = await response.json();
-      if (!response.ok || data.errcode) {
-        return fail(res, 400, data.errmsg || '微信网页授权失败');
-      }
+      const data = await fetchWechatOauthToken(code);
+      const profile = await fetchWechatOauthProfile(data);
 
-      const { openid, unionid } = data;
+      const { openid } = data;
+      const unionid = profile.unionid || data.unionid || '';
 
       const binding = await getWechatBindingByOpenid(openid);
       if (binding) {
@@ -146,7 +167,7 @@ function registerWechatRoutes(app) {
         return ok(res, { token, expiresAt, user });
       }
 
-      ok(res, { openid, unionid: unionid || '', needBind: true });
+      ok(res, { openid, unionid, nickname: profile.nickname || '', avatar: profile.avatar || '', needBind: true });
     } catch (error) {
       fail(res, error.status || 500, error.message);
     }
@@ -155,7 +176,7 @@ function registerWechatRoutes(app) {
   // ── 微信绑定已有账号 ──
   app.post('/api/wechat/oauth/bind', async (req, res) => {
     try {
-      const { openid, unionid, username, password } = req.body || {};
+      const { openid, unionid, nickname, avatar, username, password } = req.body || {};
       if (!openid) return fail(res, 400, '缺少微信 openid');
       if (!username || !password) return fail(res, 400, '请输入账号和密码');
 
@@ -178,7 +199,7 @@ function registerWechatRoutes(app) {
         );
       }
 
-      await bindWechatUser(userRow.id, openid, unionid || null);
+      await bindWechatUser(userRow.id, openid, unionid || null, null, nickname || null, avatar || null);
       await logAudit('wechat_bindings', openid, 'bind_wechat', userRow.id, { username });
       let templateMessage = null;
       try {
@@ -200,10 +221,10 @@ function registerWechatRoutes(app) {
   // 已登录用户自动绑定微信（不需账密，使用当前 JWT）
   app.post('/api/wechat/oauth/bind-authed', requireAuth(), async (req, res) => {
     try {
-      const { openid, unionid } = req.body || {};
+      const { openid, unionid, nickname, avatar } = req.body || {};
       if (!openid) return fail(res, 400, '缺少微信 openid');
 
-      await bindWechatUser(req.user.id, openid, unionid || null);
+      await bindWechatUser(req.user.id, openid, unionid || null, null, nickname || null, avatar || null);
       await logAudit('wechat_bindings', openid, 'bind_wechat_authed', req.user.id, {});
       let templateMessage = null;
       try {

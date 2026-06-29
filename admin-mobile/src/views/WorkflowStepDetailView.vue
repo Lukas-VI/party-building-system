@@ -2,8 +2,12 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { showConfirmDialog, showFailToast, showSuccessToast } from 'vant';
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
 import { deleteMobileFile, fetchMobileWorkflow, markMessageRead, requestMobileTaskChange, resetMobileTaskStatus, rescheduleMobileTask, reviewMobileTask, submitMobileTask, uploadMobileFile } from '../api';
 import { sessionState } from '../session';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 const route = useRoute();
 const router = useRouter();
@@ -13,6 +17,11 @@ const workflow = ref(null);
 const materialUploads = ref([]);
 const operationSection = ref(null);
 const previewFile = ref(null);
+const pdfPreview = reactive({
+  loading: false,
+  error: '',
+  pages: [],
+});
 const showRescheduleForm = ref(false);
 let refreshTimer = null;
 const form = reactive({
@@ -83,8 +92,73 @@ function normalizeBusinessValue(field, value) {
   return value || '';
 }
 
-function previewAttachment(item) {
-  previewFile.value = previewFile.value?.fileUrl === item.fileUrl ? null : item;
+function isImageAttachment(item) {
+  const value = `${item?.mimeType || ''} ${item?.fileName || ''}`.toLowerCase();
+  return value.includes('image/') || /\.(png|jpe?g|gif|webp)$/i.test(value);
+}
+
+function isPdfAttachment(item) {
+  const value = `${item?.mimeType || ''} ${item?.fileName || ''}`.toLowerCase();
+  return value.includes('application/pdf') || /\.pdf$/i.test(value);
+}
+
+function resetPreviewState() {
+  pdfPreview.loading = false;
+  pdfPreview.error = '';
+  pdfPreview.pages = [];
+}
+
+function closePreview() {
+  previewFile.value = null;
+  resetPreviewState();
+}
+
+async function renderPdfPreview(item) {
+  pdfPreview.loading = true;
+  pdfPreview.error = '';
+  pdfPreview.pages = [];
+  try {
+    const loadingTask = pdfjsLib.getDocument({
+      url: item.fileUrl,
+      withCredentials: false,
+    });
+    const pdf = await loadingTask.promise;
+    const pageCount = Math.min(pdf.numPages, 8);
+    const pages = [];
+    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const viewport = page.getViewport({ scale: 1.25 });
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      await page.render({ canvasContext: context, viewport }).promise;
+      pages.push({
+        pageNumber,
+        imageUrl: canvas.toDataURL('image/png'),
+      });
+    }
+    pdfPreview.pages = pages;
+    if (pdf.numPages > pageCount) {
+      pdfPreview.error = `已预览前 ${pageCount} 页，完整文件请下载查看。`;
+    }
+  } catch (error) {
+    pdfPreview.error = error.message || 'PDF 预览失败，请下载后查看。';
+  } finally {
+    pdfPreview.loading = false;
+  }
+}
+
+async function previewAttachment(item) {
+  if (previewFile.value?.fileUrl === item.fileUrl) {
+    closePreview();
+    return;
+  }
+  previewFile.value = item;
+  resetPreviewState();
+  if (isPdfAttachment(item)) {
+    await renderPdfPreview(item);
+  }
 }
 
 async function scrollToOperation() {
@@ -390,9 +464,26 @@ onBeforeUnmount(() => {
           <div class="pdf-preview-card" v-if="previewFile?.materialTag === material.tag">
             <div class="table-row__head">
               <div class="table-row__title">{{ previewFile.fileName }}</div>
-              <button class="text-link text-link--button" type="button" @click="previewFile = null">收起</button>
+              <button class="text-link text-link--button" type="button" @click="closePreview">收起</button>
             </div>
-            <iframe class="pdf-preview-frame" :src="previewFile.fileUrl" title="PDF预览"></iframe>
+            <img v-if="isImageAttachment(previewFile)" class="file-preview-image" :src="previewFile.fileUrl" alt="材料预览" />
+            <template v-else-if="isPdfAttachment(previewFile)">
+              <div class="empty-state empty-state--compact" v-if="pdfPreview.loading">正在生成 PDF 预览...</div>
+              <div class="pdf-preview-pages" v-if="pdfPreview.pages.length">
+                <img
+                  v-for="page in pdfPreview.pages"
+                  :key="page.pageNumber"
+                  class="file-preview-image"
+                  :src="page.imageUrl"
+                  :alt="`PDF 第 ${page.pageNumber} 页`"
+                />
+              </div>
+              <div class="empty-state empty-state--compact" v-if="pdfPreview.error">{{ pdfPreview.error }}</div>
+            </template>
+            <div class="empty-state empty-state--compact" v-else>当前文件类型暂不支持在线预览，请下载后查看。</div>
+            <div class="preview-actions">
+              <a class="text-link" :href="previewFile.fileUrl" target="_blank" rel="noreferrer">下载原文件</a>
+            </div>
           </div>
           <div class="empty-state empty-state--compact" v-if="!attachmentsByTag(material.tag).length">暂未提交该项材料。</div>
         </div>
