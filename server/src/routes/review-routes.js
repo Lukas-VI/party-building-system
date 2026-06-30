@@ -24,11 +24,14 @@ function registerReviewRoutes(app) {
               u.name AS applicantName,
               u.username AS applicantUsername,
               o.name AS orgName,
-              b.name AS branchName
+              b.name AS branchName,
+              ap.occupation,
+              ap.profile_json AS profileJson
            FROM workflow_step_records r
            INNER JOIN workflow_instances i ON i.id = r.instance_id
            INNER JOIN workflow_step_definitions d ON d.step_code = r.step_code
            INNER JOIN users u ON u.id = i.applicant_id
+           LEFT JOIN applicant_profiles ap ON ap.user_id = u.id
            LEFT JOIN org_units o ON o.id = u.org_id
            LEFT JOIN branches b ON b.id = u.branch_id
            WHERE r.status IN ('pending', 'reviewing')
@@ -48,12 +51,15 @@ function registerReviewRoutes(app) {
             if (detail.taskType === 'submit' && row.status === 'pending') return false;
             return true;
           })
-          .map(({ responsibleRolesJson, allowedRolesJson, requiresReviewerAction, materialSchemaJson, ...row }) => {
+          .map(({ responsibleRolesJson, allowedRolesJson, requiresReviewerAction, materialSchemaJson, profileJson, ...row }) => {
             const responsibleRoles = parseJson(responsibleRolesJson || allowedRolesJson, []);
             const detail = getStepDetail(row.stepCode, responsibleRoles);
+            const profile = parseJson(profileJson, {});
             return {
               ...row,
+              majorDirection: profile.major || profile.specialty || profile.direction || profile.profession || row.occupation || '',
               taskType: detail.taskType || 'notice',
+              taskSummary: detail.taskSummary || '',
               businessFields: detail.businessFields || [],
             };
           }),

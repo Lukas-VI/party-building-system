@@ -649,7 +649,7 @@ function App() {
                   </div>
                 </Card>
                 <CurrentWorkflowStepCard step={getCurrentWorkflowStep(workflow)} />
-                <Card title="25 步流程记录">
+                <Card title="流程节点记录">
                   <div className="table-scroll">
                   <table className="data-table">
                     <thead>
@@ -736,9 +736,11 @@ function App() {
                     <th>支部</th>
                     <th>姓名</th>
                     <th>学号/工号</th>
+                    <th>专业/方向</th>
                     <th>步骤序号</th>
                     <th>当前状态</th>
                     <th>截止时间</th>
+                    <th>流程主要内容</th>
                     <th>操作</th>
                   </tr>
                 </thead>
@@ -749,9 +751,11 @@ function App() {
                       <td>{item.branchName}</td>
                       <td><strong className="review-applicant-name">{item.applicantName}</strong></td>
                       <td>{item.applicantUsername}</td>
+                      <td>{item.majorDirection || '-'}</td>
                       <td>第 {item.sortOrder} 步</td>
                       <td>{item.sortOrder}-{item.stepName}</td>
                       <td>{item.deadline || '-'}</td>
+                      <td>{item.taskSummary || '-'}</td>
                       <td>
                         <Space>
                           <Button size="small" variant="outline" onClick={() => {
@@ -765,7 +769,7 @@ function App() {
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan="8">当前没有待审核流程。</td>
+                      <td colSpan="10">当前没有待审核流程。</td>
                     </tr>
                   )}
                 </tbody>

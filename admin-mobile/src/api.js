@@ -125,7 +125,7 @@ export function fetchMobileWorkflow(workflowId = 'me') {
   return http.get(`/mobile/workflows/${workflowId}`);
 }
 
-// 任务类动作统一按 submit / review / reschedule 区分，便于后端继续细化 25 步
+// 任务类动作统一按 submit / review / reschedule 区分，便于后端继续细化流程节点
 export function submitMobileTask(workflowId, taskId, payload) {
   return http.post(`/mobile/workflows/${workflowId}/tasks/${taskId}/submit`, payload);
 }
