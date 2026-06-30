@@ -9,6 +9,14 @@ function registerReviewRoutes(app) {
   app.get('/api/reviews/pending', requireAuth(), async (req, res) => {
     try {
       const scope = scopeClause(req.user, 'u');
+      const orgIds = String(req.query?.orgIds || '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+      const orgFilterParams = Object.fromEntries(orgIds.map((orgId, index) => [`orgId${index}`, orgId]));
+      const orgFilterSql = orgIds.length
+        ? `AND u.org_id IN (${orgIds.map((_, index) => `:orgId${index}`).join(', ')})`
+        : '';
       const rows = await query(
         `SELECT
               i.applicant_id AS applicantId,
@@ -36,8 +44,12 @@ function registerReviewRoutes(app) {
            LEFT JOIN branches b ON b.id = u.branch_id
            WHERE r.status IN ('pending', 'reviewing')
            ${scope.sql}
+           ${orgFilterSql}
            ORDER BY r.deadline ASC, d.sort_order ASC`,
-        scope.params,
+        {
+          ...scope.params,
+          ...orgFilterParams,
+        },
       );
       const roleIds = (req.user.roles || []).map((item) => item.id);
       ok(

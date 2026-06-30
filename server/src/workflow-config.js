@@ -149,10 +149,7 @@ const LEGACY_STEP_DETAIL_OVERRIDES = {
     materialSchema: [
       { key: 'politicalReviewScan', label: '政审扫描件', tag: 'political-review', accept: ['pdf', 'image'], required: true },
     ],
-    businessFields: [
-      { key: 'politicalReviewResult', label: '政审结论', type: 'select', required: true, owner: 'reviewer', options: ['合格', '需补充', '不合格'] },
-      { key: 'politicalReviewComment', label: '政审说明', type: 'textarea', required: false, owner: 'reviewer' },
-    ],
+    businessFields: [],
     timeRule: { recordFields: ['submittedAt', 'reviewedAt'] },
     taskSummary: '组织员上传政审扫描件并填写政审结论',
   },
@@ -185,8 +182,6 @@ const LEGACY_STEP_DETAIL_OVERRIDES = {
     materialSchema: [],
     businessFields: [
       { key: 'branchMeetingAt', label: '支委会会议时间', type: 'datetime', required: true, owner: 'reviewer' },
-      { key: 'branchReviewResult', label: '支委会审查结果', type: 'select', required: true, owner: 'reviewer', options: ['合格，同意上报党委预审', '不合格，暂缓发展'] },
-      { key: 'branchReviewComment', label: '讨论结果说明', type: 'textarea', required: true, owner: 'reviewer' },
     ],
     timeRule: { recordFields: ['reviewedAt'] },
     taskSummary: '通知支部审核结果',
@@ -201,7 +196,6 @@ const LEGACY_STEP_DETAIL_OVERRIDES = {
     materialSchema: [],
     businessFields: [
       { key: 'committeePreReviewAt', label: '党委预审时间', type: 'datetime', required: true, owner: 'reviewer' },
-      { key: 'committeePreReviewResult', label: '预审结果', type: 'select', required: true, owner: 'reviewer', options: ['同意发展', '不同意发展'] },
       { key: 'committeePreReviewOpinion', label: '基层党委审核意见', type: 'textarea', required: true, owner: 'reviewer' },
     ],
     timeRule: { recordFields: ['submittedAt', 'reviewedAt'] },

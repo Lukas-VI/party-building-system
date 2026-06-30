@@ -19,35 +19,44 @@ const scopeText = computed(() => {
   return [user.orgName, user.branchName].filter(Boolean).join(' ') || '全校范围';
 });
 
-const quickEntries = computed(() => [
-  {
+const quickEntries = computed(() => {
+  const entries = [{
     key: 'profile',
     title: '个人资料',
     desc: '查看并修改基础信息、本人经历与联系方式',
     action: () => router.push({ name: 'profile-edit' }),
-  },
-  {
+  }];
+  if (sessionState.user?.primaryRole !== 'applicant') {
+    entries.push({
+      key: 'all-data',
+      title: '查看全校数据',
+      desc: '进入申请人台账总览，查看权限范围内人员与流程节点',
+      action: () => router.push({ name: 'applicants' }),
+    });
+  }
+  entries.push({
     key: 'bind',
     title: binding.value.bound ? '微信解绑' : '微信绑定',
     desc: binding.value.bound ? '已绑定，点击解除微信关联' : '未绑定，可发起微信网页授权',
     action: binding.value.bound ? handleUnbind : beginWechatOauth,
-  },
-  {
+  });
+  entries.push({
     key: 'desktop',
     title: 'PC 后台',
     desc: '打开桌面端后台，处理台账、统计和复杂配置',
     action: () => {
       window.location.href = DESKTOP_ADMIN_URL;
     },
-  },
-  {
+  });
+  entries.push({
     key: 'logout',
     title: '退出登录',
     desc: '退出当前账号，返回登录页',
     danger: true,
     action: handleLogout,
-  },
-]);
+  });
+  return entries;
+});
 
 async function loadProfileSummary() {
   loading.value = true;

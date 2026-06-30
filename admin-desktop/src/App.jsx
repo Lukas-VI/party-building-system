@@ -66,6 +66,7 @@ function App() {
   const [applicantDetail, setApplicantDetail] = useState(null);
   const [workflow, setWorkflow] = useState(null);
   const [workflowReviews, setWorkflowReviews] = useState([]);
+  const [reviewFilters, setReviewFilters] = useState({ orgIds: [] });
   const [registrationRequests, setRegistrationRequests] = useState([]);
   const [orgs, setOrgs] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -201,14 +202,7 @@ function App() {
         setApplicantDetail(detailRes);
         setWorkflow(workflowRes);
       }
-      if (view === 'reviews') {
-        const workflowResult = await api('/reviews/pending');
-        const registrationResult = user.permissions?.some((item) => item.id === 'approve_registration')
-          ? await api('/auth/registration-requests')
-          : [];
-        setWorkflowReviews(workflowResult);
-        setRegistrationRequests(registrationResult);
-      }
+      if (view === 'reviews') await refreshReviews(reviewFilters);
       if (view === 'organizations') {
         const staffQuery = new URLSearchParams(staffFilters).toString();
         const [orgRes, branchRes, userRes, staffRes] = await Promise.all([
@@ -238,6 +232,19 @@ function App() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function refreshReviews(nextFilters = reviewFilters) {
+    const query = new URLSearchParams();
+    if (nextFilters.orgIds?.length) query.set('orgIds', nextFilters.orgIds.join(','));
+    const [workflowResult, registrationResult, orgResult] = await Promise.all([
+      api(`/reviews/pending${query.toString() ? `?${query.toString()}` : ''}`),
+      user.permissions?.some((item) => item.id === 'approve_registration') ? api('/auth/registration-requests') : Promise.resolve([]),
+      orgs.length ? Promise.resolve(orgs) : api('/orgs'),
+    ]);
+    setWorkflowReviews(workflowResult);
+    setRegistrationRequests(registrationResult);
+    setOrgs(orgResult);
   }
 
   async function handleLogin(form) {
@@ -728,6 +735,27 @@ function App() {
               </Card>
             )}
             <Card title="待审核流程事项">
+              <div className="filter-grid" style={{ marginBottom: 16 }}>
+                <Select
+                  value={reviewFilters.orgIds}
+                  onChange={(value) => setReviewFilters({ orgIds: Array.isArray(value) ? value : [] })}
+                  options={orgs.map((item) => ({ label: item.name, value: item.id }))}
+                  multiple
+                  clearable
+                  placeholder="单位多选"
+                />
+                <Button theme="danger" onClick={() => refreshReviews(reviewFilters)}>筛选</Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const emptyFilters = { orgIds: [] };
+                    setReviewFilters(emptyFilters);
+                    refreshReviews(emptyFilters);
+                  }}
+                >
+                  重置
+                </Button>
+              </div>
               <div className="table-scroll">
               <table className="data-table">
                 <thead>

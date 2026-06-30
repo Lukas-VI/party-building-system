@@ -258,9 +258,6 @@ function resolveReviewOutcome(step, requestedStatus, formData = {}) {
   if (requestedStatus !== 'approved') return requestedStatus;
   const fields = formData.businessFields || {};
   if (step.stepCode === 'STEP_03' && fields.activistDecision === '暂不确定') return 'pending';
-  if (step.stepCode === 'STEP_09' && fields.politicalReviewResult === '不合格') return 'pending';
-  if (step.stepCode === 'STEP_11' && String(fields.branchReviewResult || '').startsWith('不合格')) return 'pending';
-  if (step.stepCode === 'STEP_12' && fields.committeePreReviewResult === '不同意发展') return 'pending';
   return requestedStatus;
 }
 
