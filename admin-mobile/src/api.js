@@ -112,6 +112,16 @@ export function markMessageRead(messageId) {
   return http.post(`/mobile/messages/${messageId}/read`);
 }
 
+export function fetchNotificationRecipients(params = {}) {
+  return http.get('/notifications/recipients', { params });
+}
+
+export function sendCustomNotification(payload) {
+  return http.post('/notifications/custom', payload, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
 // 资料与流程接口
 export function fetchMobileProfile() {
   return http.get('/mobile/profile');

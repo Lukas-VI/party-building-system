@@ -1,6 +1,7 @@
 const { query, first } = require('../db');
 const { now, parseJson, errorWithStatus } = require('../lib/utils');
 const { sendWechatWorkflowApprovalTemplate } = require('./wechat-template-service');
+const { canAccessScopedRecord } = require('./permission-service');
 
 function configuredResponsibleRoles(step) {
   if (step.taskMeta?.responsibleRoles?.length) return step.taskMeta.responsibleRoles;
@@ -34,13 +35,48 @@ function normalizeNotification(item) {
   const targetRoute = targetWorkflowId
     ? `/workflow/${targetWorkflowId}/steps/${item.relatedStepCode || ''}?notificationId=${item.id}`
     : '';
+  const statusTemplate = notificationStatusTemplate(item);
   return {
     ...item,
     isUnread: item.status === 'unread',
     targetWorkflowId,
     targetRoute,
     targetLabel: item.relatedStepCode ? `流程节点 ${item.relatedStepCode}` : '消息详情',
+    statusLabel: statusTemplate.label,
+    statusTone: statusTemplate.tone,
+    hideTargetDetails: statusTemplate.hideTargetDetails,
+    detailRows: buildNotificationDetailRows(item, statusTemplate),
   };
+}
+
+function notificationStatusTemplate(item) {
+  const title = item.title || '';
+  const content = item.content || '';
+  if (item.type === 'task_reviewed' && /不通过|退回|驳回|补充/.test(`${title}${content}`)) {
+    return { label: '未办理成功', tone: 'danger', hideTargetDetails: true };
+  }
+  if (item.type === 'task_reviewed' || item.type === 'next_step_opened') {
+    return { label: '已办理成功', tone: 'success', hideTargetDetails: false };
+  }
+  if (item.status === 'unread') {
+    return { label: '待查看', tone: 'danger', hideTargetDetails: false };
+  }
+  return { label: '已查看', tone: 'default', hideTargetDetails: false };
+}
+
+function buildNotificationDetailRows(item, statusTemplate) {
+  const rows = [
+    { label: '状态', value: statusTemplate.label, tone: statusTemplate.tone },
+    { label: '时间', value: item.createdAt || '-' },
+  ];
+  if (!statusTemplate.hideTargetDetails && item.relatedStepCode) {
+    rows.push({ label: '节点', value: item.relatedStepCode });
+  }
+  if (!statusTemplate.hideTargetDetails && item.relatedTargetType) {
+    rows.push({ label: '关联', value: item.relatedTargetType === 'workflow' ? '流程消息' : item.relatedTargetType });
+  }
+  rows.push({ label: '说明', value: item.content || '-' });
+  return rows;
 }
 
 async function getNotificationForUser(user, notificationId) {
@@ -121,18 +157,93 @@ async function createWorkflowNotification({
     relatedTargetId,
   );
   let templateMessage = null;
-  try {
-    templateMessage = await sendWechatWorkflowApprovalTemplate({
-      userId,
-      stepCode: relatedStepCode,
-      stepName,
-      senderName,
-      notificationId,
-    });
-  } catch (error) {
-    console.warn('[wechat] workflow approval template failed:', error.message);
+  if (relatedStepCode) {
+    try {
+      templateMessage = await sendWechatWorkflowApprovalTemplate({
+        userId,
+        stepCode: relatedStepCode,
+        stepName,
+        senderName,
+        notificationId,
+      });
+    } catch (error) {
+      console.warn('[wechat] workflow approval template failed:', error.message);
+    }
   }
   return { notificationId, templateMessage };
+}
+
+async function listNotificationRecipients(user, { keyword = '', orgId = '', branchId = '', limit = 200 } = {}) {
+  const where = ['u.status = \'active\''];
+  const params = { limit: Math.min(Number(limit) || 200, 500) };
+  if (keyword) {
+    where.push('(u.username LIKE :keyword OR u.name LIKE :keyword OR o.name LIKE :keyword OR b.name LIKE :keyword)');
+    params.keyword = `%${keyword}%`;
+  }
+  if (orgId) {
+    where.push('u.org_id = :orgId');
+    params.orgId = orgId;
+  }
+  if (branchId) {
+    where.push('u.branch_id = :branchId');
+    params.branchId = branchId;
+  }
+  const rows = await query(
+    `SELECT
+        u.id,
+        u.username,
+        u.name,
+        u.org_id AS orgId,
+        u.branch_id AS branchId,
+        o.name AS orgName,
+        b.name AS branchName,
+        GROUP_CONCAT(DISTINCT r.label ORDER BY r.label SEPARATOR '、') AS roleNames
+     FROM users u
+     LEFT JOIN org_units o ON o.id = u.org_id
+     LEFT JOIN branches b ON b.id = u.branch_id
+     LEFT JOIN user_roles ur ON ur.user_id = u.id
+     LEFT JOIN roles r ON r.id = ur.role_id
+     WHERE ${where.join(' AND ')}
+     GROUP BY u.id, u.username, u.name, u.org_id, u.branch_id, o.name, b.name
+     ORDER BY o.name ASC, b.name ASC, u.name ASC
+     LIMIT ${params.limit}`,
+    params,
+  );
+  return rows.filter((row) => canAccessScopedRecord(user, row));
+}
+
+async function sendCustomNotification(user, payload = {}) {
+  const title = String(payload.title || '').trim();
+  const content = String(payload.content || '').trim();
+  const recipientUserIds = Array.from(new Set((payload.recipientUserIds || []).map((item) => String(item).trim()).filter(Boolean)));
+  if (!title) throw errorWithStatus('请输入通知标题', 400);
+  if (!content) throw errorWithStatus('请输入通知内容', 400);
+  if (!recipientUserIds.length) throw errorWithStatus('请选择通知人员', 400);
+
+  const allowedRecipients = await listNotificationRecipients(user, { limit: 500 });
+  const allowedIds = new Set(allowedRecipients.map((item) => item.id));
+  const targetIds = recipientUserIds.filter((userId) => allowedIds.has(userId));
+  if (!targetIds.length) throw errorWithStatus('没有可通知的人员', 403);
+
+  const results = [];
+  for (const userId of targetIds) {
+    results.push(await createWorkflowNotification({
+      userId,
+      type: 'custom_notice',
+      title,
+      content: `${user.name || '系统通知'}：${content}`,
+      relatedStepCode: payload.relatedStepCode || null,
+      relatedTargetId: payload.relatedTargetId || null,
+      stepName: payload.stepName || payload.relatedStepCode || '自定义通知',
+      senderName: user.name || '系统通知',
+    }));
+  }
+  return {
+    requested: recipientUserIds.length,
+    sent: results.length,
+    skipped: recipientUserIds.length - results.length,
+    results,
+  };
 }
 
 async function getUserScopeById(userId) {
@@ -182,6 +293,8 @@ module.exports = {
   markNotificationRead,
   createNotification,
   createWorkflowNotification,
+  listNotificationRecipients,
+  sendCustomNotification,
   getUserScopeById,
   roleMatchesApplicantScope,
   notificationRecipientsForStep,

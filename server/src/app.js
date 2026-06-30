@@ -14,6 +14,7 @@ const { registerOrgRoutes } = require('./routes/org-routes');
 const { registerReviewRoutes } = require('./routes/review-routes');
 const { registerStatsRoutes } = require('./routes/stats-routes');
 const { registerExportRoutes } = require('./routes/export-routes');
+const { registerNotificationRoutes } = require('./routes/notification-routes');
 
 /**
  * Build the Express application and wire middleware plus route groups.
@@ -58,6 +59,7 @@ function createApp() {
   registerWorkflowRoutes(app);
   registerOrgRoutes(app);
   registerReviewRoutes(app);
+  registerNotificationRoutes(app);
   registerStatsRoutes(app);
   registerExportRoutes(app);
 

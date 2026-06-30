@@ -58,6 +58,12 @@ onMounted(async () => {
               <span class="tag-pair">新消息</span>
             </div>
             <div class="panel-note__text">{{ item.content }}</div>
+            <div class="message-detail-grid" v-if="item.detailRows?.length">
+              <div class="message-detail-row" v-for="row in item.detailRows" :key="`${item.id}-${row.label}`">
+                <span>{{ row.label }}</span>
+                <strong :class="row.tone === 'danger' ? 'is-danger-text' : ''">{{ row.value }}</strong>
+              </div>
+            </div>
             <div class="step-item__meta">{{ item.createdAt }} <span v-if="item.targetLabel">· {{ item.targetLabel }}</span></div>
           </button>
           <button class="message-fold" v-if="readMessages.length" type="button" @click="showReadMessages = !showReadMessages">
@@ -70,6 +76,12 @@ onMounted(async () => {
                 <span class="tag-pair">已读</span>
               </div>
               <div class="panel-note__text">{{ item.content }}</div>
+              <div class="message-detail-grid" v-if="item.detailRows?.length">
+                <div class="message-detail-row" v-for="row in item.detailRows" :key="`${item.id}-${row.label}`">
+                  <span>{{ row.label }}</span>
+                  <strong :class="row.tone === 'danger' ? 'is-danger-text' : ''">{{ row.value }}</strong>
+                </div>
+              </div>
               <div class="step-item__meta">{{ item.createdAt }} <span v-if="item.targetLabel">· {{ item.targetLabel }}</span></div>
             </button>
           </template>

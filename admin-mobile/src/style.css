@@ -929,6 +929,32 @@ textarea:focus-visible {
   opacity: 0.72;
 }
 
+.message-detail-grid {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 247, 237, 0.78);
+}
+
+.message-detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.message-detail-row strong {
+  color: var(--text);
+  text-align: right;
+}
+
+.is-danger-text {
+  color: var(--accent-strong) !important;
+}
+
 .message-fold {
   width: 100%;
   margin-top: 10px;

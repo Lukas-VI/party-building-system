@@ -67,6 +67,8 @@ function App() {
   const [workflow, setWorkflow] = useState(null);
   const [workflowReviews, setWorkflowReviews] = useState([]);
   const [reviewFilters, setReviewFilters] = useState({ orgIds: [] });
+  const [notificationRecipients, setNotificationRecipients] = useState([]);
+  const [customNoticeForm, setCustomNoticeForm] = useState({ recipientUserIds: [], title: '', content: '', relatedStepCode: '', relatedTargetId: '', stepName: '' });
   const [registrationRequests, setRegistrationRequests] = useState([]);
   const [orgs, setOrgs] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -245,6 +247,9 @@ function App() {
     setWorkflowReviews(workflowResult);
     setRegistrationRequests(registrationResult);
     setOrgs(orgResult);
+    if (user.permissions?.some((item) => ['review_steps', 'manage_orgs', 'approve_registration'].includes(item.id))) {
+      setNotificationRecipients(await api('/notifications/recipients'));
+    }
   }
 
   async function handleLogin(form) {
@@ -315,6 +320,31 @@ function App() {
       });
       MessagePlugin.success(status === 'approved' ? '已通过' : '已退回');
       refreshForView('reviews');
+    } catch (error) {
+      MessagePlugin.error(error.message);
+    }
+  }
+
+  function fillNoticeForReview(item) {
+    setCustomNoticeForm({
+      recipientUserIds: [item.applicantId],
+      title: `${item.stepName}办理通知`,
+      content: `请关注“${item.stepName}”节点办理要求，及时进入系统查看消息。`,
+      relatedStepCode: item.stepCode,
+      relatedTargetId: item.applicantId,
+      stepName: item.stepName,
+    });
+    MessagePlugin.info('已带入申请人和当前节点，可编辑后发送');
+  }
+
+  async function sendCustomNotice() {
+    try {
+      const result = await api('/notifications/custom', {
+        method: 'POST',
+        body: JSON.stringify(customNoticeForm),
+      });
+      MessagePlugin.success(`通知已发送 ${result.sent} 人`);
+      setCustomNoticeForm((prev) => ({ ...prev, recipientUserIds: [], title: '', content: '' }));
     } catch (error) {
       MessagePlugin.error(error.message);
     }
@@ -735,6 +765,34 @@ function App() {
               </Card>
             )}
             <Card title="待审核流程事项">
+              <div className="notice-compose">
+                <div>
+                  <div className="notice-compose__title">发送自定义通知</div>
+                  <div className="section-note">可多选通知人员；如带入流程节点，会同步写入站内消息并尝试发送服务号模板消息。</div>
+                </div>
+                <div className="filter-grid">
+                  <Select
+                    value={customNoticeForm.recipientUserIds}
+                    onChange={(value) => setCustomNoticeForm((prev) => ({ ...prev, recipientUserIds: Array.isArray(value) ? value : [] }))}
+                    options={notificationRecipients.map((item) => ({
+                      label: `${item.name}（${item.username}｜${item.orgName || '-'}｜${item.roleNames || '-'}）`,
+                      value: item.id,
+                    }))}
+                    multiple
+                    filterable
+                    clearable
+                    placeholder="多选通知人员"
+                  />
+                  <Input value={customNoticeForm.title} placeholder="通知标题" onChange={(value) => setCustomNoticeForm((prev) => ({ ...prev, title: value }))} />
+                  <textarea
+                    className="inline-input notice-compose__textarea"
+                    value={customNoticeForm.content}
+                    placeholder="通知内容"
+                    onChange={(event) => setCustomNoticeForm((prev) => ({ ...prev, content: event.target.value }))}
+                  />
+                  <Button theme="danger" onClick={sendCustomNotice}>发送通知</Button>
+                </div>
+              </div>
               <div className="filter-grid" style={{ marginBottom: 16 }}>
                 <Select
                   value={reviewFilters.orgIds}
@@ -792,6 +850,7 @@ function App() {
                           }}>查看流程</Button>
                             <Button size="small" theme="success" onClick={() => doReview(item, 'approved')}>{item.taskType === 'notice' ? '确认同意' : '确认通过'}</Button>
                             <Button size="small" theme="danger" variant="outline" onClick={() => doReview(item, 'rejected')}>{item.taskType === 'notice' ? '确认不同意' : '不通过退回'}</Button>
+                            <Button size="small" variant="outline" onClick={() => fillNoticeForReview(item)}>通知TA</Button>
                         </Space>
                       </td>
                     </tr>

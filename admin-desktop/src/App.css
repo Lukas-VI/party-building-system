@@ -182,6 +182,26 @@ body {
   gap: 18px;
 }
 
+.notice-compose {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg-soft);
+}
+
+.notice-compose__title {
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.notice-compose__textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
 .setting-row {
   display: flex;
   align-items: center;
