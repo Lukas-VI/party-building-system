@@ -59,6 +59,45 @@ const WORKFLOW_STEP_NAMES = [
   '上级党委审批转正',
 ];
 
+const OFFICIAL_ORG_UNITS = [
+  ['org-math', '数学与统计学院党委'],
+  ['org-physics', '物理学院党委'],
+  ['org-chemistry', '化学化工学院党委'],
+  ['org-life-science', '生命科学学院党委'],
+  ['org-environment', '环境学院党委'],
+  ['org-fisheries', '水产学院党委'],
+  ['org-optical-engineering', '光电工程学院党委'],
+  ['org-materials', '材料科学与工程学院党委'],
+  ['org-computer-information', '计算机与信息工程学院党委'],
+  ['org-software', '软件学院党委'],
+  ['org-pharmacy', '药学院党委'],
+  ['org-foreign-languages', '外国语学院党委'],
+  ['org-politics-public-admin', '政治与公共管理学院党委'],
+  ['org-business', '商学院党委'],
+  ['org-literature', '文学院党委'],
+  ['org-education', '教育学部党委'],
+  ['org-history-culture', '历史文化学院党委'],
+  ['org-geography-tourism', '地理与旅游学院党委'],
+  ['org-law', '法学院党委'],
+  ['org-sociology', '社会学院党委'],
+  ['org-marxism', '马克思主义学院党委'],
+  ['org-sports', '体育学院党委'],
+  ['org-music-dance', '音乐舞蹈学院党委'],
+  ['org-fine-arts', '美术学院党委'],
+  ['org-international-education', '国际教育学院党委'],
+  ['org-junfu-college', '俊甫书院党总支'],
+  ['org-perpignan-institute', '佩皮尼昂国际理工学院党总支'],
+  ['org-administration', '机关党委'],
+  ['org-logistics', '后勤党委'],
+  ['org-retired-staff', '离退休职工党委'],
+  ['org-library-archives-info', '图书与档案信息中心党总支'],
+  ['org-hospital', '医院党总支'],
+  ['org-assets-company', '资产经营有限公司党总支'],
+  ['org-continuing-education', '继续教育学院党总支'],
+  ['org-teacher-education', '教师教育学院党总支'],
+  ['org-affiliated-high-school', '附属中学党委'],
+];
+
 function workflowPhaseByOrder(sortOrder) {
   if (sortOrder <= 9) return '培养考察';
   if (sortOrder <= 17) return '接收预备党员';
@@ -330,6 +369,18 @@ async function ensureRegistrationCandidateSeed() {
   );
 }
 
+async function ensureOfficialOrgUnits() {
+  if (!(await tableExists('org_units'))) return;
+  for (const [id, name] of OFFICIAL_ORG_UNITS) {
+    await query(
+      `INSERT INTO org_units (id, name)
+       VALUES (:id, :name)
+       ON DUPLICATE KEY UPDATE name = VALUES(name)`,
+      { id, name },
+    );
+  }
+}
+
 /**
  * Initialize schema, seed data and additive backfills needed for local operation.
  */
@@ -340,6 +391,7 @@ async function ensureSeedData() {
   }
   const role = await first('SELECT id FROM roles LIMIT 1');
   if (role) {
+    await ensureOfficialOrgUnits();
     await ensureUserProfiles();
     await ensureRefactoredWorkflowSteps();
     await ensureWorkflowDefinitionDetails();
@@ -388,11 +440,7 @@ async function ensureSeedData() {
     }
   }
 
-  const orgs = [
-    ['org-literature', '文学院党委'],
-    ['org-math', '数学与统计学院党委'],
-    ['org-physics', '物理学院党委']
-  ];
+  const orgs = OFFICIAL_ORG_UNITS;
   for (const [id, name] of orgs) {
     await query('INSERT INTO org_units (id, name) VALUES (:id, :name)', { id, name });
   }
