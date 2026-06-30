@@ -111,7 +111,14 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="list-stack">
-    <section class="section-card" v-if="workbench?.currentUser">
+    <section class="section-card workbench-hero-card" v-if="workbench?.currentUser">
+      <div class="party-hero-art" aria-hidden="true">
+        <div class="party-hero-art__flag"></div>
+        <div class="party-hero-art__emblem"></div>
+        <div class="party-hero-art__wall">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
       <div class="section-card__hd">
         <div class="section-card__title">{{ workbench.currentUser.name }}</div>
         <div class="section-card__desc">{{ workbench.currentUser.roleLabel }} · {{ workbench.currentUser.scopeLabel }}</div>
