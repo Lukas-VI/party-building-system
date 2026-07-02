@@ -52,6 +52,7 @@ function registerReviewRoutes(app) {
         },
       );
       const roleIds = (req.user.roles || []).map((item) => item.id);
+      const hasHighPrivilege = ['superAdmin', 'orgDept'].includes(req.user.primaryRole);
       ok(
         res,
         rows
@@ -59,7 +60,7 @@ function registerReviewRoutes(app) {
             const responsibleRoles = parseJson(row.responsibleRolesJson || row.allowedRolesJson, []);
             const detail = getStepDetail(row.stepCode, responsibleRoles);
             if (!Number(detail.requiresReviewerAction ?? row.requiresReviewerAction ?? 0)) return false;
-            if (!responsibleRoles.some((roleId) => roleIds.includes(roleId))) return false;
+            if (!hasHighPrivilege && !responsibleRoles.some((roleId) => roleIds.includes(roleId))) return false;
             if (detail.taskType === 'submit' && row.status === 'pending') return false;
             return true;
           })
