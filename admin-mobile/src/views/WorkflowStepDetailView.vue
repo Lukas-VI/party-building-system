@@ -386,13 +386,13 @@ onBeforeUnmount(() => {
       </div>
       <div class="section-card__bd" v-if="currentTask">
         <div class="workflow-card workflow-card--static status-card" :class="currentTask.reviewClassName">
-          <van-icon :name="currentTask.reviewIcon" class="status-card__mark" />
+          
           <div class="status-card__content">
             <div class="status-card__main">
               <div class="step-order">{{ currentTask.orderLabel }}</div>
               <div class="workflow-card__title">{{ currentTask.stepName }}</div>
               <span class="status-chip" :class="currentTask.reviewClassName">
-                <van-icon :name="currentTask.reviewIcon" class="status-chip__icon" size="12" />{{ currentTask.reviewLabel }}
+                {{ currentTask.reviewLabel }}
               </span>
             </div>
           </div>
@@ -583,3 +583,4 @@ onBeforeUnmount(() => {
     </section>
   </div>
 </template>
+

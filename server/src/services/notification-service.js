@@ -30,6 +30,26 @@ async function listNotifications(user, limit = 20) {
   return rows.map((item) => normalizeNotification(item));
 }
 
+
+function buildNotificationScope(user) {
+  const primary = user.primaryRole || '';
+  if (primary === 'applicant') {
+    return { sql: 'WHERE n.user_id = :userId', params: { userId: user.id } };
+  }
+  if (primary === 'branchSecretary' && user.branchId) {
+    return {
+      sql: 'LEFT JOIN users scope_u ON n.user_id = scope_u.id WHERE scope_u.branch_id = :branchId',
+      params: { branchId: user.branchId },
+    };
+  }
+  if (['secretary', 'deputySecretary', 'organizer'].includes(primary) && user.orgId) {
+    return {
+      sql: 'LEFT JOIN users scope_u ON n.user_id = scope_u.id WHERE scope_u.org_id = :orgId',
+      params: { orgId: user.orgId },
+    };
+  }
+  return { sql: 'WHERE 1=1', params: {} };
+}
 function normalizeNotification(item) {
   const targetWorkflowId = item.relatedTargetType === 'workflow' ? String(item.relatedTargetId || '').replace(/^wf-/, '') : '';
   const targetRoute = targetWorkflowId
@@ -227,16 +247,27 @@ async function sendCustomNotification(user, payload = {}) {
 
   const results = [];
   for (const userId of targetIds) {
-    results.push(await createWorkflowNotification({
+    const notificationId = await createNotification(
       userId,
-      type: 'custom_notice',
+      'custom_notice',
       title,
-      content: `${user.name || '系统通知'}：${content}`,
-      relatedStepCode: payload.relatedStepCode || null,
-      relatedTargetId: payload.relatedTargetId || null,
-      stepName: payload.stepName || payload.relatedStepCode || '自定义通知',
-      senderName: user.name || '系统通知',
-    }));
+      `${user.name || '系统通知'}：${content}`,
+      payload.relatedStepCode || null,
+      'workflow',
+      payload.relatedTargetId || null,
+    );
+    let templateMessage = null;
+    try {
+      templateMessage = await sendWechatRegistrationApprovalReminder({
+        name: payload.recipientName || title,
+        submittedAt: now(),
+        orgId: null,
+        branchId: null,
+      });
+    } catch (error) {
+      console.warn('[wechat] reg approval template failed:', error.message);
+    }
+    results.push({ notificationId, templateMessage });
   }
   return {
     requested: recipientUserIds.length,
@@ -299,3 +330,5 @@ module.exports = {
   roleMatchesApplicantScope,
   notificationRecipientsForStep,
 };
+
+

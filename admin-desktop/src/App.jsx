@@ -771,18 +771,48 @@ function App() {
                   <div className="section-note">可多选通知人员；如带入流程节点，会同步写入站内消息并尝试发送服务号模板消息。</div>
                 </div>
                 <div className="filter-grid">
-                  <Select
-                    value={customNoticeForm.recipientUserIds}
-                    onChange={(value) => setCustomNoticeForm((prev) => ({ ...prev, recipientUserIds: Array.isArray(value) ? value : [] }))}
-                    options={notificationRecipients.map((item) => ({
-                      label: `${item.name}（${item.username}｜${item.orgName || '-'}｜${item.roleNames || '-'}）`,
-                      value: item.id,
-                    }))}
-                    multiple
-                    filterable
-                    clearable
-                    placeholder="多选通知人员"
-                  />
+                  <div className="notice-recipients">
+                    <div className="notice-recipients__label">通知人员</div>
+                    {(() => {
+                      const grouped = {};
+                      notificationRecipients.forEach((item) => {
+                        const orgKey = item.orgName || '未分配单位';
+                        const branchKey = item.branchName || '未分配支部';
+                        if (!grouped[orgKey]) grouped[orgKey] = {};
+                        if (!grouped[orgKey][branchKey]) grouped[orgKey][branchKey] = [];
+                        grouped[orgKey][branchKey].push(item);
+                      });
+                      return Object.keys(grouped).map((orgName) => (
+                        <details key={orgName} className="notice-group">
+                          <summary className="notice-group__org">{orgName} ({grouped[orgName] && Object.values(grouped[orgName]).reduce((s, arr) => s + arr.length, 0)}人)</summary>
+                          {Object.keys(grouped[orgName]).map((branchName) => (
+                            <details key={branchName} className="notice-group notice-group--branch">
+                              <summary className="notice-group__branch">{branchName} ({grouped[orgName][branchName].length}人)</summary>
+                              <div className="notice-group__members">
+                                {grouped[orgName][branchName].map((item) => (
+                                  <label key={item.id} className="notice-member">
+                                    <input
+                                      type="checkbox"
+                                      checked={customNoticeForm.recipientUserIds.includes(item.id)}
+                                      onChange={(event) => {
+                                        setCustomNoticeForm((prev) => {
+                                          const updated = event.target.checked
+                                            ? [...prev.recipientUserIds, item.id]
+                                            : prev.recipientUserIds.filter((id) => id !== item.id);
+                                          return { ...prev, recipientUserIds: updated };
+                                        });
+                                      }}
+                                    />
+                                    <span>{item.name}（{item.username}）</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </details>
+                          ))}
+                        </details>
+                      ));
+                    })()}
+                  </div>
                   <Input value={customNoticeForm.title} placeholder="通知标题" onChange={(value) => setCustomNoticeForm((prev) => ({ ...prev, title: value }))} />
                   <textarea
                     className="inline-input notice-compose__textarea"
@@ -1353,3 +1383,4 @@ function ConfigRow({ item, onSave }) {
 }
 
 export default App;
+
