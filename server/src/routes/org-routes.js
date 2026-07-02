@@ -178,6 +178,8 @@ function registerOrgRoutes(app) {
             u.branch_id AS branchId,
             o.name AS orgName,
             b.name AS branchName,
+            wb.openid AS wechatOpenid,
+            CASE WHEN wb.id IS NOT NULL THEN '已绑定' ELSE '未绑定' END AS wechatBindStatus,
             GROUP_CONCAT(r.id ORDER BY ur.id SEPARATOR ',') AS roleIds,
             SUBSTRING_INDEX(GROUP_CONCAT(r.id ORDER BY ur.id SEPARATOR ','), ',', 1) AS roleId,
             GROUP_CONCAT(r.label ORDER BY ur.id SEPARATOR ' / ') AS roleLabels
@@ -186,6 +188,7 @@ function registerOrgRoutes(app) {
          LEFT JOIN branches b ON b.id = u.branch_id
          LEFT JOIN user_roles ur ON ur.user_id = u.id
          LEFT JOIN roles r ON r.id = ur.role_id
+         LEFT JOIN wechat_bindings wb ON wb.user_id = u.id AND wb.status = 'active'
          ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
          GROUP BY u.id, u.username, u.name, u.status, u.org_id, u.branch_id, o.name, b.name
          ORDER BY u.username ASC`,
