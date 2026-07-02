@@ -112,13 +112,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="list-stack">
     <section class="section-card workbench-hero-card" v-if="workbench?.currentUser">
-      <div class="party-hero-art" aria-hidden="true">
-        <div class="party-hero-art__flag"></div>
-        <div class="party-hero-art__emblem"></div>
-        <div class="party-hero-art__wall">
-          <span></span><span></span><span></span><span></span><span></span>
-        </div>
-      </div>
+
       <div class="section-card__hd">
         <div class="section-card__title">{{ workbench.currentUser.name }}</div>
         <div class="section-card__desc">{{ workbench.currentUser.roleLabel }} · {{ workbench.currentUser.scopeLabel }}</div>
@@ -154,13 +148,13 @@ onBeforeUnmount(() => {
       <div class="section-card__bd">
         <div class="table-like" v-if="todoItems.length">
           <button v-for="item in todoItems" :key="`${item.workflowId}-${item.taskId}`" type="button" class="workflow-card status-card" :class="cardClass(item)" @click="openTask(item)">
-            <van-icon :name="cardIcon(item)" class="status-card__mark" />
+            
             <div class="status-card__content">
               <div class="status-card__main">
                 <div class="step-order">{{ item.orderLabel || '待办' }}</div>
                 <div class="workflow-card__title">{{ item.stepName }}</div>
                 <span class="status-chip" :class="cardClass(item)">
-                  <van-icon :name="cardIcon(item)" class="status-chip__icon" size="12" />{{ cardLabel(item) }}
+                  {{ cardLabel(item) }}
                 </span>
               </div>
             </div>
@@ -238,3 +232,4 @@ onBeforeUnmount(() => {
     </section>
   </div>
 </template>
+
