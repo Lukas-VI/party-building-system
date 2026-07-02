@@ -258,14 +258,16 @@ async function sendCustomNotification(user, payload = {}) {
     );
     let templateMessage = null;
     try {
-      templateMessage = await sendWechatRegistrationApprovalReminder({
-        name: payload.recipientName || title,
-        submittedAt: now(),
-        orgId: null,
-        branchId: null,
+      templateMessage = await sendWechatWorkflowApprovalTemplate({
+        userId,
+        stepCode: payload.relatedStepCode || 'CUSTOM_NOTICE',
+        stepName: payload.stepName || title,
+        senderName: user.name || '系统通知',
+        sentAt: now(),
+        notificationId,
       });
     } catch (error) {
-      console.warn('[wechat] reg approval template failed:', error.message);
+      console.warn('[wechat] workflow approval template failed:', error.message);
     }
     results.push({ notificationId, templateMessage });
   }
@@ -330,5 +332,6 @@ module.exports = {
   roleMatchesApplicantScope,
   notificationRecipientsForStep,
 };
+
 
 

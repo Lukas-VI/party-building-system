@@ -772,45 +772,96 @@ function App() {
                 </div>
                 <div className="filter-grid">
                   <div className="notice-recipients">
-                    <div className="notice-recipients__label">通知人员</div>
+                    <div className="notice-recipients__label">通知人员 <span className="step-item__meta">点击单位/支部名可全选/取消</span></div>
+                    <div className="notice-recipients__search">
+                      <input
+                        className="inline-input"
+                        type="text"
+                        placeholder="搜索姓名或学号..."
+                        onChange={(event) => {
+                          setCustomNoticeForm((prev) => ({ ...prev, _searchKeyword: event.target.value }));
+                        }}
+                      />
+                    </div>
                     {(() => {
                       const grouped = {};
-                      notificationRecipients.forEach((item) => {
-                        const orgKey = item.orgName || '未分配单位';
-                        const branchKey = item.branchName || '未分配支部';
+                      const keyword = (customNoticeForm._searchKeyword || "").trim();
+                      const filtered = keyword
+                        ? notificationRecipients.filter((item) =>
+                            (item.name || "").includes(keyword) || (item.username || "").includes(keyword)
+                          )
+                        : notificationRecipients;
+                      filtered.forEach((item) => {
+                        const orgKey = item.orgName || "未分配单位";
+                        const branchKey = item.branchName || "未分配支部";
                         if (!grouped[orgKey]) grouped[orgKey] = {};
                         if (!grouped[orgKey][branchKey]) grouped[orgKey][branchKey] = [];
                         grouped[orgKey][branchKey].push(item);
                       });
-                      return Object.keys(grouped).map((orgName) => (
-                        <details key={orgName} className="notice-group">
-                          <summary className="notice-group__org">{orgName} ({grouped[orgName] && Object.values(grouped[orgName]).reduce((s, arr) => s + arr.length, 0)}人)</summary>
-                          {Object.keys(grouped[orgName]).map((branchName) => (
-                            <details key={branchName} className="notice-group notice-group--branch">
-                              <summary className="notice-group__branch">{branchName} ({grouped[orgName][branchName].length}人)</summary>
-                              <div className="notice-group__members">
-                                {grouped[orgName][branchName].map((item) => (
-                                  <label key={item.id} className="notice-member">
-                                    <input
-                                      type="checkbox"
-                                      checked={customNoticeForm.recipientUserIds.includes(item.id)}
-                                      onChange={(event) => {
-                                        setCustomNoticeForm((prev) => {
-                                          const updated = event.target.checked
-                                            ? [...prev.recipientUserIds, item.id]
-                                            : prev.recipientUserIds.filter((id) => id !== item.id);
-                                          return { ...prev, recipientUserIds: updated };
-                                        });
-                                      }}
-                                    />
-                                    <span>{item.name}（{item.username}）</span>
-                                  </label>
-                                ))}
-                              </div>
-                            </details>
-                          ))}
-                        </details>
-                      ));
+                      return Object.keys(grouped).map((orgName) => {
+                        const orgItems = grouped[orgName];
+                        const orgAllIds = Object.values(orgItems).flat().map((item) => item.id);
+                        const orgAllSelected = orgAllIds.every((id) => customNoticeForm.recipientUserIds.includes(id));
+                        return (
+                          <details key={orgName} className="notice-group" open>
+                            <summary className="notice-group__org" onClick={(event) => {
+                              event.preventDefault();
+                              setCustomNoticeForm((prev) => {
+                                const existing = new Set(prev.recipientUserIds);
+                                const allChosen = orgAllIds.every((id) => existing.has(id));
+                                const updated = allChosen
+                                  ? prev.recipientUserIds.filter((id) => !orgAllIds.includes(id))
+                                  : [...new Set([...prev.recipientUserIds, ...orgAllIds])];
+                                return { ...prev, recipientUserIds: updated };
+                              });
+                            }}>
+                              <input type="checkbox" checked={orgAllSelected} readOnly onClick={(event) => event.stopPropagation()} />
+                              <span>{orgName} ({orgAllIds.length}人)</span>
+                            </summary>
+                            {Object.keys(orgItems).map((branchName) => {
+                              const branchIds = orgItems[branchName].map((item) => item.id);
+                              const branchSelected = branchIds.every((id) => customNoticeForm.recipientUserIds.includes(id));
+                              return (
+                                <details key={branchName} className="notice-group notice-group--branch" open>
+                                  <summary className="notice-group__branch" onClick={(event) => {
+                                    event.preventDefault();
+                                    setCustomNoticeForm((prev) => {
+                                      const existing = new Set(prev.recipientUserIds);
+                                      const allChosen = branchIds.every((id) => existing.has(id));
+                                      const updated = allChosen
+                                        ? prev.recipientUserIds.filter((id) => !branchIds.includes(id))
+                                        : [...new Set([...prev.recipientUserIds, ...branchIds])];
+                                      return { ...prev, recipientUserIds: updated };
+                                    });
+                                  }}>
+                                    <input type="checkbox" checked={branchSelected} readOnly onClick={(event) => event.stopPropagation()} />
+                                    <span>{branchName} ({branchIds.length}人)</span>
+                                  </summary>
+                                  <div className="notice-group__members">
+                                    {orgItems[branchName].map((item) => (
+                                      <label key={item.id} className="notice-member">
+                                        <input
+                                          type="checkbox"
+                                          checked={customNoticeForm.recipientUserIds.includes(item.id)}
+                                          onChange={(event) => {
+                                            setCustomNoticeForm((prev) => {
+                                              const updated = event.target.checked
+                                                ? [...prev.recipientUserIds, item.id]
+                                                : prev.recipientUserIds.filter((id) => id !== item.id);
+                                              return { ...prev, recipientUserIds: updated };
+                                            });
+                                          }}
+                                        />
+                                        <span>{item.name}（{item.username}）</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </details>
+                              );
+                            })}
+                          </details>
+                        );
+                      });
                     })()}
                   </div>
                   <Input value={customNoticeForm.title} placeholder="通知标题" onChange={(value) => setCustomNoticeForm((prev) => ({ ...prev, title: value }))} />
