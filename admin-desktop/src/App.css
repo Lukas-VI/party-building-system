@@ -841,3 +841,65 @@ body {
 .notice-floating-member input[type="checkbox"] {
   accent-color: var(--accent);
 }
+
+
+/* Modal overlay for delete confirm */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-dialog {
+  background: var(--bg-panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.2);
+  max-width: 480px;
+  width: 90%;
+  padding: 24px;
+}
+
+.modal-dialog__title {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 16px;
+  color: var(--text-main);
+}
+
+.modal-dialog__body {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-subtle);
+}
+
+.modal-dialog__body p {
+  margin: 8px 0;
+}
+
+.modal-dialog__body .field-block {
+  margin-top: 14px;
+}
+
+.modal-dialog__body .field-label {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--text-main);
+}
+
+.modal-dialog__body .inline-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modal-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}

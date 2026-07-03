@@ -294,6 +294,33 @@ function registerOrgRoutes(app) {
     }
   });
 
+  app.delete('/api/orgs/staff/:id', requireAuth(), requirePermission('manage_orgs'), async (req, res) => {
+    try {
+      const target = await first('SELECT id, name, username FROM users WHERE id = :id', { id: req.params.id });
+      if (!target) return fail(res, 404, '未找到人员');
+      if (HIGH_PRIVILEGE_ROLES.has(req.user.primaryRole) && req.user.id === target.id) return fail(res, 400, '不能删除自己');
+
+      const highRoleUser = await first(
+        `SELECT 1 FROM user_roles ur
+         INNER JOIN roles r ON r.id = ur.role_id
+         WHERE ur.user_id = :userId AND r.id IN ('superAdmin', 'orgDept') LIMIT 1`,
+        { userId: target.id },
+      );
+      if (highRoleUser && req.user.primaryRole !== 'superAdmin') return fail(res, 403, '无权删除高权限账号');
+
+      await query('DELETE FROM user_roles WHERE user_id = :userId', { userId: target.id });
+      await query('DELETE FROM wechat_bindings WHERE user_id = :userId', { userId: target.id });
+      await query('DELETE FROM notifications WHERE user_id = :userId', { userId: target.id });
+      await query('DELETE FROM notification_receipts WHERE user_id = :userId', { userId: target.id });
+      await query('DELETE FROM applicant_profiles WHERE user_id = :userId', { userId: target.id });
+      await query('DELETE FROM users WHERE id = :id', { id: target.id });
+      await logAudit('users', target.id, 'delete_staff', req.user.id, { username: target.username, name: target.name });
+      ok(res, true, '人员已删除');
+    } catch (error) {
+      fail(res, 500, error.message);
+    }
+  });
+
   app.post('/api/orgs/import-staff', requireAuth(), requirePermission('manage_orgs'), upload.single('file'), async (req, res) => {
     try {
       if (!req.file) return fail(res, 400, '请上传人员表格');

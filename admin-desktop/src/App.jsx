@@ -83,6 +83,7 @@ function App() {
   const [staffRows, setStaffRows] = useState([]);
   const [staffFilters, setStaffFilters] = useState({ keyword: '', orgId: '', branchId: '', status: '' });
   const [staffForm, setStaffForm] = useState(EMPTY_STAFF_FORM);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [orgForm, setOrgForm] = useState(EMPTY_ORG_FORM);
   const [branchForm, setBranchForm] = useState(EMPTY_BRANCH_FORM);
 
@@ -1089,7 +1090,7 @@ function App() {
                         <td><Tag theme={item.status === 'active' ? 'success' : item.status === 'pending' ? 'warning' : 'default'}>{item.status}</Tag></td>
                         <td><Tag theme={item.wechatBindStatus === '已绑定' ? 'success' : 'default'}>{item.wechatBindStatus || '未绑定'}</Tag></td>
                         <td>{item.roleLabels || '-'}</td>
-                        <td><Button size="small" theme="danger" variant="outline" onClick={() => editStaff(item)}>编辑</Button></td>
+                        <td><Space><Button size="small" theme="danger" variant="outline" onClick={() => editStaff(item)}>编辑</Button><Button size="small" theme="danger" onClick={() => requestDeleteStaff(item)}>删除</Button></Space></td>
                       </tr>
                     )) : (
                       <tr>
@@ -1108,6 +1109,32 @@ function App() {
               </div>
               <Button theme="danger" style={{ marginTop: 16 }} onClick={assignRole}>分配角色</Button>
             </Card>
+          </div>
+        )}
+
+        {deleteConfirm && (
+          <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
+            <div className="modal-dialog" onClick={(event) => event.stopPropagation()}>
+              <div className="modal-dialog__title">确认删除账号</div>
+              <div className="modal-dialog__body">
+                <p>即将删除人员：<strong>{deleteConfirm.name}（{deleteConfirm.username}）</strong></p>
+                <p>此操作将同时清除该用户的角色、微信绑定、消息记录和申请人资料，不可撤销。</p>
+                <div className="field-block">
+                  <div className="field-label">请输入该人员的学号/工号以确认删除：</div>
+                  <input
+                    className="inline-input"
+                    type="text"
+                    value={deleteConfirm.confirmText}
+                    placeholder={`请输入 ${deleteConfirm.username}`}
+                    onChange={(event) => setDeleteConfirm((prev) => ({ ...prev, confirmText: event.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="modal-dialog__actions">
+                <Button variant="outline" onClick={() => setDeleteConfirm(null)}>取消</Button>
+                <Button theme="danger" disabled={deleteConfirm.confirmText !== deleteConfirm.username} onClick={confirmDeleteStaff}>确认删除</Button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1444,4 +1471,5 @@ function ConfigRow({ item, onSave }) {
 }
 
 export default App;
+
 
